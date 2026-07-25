@@ -65,25 +65,31 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    const cacheFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: cached } = await supabase
-      .from('cached_restaurants')
-      .select('*')
-      .gt('cached_at', cacheFrom)
-      .limit(50);
+    // Geo filtering + 7-day TTL happen in SQL against the WHOLE table (see
+    // migration 021). This returns only rows truly within radiusMeters, ordered
+    // nearest-first — no arbitrary 50-row slice that could miss nearby data.
+    const { data: cachedNearby, error: cacheReadErr } = await supabase.rpc(
+      'get_cached_restaurants_nearby',
+      {
+        p_lat: latitude,
+        p_lng: longitude,
+        p_radius_meters: radiusMeters,
+        p_max_age_hours: 7 * 24,
+      }
+    );
 
-    // Filter cached restaurants within search radius
-    const cachedNearby = cached?.filter((r) => {
-      const distance = haversine(latitude, longitude, r.latitude, r.longitude);
-      return distance <= radiusMeters;
-    }) ?? [];
+    if (cacheReadErr) {
+      // Treat a cache-read failure as a miss and fall through to Google.
+      console.warn('[fetch-nearby-restaurants] Cache read failed (treating as miss):', cacheReadErr);
+    }
+    const nearby = cachedNearby ?? [];
 
-    console.log('[fetch-nearby-restaurants] Cache check: user at (', latitude, ',', longitude, ') found', cachedNearby.length, 'nearby restaurants within', radiusMeters, 'meters');
+    console.log('[fetch-nearby-restaurants] Cache check: user at (', latitude, ',', longitude, ') found', nearby.length, 'nearby restaurants within', radiusMeters, 'meters');
 
     // If cache hit, return immediately (no Google API call)
-    if (cachedNearby.length > 0) {
-      console.log('[fetch-nearby-restaurants] Cache hit! Returning', cachedNearby.length, 'cached restaurants');
-      const transformed = cachedNearby.map((r) => ({
+    if (nearby.length > 0) {
+      console.log('[fetch-nearby-restaurants] Cache hit! Returning', nearby.length, 'cached restaurants');
+      const transformed = nearby.map((r) => ({
         placeId: r.place_id,
         name: r.name,
         location: {
