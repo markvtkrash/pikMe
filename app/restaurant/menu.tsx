@@ -19,6 +19,10 @@ interface Coupon {
   id: string;
   menu_item_id?: string;
   is_active: boolean;
+  coupon_code: string;
+  expiry_date: string;
+  usage_limit: number | null;
+  times_used: number;
 }
 
 export default function RestaurantMenuScreen() {
@@ -217,6 +221,9 @@ export default function RestaurantMenuScreen() {
                           <Text style={styles.couponExpiry}>
                             Expires: {new Date(existingCoupon.expiry_date).toLocaleDateString()}
                           </Text>
+                          <Text style={styles.couponUsage}>
+                            Used {existingCoupon.times_used}/{existingCoupon.usage_limit ?? '∞'} times
+                          </Text>
                         </View>
                       </View>
                     </View>
@@ -304,6 +311,7 @@ const styles = StyleSheet.create({
   couponTicketIcon: { fontSize: 24 },
   couponCode: { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
   couponExpiry: { fontSize: 10, color: '#999', marginTop: 3 },
+  couponUsage: { fontSize: 10, color: '#666', fontWeight: '600', marginTop: 2 },
   actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50' },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },

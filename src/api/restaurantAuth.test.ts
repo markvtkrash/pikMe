@@ -21,6 +21,8 @@ import {
   getActiveCouponsByPlaceId,
   getRestaurantMenuItems,
   refreshRestaurantMenu,
+  activateCoupon,
+  closeCouponActivation,
 } from './restaurantAuth';
 
 const getUser = supabase.auth.getUser as jest.Mock;
@@ -303,5 +305,61 @@ describe('refreshRestaurantMenu', () => {
     mockFetch(500, { unexpected: true });
 
     await expect(refreshRestaurantMenu('r1', 'Diner', 'token')).rejects.toThrow(JSON.stringify({ unexpected: true }));
+  });
+});
+
+describe('activateCoupon', () => {
+  it('returns the activation window from a single-row RPC response', async () => {
+    rpc.mockResolvedValue({
+      data: [{ activated_at: '2026-01-01T00:00:00Z', expires_at: '2026-01-01T00:05:00Z', already_active: false }],
+      error: null,
+    });
+
+    const result = await activateCoupon('c1');
+
+    expect(rpc).toHaveBeenCalledWith('activate_coupon', { p_coupon_id: 'c1' });
+    expect(result).toEqual({
+      activatedAt: '2026-01-01T00:00:00Z',
+      expiresAt: '2026-01-01T00:05:00Z',
+      alreadyActive: false,
+    });
+  });
+
+  it('handles a single-object RPC response (not wrapped in an array)', async () => {
+    rpc.mockResolvedValue({
+      data: { activated_at: '2026-01-01T00:00:00Z', expires_at: '2026-01-01T00:05:00Z', already_active: true },
+      error: null,
+    });
+
+    const result = await activateCoupon('c1');
+
+    expect(result.alreadyActive).toBe(true);
+  });
+
+  it('throws when the coupon can no longer be activated', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'Coupon is no longer available' } });
+
+    await expect(activateCoupon('c1')).rejects.toEqual({ message: 'Coupon is no longer available' });
+  });
+});
+
+describe('closeCouponActivation', () => {
+  it('returns true when a row was closed', async () => {
+    rpc.mockResolvedValue({ data: true, error: null });
+
+    await expect(closeCouponActivation('c1')).resolves.toBe(true);
+    expect(rpc).toHaveBeenCalledWith('close_coupon_activation', { p_coupon_id: 'c1' });
+  });
+
+  it('returns false when there was nothing to close', async () => {
+    rpc.mockResolvedValue({ data: false, error: null });
+
+    await expect(closeCouponActivation('c1')).resolves.toBe(false);
+  });
+
+  it('throws on error', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'not authenticated' } });
+
+    await expect(closeCouponActivation('c1')).rejects.toEqual({ message: 'not authenticated' });
   });
 });

@@ -31,6 +31,12 @@ export default function AdminClaimsScreen() {
 
   async function loadClaims() {
     try {
+      // TEMP DEBUG — remove once the "Only admins can view claims" session
+      // mismatch is diagnosed. Shows exactly who the client thinks is signed
+      // in right before the RPC call that's rejecting them.
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      console.log('[admin-claims] [debug] current session user:', authData?.user?.id, authData?.user?.email, 'authError:', authError);
+
       const { data, error } = await supabase.rpc('get_pending_claims');
       if (error) throw error;
       setClaims(data || []);

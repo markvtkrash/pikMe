@@ -200,7 +200,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       router.replace('/(onboarding)/welcome');
     } else if (onboardingComplete && (inOnboarding || inAuth)) {
       console.log('[AuthGate] Onboarded but on onboarding/auth page, redirecting to tabs');
-      router.replace('/(tabs)');
+      router.replace('/(main)/(tabs)');
     } else if (onboardingComplete && !inOnboarding && !inAuth) {
       console.log('[AuthGate] Onboarded and on correct page, no redirect needed');
     } else if (!onboardingComplete && inOnboarding) {

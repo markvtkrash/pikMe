@@ -15,7 +15,13 @@ import { MenuItemSkeleton } from '../../src/components/menu/MenuItemSkeleton';
 import { useSavedStore } from '../../src/store/savedStore';
 import { useSaved } from '../../src/hooks/useSaved';
 import { getActiveCouponsByPlaceId } from '../../src/api/restaurantAuth';
-import type { Recommendation } from '../../src/types';
+import { useCouponActivation } from '../../src/hooks/useCouponActivation';
+import { CouponActivationModal } from '../../src/components/coupon/CouponActivationModal';
+import { CouponConfirmModal } from '../../src/components/coupon/CouponConfirmModal';
+import { NutritionDisclaimerModal } from '../../src/components/restaurant/NutritionDisclaimerModal';
+import { supabase } from '../../src/api/supabase';
+import { useUIStore } from '../../src/store/uiStore';
+import type { Recommendation, Coupon } from '../../src/types';
 
 const LOADING_EMOJIS = ['🍽️', '🥗', '🍲', '🥘', '🍳'];
 
@@ -46,10 +52,18 @@ export default function RestaurantDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [couponsOnly, setCouponsOnly] = useState(false);
-  const [coupons, setCoupons] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
 
+  const hasSeenNutritionDisclaimer = useUIStore((s) => s.hasSeenNutritionDisclaimer);
+  const setHasSeenNutritionDisclaimer = useUIStore((s) => s.setHasSeenNutritionDisclaimer);
+  const [showNutritionDisclaimer, setShowNutritionDisclaimer] = useState(!hasSeenNutritionDisclaimer);
+
   const { data: recommendations, isLoading, error } = useMenuRecommendations(restaurant);
+
+  const removeCouponFromList = (couponId: string) =>
+    setCoupons((prev) => prev.filter((c) => c.id !== couponId));
+  const genericCouponActivation = useCouponActivation({ onClosed: removeCouponFromList });
 
   useEffect(() => {
     if (!id) {
@@ -143,12 +157,19 @@ export default function RestaurantDetailScreen() {
       return <MenuItemSkeleton />;
     }
     const itemCoupons = coupons.filter(c => c.menu_item_id === item.menuItem.itemId);
-    return <MenuItemCardSwipeable recommendation={item} itemCoupons={itemCoupons} />;
+    return (
+      <MenuItemCardSwipeable
+        recommendation={item}
+        itemCoupons={itemCoupons}
+        onCouponClosed={removeCouponFromList}
+      />
+    );
   };
 
   const displayData = isLoading ? Array(5).fill({ _skeleton: true }) : filteredRecommendations ?? [];
 
   return (
+    <>
     <FlatList
       data={displayData}
       keyExtractor={(r, idx) => ('_skeleton' in r ? `skeleton-${idx}` : r.menuItem.itemId)}
@@ -236,11 +257,19 @@ export default function RestaurantDetailScreen() {
                 {genericCoupons.length > 0 ? '🎉 Deals on Any Item' : '🎉 Menu Item Deals'}
               </Text>
               {genericCoupons.map((coupon) => (
-                <View key={coupon.id} style={styles.couponCard}>
+                <TouchableOpacity
+                  key={coupon.id}
+                  style={styles.couponCard}
+                  onPress={() => genericCouponActivation.handlePress(coupon)}
+                  activeOpacity={0.85}
+                >
                   <View style={styles.couponInfo}>
                     <Text style={styles.couponCode}>🎉 Use: {coupon.coupon_code}</Text>
                     <Text style={styles.couponDiscount}>
                       {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'} off • Any Item
+                    </Text>
+                    <Text style={styles.couponTapHint}>
+                      {coupon.activated_at ? '⏱ Active — tap to view' : 'Tap to activate'}
                     </Text>
                   </View>
                   <View style={styles.couponBadgeRight}>
@@ -248,7 +277,7 @@ export default function RestaurantDetailScreen() {
                       {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
               {itemCouponCount > 0 && (
                 <Text style={styles.couponItemNote}>
@@ -407,6 +436,35 @@ export default function RestaurantDetailScreen() {
         ) : null
       }
     />
+    <CouponActivationModal
+      visible={!!genericCouponActivation.activeCoupon}
+      coupon={genericCouponActivation.activeCoupon}
+      expiresAt={genericCouponActivation.expiresAt}
+      onDone={genericCouponActivation.handleDone}
+    />
+    <CouponConfirmModal
+      visible={!!genericCouponActivation.pendingCoupon}
+      onCancel={genericCouponActivation.cancelActivate}
+      onConfirm={genericCouponActivation.confirmActivate}
+    />
+    <NutritionDisclaimerModal
+      visible={showNutritionDisclaimer}
+      onDismiss={() => {
+        setShowNutritionDisclaimer(false);
+        setHasSeenNutritionDisclaimer(true);
+        // Best-effort, like the other agreement recordings in this app —
+        // never block the user if this write fails. record_user_agreement
+        // upserts on (user_id, agreement_type, version), so this keeps
+        // agreed_at as the most recent time they acknowledged this popup
+        // rather than piling up a row per session.
+        supabase
+          .rpc('record_user_agreement', { p_agreement_type: 'menu_nutrition_disclaimer', p_version: '1.0' })
+          .then(({ error }) => {
+            if (error) console.warn('[PikMe] Failed to record nutrition disclaimer agreement:', error);
+          });
+      }}
+    />
+    </>
   );
 }
 
@@ -623,6 +681,7 @@ const styles = StyleSheet.create({
   couponInfo: { flex: 1 },
   couponCode: { fontSize: 15, fontWeight: '900', color: '#D84315', marginBottom: 3 },
   couponDiscount: { fontSize: 13, color: '#E65100', fontWeight: '700' },
+  couponTapHint: { fontSize: 10.5, color: '#D84315', fontWeight: '700', marginTop: 3 },
   couponBadgeRight: { backgroundColor: '#FF6F00', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', elevation: 2 },
   couponValue: { fontSize: 18, fontWeight: '900', color: '#fff' },
 

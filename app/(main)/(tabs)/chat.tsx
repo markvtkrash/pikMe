@@ -7,10 +7,10 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { BRAND_COLORS } from '../../src/constants/brandTheme';
-import { useUserProfile } from '../../src/hooks/useUserProfile';
-import { useRestaurantStore } from '../../src/store/restaurantStore';
-import { sendChatMessage } from '../../src/api/functions';
+import { BRAND_COLORS } from '../../../src/constants/brandTheme';
+import { useUserProfile } from '../../../src/hooks/useUserProfile';
+import { useRestaurantStore } from '../../../src/store/restaurantStore';
+import { sendChatMessage } from '../../../src/api/functions';
 
 function parseResponse(text: string): (string | { type: 'bullet'; text: string })[] {
   const lines = text.split('\n').filter(l => l.trim());

@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 
 export default function RestaurantTabScreen() {
   const router = useRouter();

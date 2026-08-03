@@ -4,11 +4,14 @@ import {
   StyleSheet, ScrollView, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocation } from '../../src/hooks/useLocation';
-import { useNearbyRestaurants } from '../../src/hooks/useNearbyRestaurants';
-import { RestaurantCard } from '../../src/components/restaurant/RestaurantCard';
-import { SkeletonRestaurantCard } from '../../src/components/common/SkeletonCard';
-import type { Restaurant } from '../../src/types';
+import { useLocation } from '../../../src/hooks/useLocation';
+import { useNearbyRestaurants } from '../../../src/hooks/useNearbyRestaurants';
+import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
+import { SkeletonRestaurantCard } from '../../../src/components/common/SkeletonCard';
+import { RadiusSelector } from '../../../src/components/common/RadiusSelector';
+import { useRestaurantStore } from '../../../src/store/restaurantStore';
+import { normalizeForSearch } from '../../../src/utils/textMatch';
+import type { Restaurant } from '../../../src/types';
 
 const ALL = 'All';
 
@@ -22,29 +25,37 @@ function greeting() {
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
+  const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const { data: restaurants = [], isLoading, error: fetchError, refetch, isRefetching } =
     useNearbyRestaurants(location);
 
   const [search, setSearch] = useState('');
   const [activeType, setActiveType] = useState(ALL);
 
+  // Fetching always covers the max radius (see useNearbyRestaurants); the
+  // distance picker just filters that same data client-side, no refetch.
+  const withinRadius = useMemo(
+    () => (restaurants as Restaurant[]).filter((r) => r.distanceMeters <= searchRadiusMeters),
+    [restaurants, searchRadiusMeters]
+  );
+
   const typeOptions = useMemo(() => {
     const counts: Record<string, number> = {};
-    (restaurants as Restaurant[]).forEach((r) =>
+    withinRadius.forEach((r) =>
       r.cuisineTypes.forEach((t) => { counts[t] = (counts[t] ?? 0) + 1; })
     );
     return [ALL, ...Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([t]) => t)];
-  }, [restaurants]);
+  }, [withinRadius]);
 
   const filtered = useMemo(() =>
-    (restaurants as Restaurant[])
+    withinRadius
       .filter((r) => {
-        const matchSearch = r.name.toLowerCase().includes(search.toLowerCase());
+        const matchSearch = normalizeForSearch(r.name).includes(normalizeForSearch(search));
         const matchType = activeType === ALL || r.cuisineTypes.includes(activeType);
         return matchSearch && matchType;
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters),
-    [restaurants, search, activeType]
+    [withinRadius, search, activeType]
   );
 
   function chipLabel(type: string) {
@@ -116,6 +127,8 @@ export default function ExploreScreen() {
           />
         </View>
 
+        <RadiusSelector />
+
         {/* Cuisine chips */}
         {typeOptions.length > 1 && (
           <ScrollView
@@ -180,7 +193,7 @@ export default function ExploreScreen() {
               <Text style={styles.emptyBody}>
                 {search || activeType !== ALL
                   ? 'Try a different search or filter'
-                  : 'Try increasing your search radius in profile'}
+                  : 'Try increasing the distance above'}
               </Text>
             </View>
           }

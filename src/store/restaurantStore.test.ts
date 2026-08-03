@@ -21,11 +21,21 @@ function makeRestaurant(): Restaurant {
 }
 
 describe('restaurantStore', () => {
-  it('starts empty with no selection or location', () => {
+  it('starts empty with no selection or location, defaulting to a 2km radius', () => {
     const s = useRestaurantStore.getState();
     expect(s.restaurants).toEqual([]);
     expect(s.selectedRestaurantId).toBeNull();
     expect(s.userLocation).toBeNull();
+    expect(s.searchRadiusMeters).toBe(2000);
+  });
+
+  it('setSearchRadiusMeters updates the radius independently of other fields', () => {
+    useRestaurantStore.getState().setSelectedRestaurantId('p1');
+    useRestaurantStore.getState().setSearchRadiusMeters(5000);
+
+    const s = useRestaurantStore.getState();
+    expect(s.searchRadiusMeters).toBe(5000);
+    expect(s.selectedRestaurantId).toBe('p1');
   });
 
   it('setRestaurants replaces the restaurant list independently of other fields', () => {

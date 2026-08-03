@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, FlatList,
+  View, Text, TouchableOpacity, StyleSheet, FlatList, ScrollView,
   ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -102,7 +102,7 @@ export default function RestaurantDashboardScreen() {
                      restaurant.status === 'approved' ? '✓' : '✕';
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
@@ -162,58 +162,49 @@ export default function RestaurantDashboardScreen() {
           <Text style={styles.warningText}>Waiting for admin approval to manage coupons</Text>
         </View>
       )}
-    </View>
-  );
-}
 
-function CouponListItem({ coupon, onEdit }: { coupon: Coupon; onEdit: () => void }) {
-  const isExpired = new Date(coupon.expiry_date) < new Date();
-  const discountLabel = coupon.coupon_type.includes('percent') ? '%' : '$';
-
-  return (
-    <TouchableOpacity
-      style={[
-        styles.couponCard,
-        isExpired && styles.couponCardExpired
-      ]}
-      onPress={onEdit}
-    >
-      <View style={styles.couponHeader}>
-        <View>
-          <Text style={styles.couponCode}>{coupon.coupon_code}</Text>
-          <Text style={styles.couponType}>{coupon.coupon_type.includes('item') ? 'Item-specific' : 'Any item'}</Text>
-        </View>
-        <View style={styles.discountBadge}>
-          <Text style={styles.discountValue}>
-            {discountLabel}{coupon.discount_value}
-          </Text>
-        </View>
+      {/* Coupon performance table */}
+      <View style={styles.couponTableSection}>
+        <Text style={styles.sectionTitle}>Coupon Performance</Text>
+        {coupons.length === 0 ? (
+          <View style={styles.emptyList}>
+            <Text style={styles.emptyListText}>No active coupons yet</Text>
+            <Text style={styles.emptyListSubtext}>Add one from Menu Items</Text>
+          </View>
+        ) : (
+          <View style={styles.table}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeaderCell, styles.tableCodeCol]}>Code</Text>
+              <Text style={[styles.tableHeaderCell, styles.tableUsedCol]}>Used</Text>
+              <Text style={[styles.tableHeaderCell, styles.tableExpiresCol]}>Expires</Text>
+            </View>
+            {coupons.map((coupon) => (
+              <TouchableOpacity
+                key={coupon.id}
+                style={styles.tableRow}
+                onPress={() => router.push(`/restaurant/coupon/${coupon.id}/edit`)}
+              >
+                <Text style={[styles.tableCell, styles.tableCodeCol, styles.tableCodeText]} numberOfLines={1}>
+                  {coupon.coupon_code}
+                </Text>
+                <Text style={[styles.tableCell, styles.tableUsedCol]}>
+                  {coupon.times_used}/{coupon.usage_limit ?? '∞'}
+                </Text>
+                <Text style={[styles.tableCell, styles.tableExpiresCol]}>
+                  {new Date(coupon.expiry_date).toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
-
-      <View style={styles.couponFooter}>
-        <View>
-          <Text style={styles.couponMeta}>
-            Used {coupon.times_used}/{coupon.usage_limit || '∞'} times
-          </Text>
-          <Text style={styles.expiryDate}>
-            📅 Expires {new Date(coupon.expiry_date).toLocaleDateString()}
-          </Text>
-        </View>
-        <View style={[
-          styles.couponStatus,
-          isExpired ? styles.statusExpired : styles.statusActive,
-        ]}>
-          <Text style={styles.couponStatusText}>
-            {isExpired ? '❌ Expired' : '✓ Active'}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
+  scrollContent: { paddingBottom: 24 },
   header: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
@@ -277,28 +268,33 @@ const styles = StyleSheet.create({
   claimBtn: { backgroundColor: '#4CAF50', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
   claimBtnText: { color: '#fff', fontWeight: '600' },
 
-  couponCard: {
+  couponTableSection: { paddingHorizontal: 16, paddingTop: 8 },
+  table: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    overflow: 'hidden',
     elevation: 2,
   },
-  couponCardExpired: {
-    backgroundColor: '#FFEBEE',
-    borderLeftWidth: 4,
-    borderLeftColor: '#c62828',
+  tableHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#FAFAFA',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
   },
-  couponHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  couponCode: { fontSize: 15, fontWeight: '700', color: '#222' },
-  couponType: { fontSize: 12, color: '#999', marginTop: 2 },
-  discountBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  discountValue: { fontSize: 18, fontWeight: '800', color: '#4CAF50' },
-  couponFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' },
-  couponMeta: { fontSize: 12, color: '#666', marginBottom: 4 },
-  expiryDate: { fontSize: 12, fontWeight: '700', color: '#e65100' },
-  couponStatus: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
-  statusActive: { backgroundColor: '#E8F5E9' },
-  statusExpired: { backgroundColor: '#FFEBEE' },
-  couponStatusText: { fontSize: 12, fontWeight: '700', color: '#222' },
+  tableHeaderCell: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase' },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  tableCell: { fontSize: 13, color: '#444' },
+  tableCodeText: { fontWeight: '700', color: '#222' },
+  tableCodeCol: { flex: 1.4 },
+  tableUsedCol: { flex: 1, textAlign: 'center' },
+  tableExpiresCol: { flex: 1.2, textAlign: 'right' },
 });
