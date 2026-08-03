@@ -3,16 +3,20 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'rea
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, FadeIn, SlideInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS, BRAND_SHADOWS, BRAND_TYPOGRAPHY } from '../../constants/brandTheme';
-import type { Recommendation, MenuItem } from '../../types';
+import type { Recommendation, MenuItem, Coupon } from '../../types';
 import { getItemAnalysis } from '../../api/functions';
 import { useUserProfile } from '../../hooks/useUserProfile';
 import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
+import { useCouponActivation } from '../../hooks/useCouponActivation';
 import { getItemWarnings, getSafeIndicator } from './menuItemWarnings';
+import { CouponActivationModal } from '../coupon/CouponActivationModal';
+import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
 
 interface Props {
   recommendation: Recommendation;
-  itemCoupons?: any[];
+  itemCoupons?: Coupon[];
+  onCouponClosed?: (couponId: string) => void;
 }
 
 function ScoreBadge({ score }: { score: number }) {
@@ -37,13 +41,14 @@ function Macro({ label, value, unit, color }: { label: string; value: number; un
   );
 }
 
-export function MenuItemCard({ recommendation, itemCoupons = [] }: Props) {
+export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed }: Props) {
   const { menuItem: item, score, reasons, warnings } = recommendation;
   const n = item.nutrition;
   const { data: profile } = useUserProfile();
 
   const isSaved = useSavedStore((s) => s.menuItemIds.has(item.itemId));
   const { toggleMenuItem } = useSaved();
+  const couponActivation = useCouponActivation({ onClosed: onCouponClosed });
 
   const [analysisText, setAnalysisText]     = useState('');
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -114,6 +119,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [] }: Props) {
   const warnChips = warnings.slice(0, 1);
 
   return (
+    <>
     <View style={styles.card}>
       {/* Header row */}
       <View style={styles.headerRow}>
@@ -218,7 +224,12 @@ export function MenuItemCard({ recommendation, itemCoupons = [] }: Props) {
       {itemCoupons.length > 0 && (
         <View style={styles.couponBannerContainer}>
           {itemCoupons.map((coupon) => (
-            <View key={coupon.id} style={styles.couponBannerBox}>
+            <TouchableOpacity
+              key={coupon.id}
+              style={styles.couponBannerBox}
+              onPress={() => couponActivation.handlePress(coupon)}
+              activeOpacity={0.85}
+            >
               <View style={styles.couponBannerLeft}>
                 <Text style={styles.couponSaveLabel}>SAVE</Text>
                 <View style={styles.couponAmountBox}>
@@ -238,9 +249,12 @@ export function MenuItemCard({ recommendation, itemCoupons = [] }: Props) {
                     ? `${coupon.discount_value}% off`
                     : `$${coupon.discount_value} off`}
                 </Text>
+                <Text style={styles.couponTapHint}>
+                  {coupon.activated_at ? '⏱ Active — tap to view' : 'Tap to activate'}
+                </Text>
               </View>
               <Text style={styles.couponStarRight}>⭐</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -297,6 +311,18 @@ export function MenuItemCard({ recommendation, itemCoupons = [] }: Props) {
         </Animated.View>
       )}
     </View>
+    <CouponActivationModal
+      visible={!!couponActivation.activeCoupon}
+      coupon={couponActivation.activeCoupon}
+      expiresAt={couponActivation.expiresAt}
+      onDone={couponActivation.handleDone}
+    />
+    <CouponConfirmModal
+      visible={!!couponActivation.pendingCoupon}
+      onCancel={couponActivation.cancelActivate}
+      onConfirm={couponActivation.confirmActivate}
+    />
+    </>
   );
 }
 
@@ -304,6 +330,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
+    borderWidth: 2,
+    borderColor: BRAND_COLORS.primary,
     marginHorizontal: 16,
     marginBottom: 12,
     padding: 16,
@@ -541,6 +569,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#E65100',
     textTransform: 'capitalize',
+  },
+  couponTapHint: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#D84315',
+    marginTop: 3,
   },
   couponStarRight: {
     fontSize: 24,

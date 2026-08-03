@@ -4,9 +4,9 @@ import {
   ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSaved } from '../../src/hooks/useSaved';
-import { RestaurantCard } from '../../src/components/restaurant/RestaurantCard';
-import type { MenuItem } from '../../src/types';
+import { useSaved } from '../../../src/hooks/useSaved';
+import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
+import type { MenuItem } from '../../../src/types';
 
 type Tab = 'restaurants' | 'items';
 

@@ -46,6 +46,7 @@ export default function EditCouponScreen() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [usageLimitError, setUsageLimitError] = useState<string | undefined>();
 
   useEffect(() => {
     loadCoupon();
@@ -90,6 +91,18 @@ export default function EditCouponScreen() {
       return;
     }
 
+    if (!usageLimit.trim()) {
+      setUsageLimitError('Usage limit is required');
+      Alert.alert('Error', 'Usage limit is required');
+      return;
+    }
+    if (!Number.isInteger(Number(usageLimit)) || Number(usageLimit) <= 0) {
+      setUsageLimitError('Enter a whole number greater than 0');
+      Alert.alert('Error', 'Usage limit must be a whole number greater than 0');
+      return;
+    }
+    setUsageLimitError(undefined);
+
     console.log('[coupon-edit] Validation passed, updating...');
     setUpdating(true);
     try {
@@ -99,7 +112,7 @@ export default function EditCouponScreen() {
         couponCode: code.toUpperCase().trim(),
         expiryDate: expiryDate.toISOString(),
         menuItemId: menuItemId.trim() || undefined,
-        usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
+        usageLimit: parseInt(usageLimit, 10),
         isActive,
       });
 
@@ -238,15 +251,24 @@ export default function EditCouponScreen() {
           )}
 
           {/* Usage Limit */}
-          <Text style={styles.label}>Usage Limit</Text>
+          <Text style={styles.label}>Usage Limit *</Text>
+          <Text style={styles.helpText}>
+            The maximum number of customers who can activate this coupon in total.
+            Once that many people have activated it, it stops appearing for anyone
+            else — so pick a number you can actually honor at the register.
+          </Text>
           <TextInput
-            style={styles.input}
-            placeholder="Leave blank for unlimited"
+            style={[styles.input, usageLimitError && styles.inputError]}
+            placeholder="e.g., 100"
             placeholderTextColor="#999"
             keyboardType="number-pad"
             value={usageLimit}
-            onChangeText={setUsageLimit}
+            onChangeText={(text) => {
+              setUsageLimit(text);
+              if (text.trim()) setUsageLimitError(undefined);
+            }}
           />
+          {usageLimitError && <Text style={styles.errorText}>{usageLimitError}</Text>}
 
           {/* Expiry Date */}
           <Text style={styles.label}>Expiry Date</Text>
@@ -355,6 +377,9 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
+  helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
+  inputError: { borderColor: '#e53e3e', borderWidth: 2 },
+  errorText: { fontSize: 12, color: '#e53e3e', fontWeight: '600', marginBottom: 8, marginTop: -8 },
   typeDisplay: {
     backgroundColor: '#fff',
     borderRadius: 10,

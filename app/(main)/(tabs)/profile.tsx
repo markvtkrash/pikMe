@@ -3,11 +3,11 @@ import {
   ScrollView, Alert, ActivityIndicator, TextInput, Platform,
 } from 'react-native';
 import { useState } from 'react';
-import { supabase } from '../../src/api/supabase';
-import { useUserProfile } from '../../src/hooks/useUserProfile';
-import { upsertUserProfile, deleteAccount } from '../../src/api/functions';
-import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../src/constants/dietaryOptions';
-import type { UserProfile } from '../../src/types';
+import { supabase } from '../../../src/api/supabase';
+import { useUserProfile } from '../../../src/hooks/useUserProfile';
+import { upsertUserProfile, deleteAccount } from '../../../src/api/functions';
+import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../src/constants/dietaryOptions';
+import type { UserProfile } from '../../../src/types';
 
 // React Native's Alert isn't implemented on react-native-web, so on web we fall
 // back to the browser's native confirm/alert. Returns whether the user confirmed.

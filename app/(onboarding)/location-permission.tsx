@@ -56,7 +56,7 @@ export default function LocationPermissionScreen() {
 
       setOnboardingComplete(true);
       resetDraft();
-      router.replace('/(tabs)');
+      router.replace('/(main)/(tabs)');
     } catch (err: any) {
       Alert.alert(
         'Setup failed',

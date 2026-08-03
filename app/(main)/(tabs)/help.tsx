@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { BRAND_COLORS } from '../../src/constants/brandTheme';
+import { BRAND_COLORS } from '../../../src/constants/brandTheme';
 
 const LEGAL_LINKS = {
   privacy: 'https://pikme.app/privacy',

@@ -119,3 +119,21 @@ export interface SavedItems {
   restaurants: Restaurant[];
   menuItems: MenuItem[];
 }
+
+export interface Coupon {
+  id: string;
+  restaurant_id: string;
+  coupon_code: string;
+  coupon_type: 'item_percent' | 'item_fixed' | 'generic_percent' | 'generic_fixed';
+  discount_value: number;
+  menu_item_id: string | null;
+  is_active: boolean;
+  expiry_date: string;
+  usage_limit: number | null;
+  times_used: number;
+  created_at: string;
+  updated_at: string;
+  // Present only if the current customer already activated this coupon.
+  activated_at: string | null;
+  expires_at: string | null;
+}

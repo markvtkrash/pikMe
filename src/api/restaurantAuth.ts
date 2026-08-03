@@ -1,6 +1,31 @@
 import { supabase } from './supabase';
+import type { Coupon } from '../types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+
+export interface GeocodedLocation {
+  latitude: number;
+  longitude: number;
+  formattedAddress: string;
+}
+
+// Turns a free-text zip code/city/address into coordinates via the
+// restaurant-search edge function (which calls Google's Geocoding API).
+// Used by the owner claim flow so it can then call the exact same
+// fetchNearbyRestaurants() customers use — guaranteeing an owner can only
+// claim a restaurant that a customer searching from that same location would
+// actually be able to discover, instead of an unconstrained global search.
+export async function geocodeLocation(query: string): Promise<GeocodedLocation> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error);
+  return data;
+}
 
 export async function signUpRestaurantOwner(email: string, password: string, businessName: string) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-auth-signup`, {
@@ -173,13 +198,41 @@ export async function getRestaurantCoupons(restaurantId: string) {
   return data || [];
 }
 
-export async function getActiveCouponsForRestaurant(restaurantId: string) {
+export async function getActiveCouponsForRestaurant(restaurantId: string): Promise<Coupon[]> {
   const { data, error } = await supabase.rpc('get_active_coupons_for_restaurant', {
     p_restaurant_id: restaurantId,
   });
 
   if (error) throw error;
   return data || [];
+}
+
+export interface ActivateCouponResult {
+  activatedAt: string;
+  expiresAt: string;
+  alreadyActive: boolean;
+}
+
+// Idempotent: calling this again for a coupon the user already activated just
+// returns the existing countdown window instead of burning a second use.
+export async function activateCoupon(couponId: string): Promise<ActivateCouponResult> {
+  const { data, error } = await supabase.rpc('activate_coupon', { p_coupon_id: couponId });
+  if (error) throw error;
+
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    activatedAt: row.activated_at,
+    expiresAt: row.expires_at,
+    alreadyActive: row.already_active,
+  };
+}
+
+// Safe to call even after the countdown has expired — the use was already
+// burned at activation, so closing early or late has no effect on usage_limit.
+export async function closeCouponActivation(couponId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('close_coupon_activation', { p_coupon_id: couponId });
+  if (error) throw error;
+  return data as boolean;
 }
 
 export async function getActiveCouponsByPlaceId(googlePlaceId: string) {

@@ -42,7 +42,7 @@ export default function NewCouponScreen() {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ code?: string; discount?: string; menuItem?: string }>({});
+  const [errors, setErrors] = useState<{ code?: string; discount?: string; menuItem?: string; usageLimit?: string }>({});
 
   // Validate on input change
   const validateForm = () => {
@@ -50,6 +50,11 @@ export default function NewCouponScreen() {
     if (!code.trim()) newErrors.code = 'Coupon code is required';
     if (!discount.trim()) newErrors.discount = 'Discount value is required';
     if (couponType.includes('item') && !menuItemId.trim()) newErrors.menuItem = 'Menu item is required';
+    if (!usageLimit.trim()) {
+      newErrors.usageLimit = 'Usage limit is required';
+    } else if (!Number.isInteger(Number(usageLimit)) || Number(usageLimit) <= 0) {
+      newErrors.usageLimit = 'Enter a whole number greater than 0';
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -112,7 +117,7 @@ export default function NewCouponScreen() {
         couponCode: code.toUpperCase().trim(),
         expiryDate: expiryDate.toISOString(),
         menuItemId: finalMenuItemId,
-        usageLimit: usageLimit ? parseInt(usageLimit) : undefined,
+        usageLimit: parseInt(usageLimit, 10),
       });
 
       console.log('[coupon-new] createCoupon called with:', { couponType, menuItemId: finalMenuItemId });
@@ -227,15 +232,24 @@ export default function NewCouponScreen() {
         )}
 
         {/* Usage Limit */}
-        <Text style={styles.label}>Usage Limit (optional)</Text>
+        <Text style={styles.label}>Usage Limit *</Text>
+        <Text style={styles.helpText}>
+          The maximum number of customers who can activate this coupon in total.
+          Once that many people have activated it, it stops appearing for anyone
+          else — so pick a number you can actually honor at the register.
+        </Text>
         <TextInput
-          style={styles.input}
-          placeholder="Leave blank for unlimited"
+          style={[styles.input, errors.usageLimit && styles.inputError]}
+          placeholder="e.g., 100"
           placeholderTextColor="#999"
           keyboardType="number-pad"
           value={usageLimit}
-          onChangeText={setUsageLimit}
+          onChangeText={(text) => {
+            setUsageLimit(text);
+            if (text.trim()) setErrors(prev => ({ ...prev, usageLimit: undefined }));
+          }}
         />
+        {errors.usageLimit && <Text style={styles.errorText}>{errors.usageLimit}</Text>}
 
         {/* Expiry Date */}
         <Text style={styles.label}>Expiry Date</Text>
@@ -331,6 +345,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
+  helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   typeBtn: {
     flex: 1,

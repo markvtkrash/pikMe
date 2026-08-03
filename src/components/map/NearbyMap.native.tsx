@@ -4,10 +4,12 @@ import {
   StyleSheet, TouchableOpacity, Dimensions,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../hooks/useLocation';
 import { useNearbyRestaurants } from '../../hooks/useNearbyRestaurants';
 import { useRestaurantStore } from '../../store/restaurantStore';
 import { RestaurantCard } from '../restaurant/RestaurantCard';
+import { RadiusSelector } from '../common/RadiusSelector';
 import type { Restaurant } from '../../types';
 
 const { width } = Dimensions.get('window');
@@ -16,9 +18,14 @@ const CARD_WIDTH = width * 0.75;
 export function NearbyMap() {
   const mapRef = useRef<MapView>(null);
   const listRef = useRef<FlatList>(null);
+  const insets = useSafeAreaInsets();
   const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
+  const { selectedRestaurantId, setSelectedRestaurantId, searchRadiusMeters } = useRestaurantStore();
   const { data: restaurants = [], isLoading, error: fetchError, refetch } = useNearbyRestaurants(location);
-  const { selectedRestaurantId, setSelectedRestaurantId } = useRestaurantStore();
+  // Fetching always covers the max radius; filter to the selected distance client-side.
+  const visibleRestaurants = (restaurants as Restaurant[]).filter(
+    (r) => r.distanceMeters <= searchRadiusMeters
+  );
 
   function selectRestaurant(restaurant: Restaurant) {
     setSelectedRestaurantId(restaurant.placeId);
@@ -32,7 +39,7 @@ export function NearbyMap() {
     }, 400);
 
     // Scroll card strip to the tapped restaurant
-    const idx = (restaurants as Restaurant[]).findIndex((r) => r.placeId === restaurant.placeId);
+    const idx = visibleRestaurants.findIndex((r) => r.placeId === restaurant.placeId);
     if (idx >= 0) {
       listRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
     }
@@ -76,7 +83,7 @@ export function NearbyMap() {
           showsUserLocation
           showsMyLocationButton
         >
-          {(restaurants as Restaurant[]).map((restaurant) => (
+          {visibleRestaurants.map((restaurant) => (
             <Marker
               key={restaurant.placeId}
               coordinate={{
@@ -98,6 +105,11 @@ export function NearbyMap() {
         </MapView>
       )}
 
+      {/* Radius selector overlay */}
+      <View style={[styles.radiusOverlay, { top: insets.top + 8 }]}>
+        <RadiusSelector />
+      </View>
+
       {/* Bottom card strip */}
       <View style={styles.cardStrip}>
         {isLoading ? (
@@ -112,14 +124,14 @@ export function NearbyMap() {
               <Text style={styles.retryLink}>Retry</Text>
             </TouchableOpacity>
           </View>
-        ) : restaurants.length === 0 ? (
+        ) : visibleRestaurants.length === 0 ? (
           <View style={styles.stripLoading}>
             <Text style={styles.errorBody}>No restaurants found nearby</Text>
           </View>
         ) : (
           <FlatList
             ref={listRef}
-            data={restaurants as Restaurant[]}
+            data={visibleRestaurants}
             keyExtractor={(item) => item.placeId}
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -145,6 +157,17 @@ export function NearbyMap() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#eee' },
+  radiusOverlay: {
+    position: 'absolute',
+    left: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
   icon: { fontSize: 48, marginBottom: 12 },
   statusText: { marginTop: 10, fontSize: 14, color: '#888' },

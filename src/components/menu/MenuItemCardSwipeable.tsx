@@ -6,14 +6,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { MenuItemCard } from './MenuItemCard';
-import type { Recommendation } from '../../types';
+import type { Recommendation, Coupon } from '../../types';
 
 interface Props {
   recommendation: Recommendation;
-  itemCoupons?: any[];
+  itemCoupons?: Coupon[];
+  onCouponClosed?: (couponId: string) => void;
 }
 
-export function MenuItemCardSwipeable({ recommendation, itemCoupons = [] }: Props) {
+export function MenuItemCardSwipeable({ recommendation, itemCoupons = [], onCouponClosed }: Props) {
   const translateX = useSharedValue(0);
 
   const pan = Gesture.Pan()
@@ -36,7 +37,7 @@ export function MenuItemCardSwipeable({ recommendation, itemCoupons = [] }: Prop
   return (
     <GestureDetector gesture={pan}>
       <Animated.View style={animatedStyle}>
-        <MenuItemCard recommendation={recommendation} itemCoupons={itemCoupons} />
+        <MenuItemCard recommendation={recommendation} itemCoupons={itemCoupons} onCouponClosed={onCouponClosed} />
       </Animated.View>
     </GestureDetector>
   );

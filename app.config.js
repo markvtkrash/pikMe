@@ -46,6 +46,7 @@ export default {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
+      ownerSearchRadiusMeters: process.env.EXPO_PUBLIC_OWNER_SEARCH_RADIUS_METERS,
       eas: {
         projectId: '5a1bbf4f-cdd8-4475-8651-278984841323',
       },

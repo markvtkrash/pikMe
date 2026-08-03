@@ -3,11 +3,18 @@ import { View, Text, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity }
 import { RestaurantCard } from '../restaurant/RestaurantCard';
 import { useLocation } from '../../hooks/useLocation';
 import { useNearbyRestaurants } from '../../hooks/useNearbyRestaurants';
+import { useRestaurantStore } from '../../store/restaurantStore';
+import { RadiusSelector } from '../common/RadiusSelector';
 import type { Restaurant } from '../../types';
 
 export function NearbyMap() {
   const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
+  const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const { data: restaurants = [], isLoading, error: fetchError, refetch } = useNearbyRestaurants(location);
+  // Fetching always covers the max radius; filter to the selected distance client-side.
+  const visibleRestaurants = (restaurants as Restaurant[]).filter(
+    (r) => r.distanceMeters <= searchRadiusMeters
+  );
 
   if (locationLoading) {
     return (
@@ -37,6 +44,8 @@ export function NearbyMap() {
         <Text style={styles.bannerText}>🗺 Map view is available on the mobile app</Text>
       </View>
 
+      <RadiusSelector />
+
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color="#4CAF50" />
@@ -49,15 +58,15 @@ export function NearbyMap() {
             <Text style={styles.btnText}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : restaurants.length === 0 ? (
+      ) : visibleRestaurants.length === 0 ? (
         <View style={styles.center}>
           <Text style={styles.icon}>🍽️</Text>
           <Text style={styles.errorTitle}>No restaurants found</Text>
-          <Text style={styles.errorBody}>Try increasing your search radius in your profile.</Text>
+          <Text style={styles.errorBody}>Try increasing the distance above.</Text>
         </View>
       ) : (
         <FlatList
-          data={restaurants as Restaurant[]}
+          data={visibleRestaurants}
           keyExtractor={(item) => item.placeId}
           renderItem={({ item }) => <RestaurantCard restaurant={item} />}
           contentContainerStyle={styles.list}
