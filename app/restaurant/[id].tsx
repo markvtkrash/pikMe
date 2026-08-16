@@ -30,6 +30,21 @@ function placeholderBg(name: string) {
   return PLACEHOLDER_BG[name.charCodeAt(0) % PLACEHOLDER_BG.length];
 }
 
+// Generic restaurant/food photos shown when a real photo is missing or its
+// Google photo_reference has expired — same restaurant always gets the same
+// one (keyed off its name, like placeholderBg above) rather than a random one
+// flickering between re-renders.
+const PLACEHOLDER_IMAGES = [
+  require('../../assets/placeholders/restaurant-1.jpg'),
+  require('../../assets/placeholders/restaurant-2.jpg'),
+  require('../../assets/placeholders/food-1.jpg'),
+  require('../../assets/placeholders/food-2.png'),
+];
+
+function placeholderImage(name: string) {
+  return PLACEHOLDER_IMAGES[name.charCodeAt(0) % PLACEHOLDER_IMAGES.length];
+}
+
 const LOADING_STATES = [
   { emoji: '📊', text: 'Analyzing nutrition', bg: '#E8F5E9' },
   { emoji: '🎯', text: 'Matching goals', bg: '#E3F2FD' },
@@ -54,6 +69,7 @@ export default function RestaurantDetailScreen() {
   const [couponsOnly, setCouponsOnly] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
+  const [imgFailed, setImgFailed] = useState(false);
 
   const hasSeenNutritionDisclaimer = useUIStore((s) => s.hasSeenNutritionDisclaimer);
   const setHasSeenNutritionDisclaimer = useUIStore((s) => s.setHasSeenNutritionDisclaimer);
@@ -64,6 +80,13 @@ export default function RestaurantDetailScreen() {
   const removeCouponFromList = (couponId: string) =>
     setCoupons((prev) => prev.filter((c) => c.id !== couponId));
   const genericCouponActivation = useCouponActivation({ onClosed: removeCouponFromList });
+
+  // Google's photo_reference tokens can expire independent of our own cache
+  // TTL — reset the failure flag whenever the URL itself changes so a fresh
+  // reference gets a fresh chance to load.
+  useEffect(() => {
+    setImgFailed(false);
+  }, [restaurant?.photoUrl]);
 
   useEffect(() => {
     if (!id) {
@@ -142,7 +165,7 @@ export default function RestaurantDetailScreen() {
     );
   }
 
-  const imgUri = restaurant.photoUrl ?? null;
+  const imgUri = !imgFailed ? restaurant.photoUrl ?? null : null;
 
   const cuisineDisplay = restaurant.cuisineTypes
     .slice(0, 4)
@@ -188,10 +211,9 @@ export default function RestaurantDetailScreen() {
                   contentFit="cover"
                   transition={300}
                   placeholder={{ color: placeholderBg(restaurant.name) }}
+                  onError={() => setImgFailed(true)}
                 />
-              : <View style={[styles.heroImg, { backgroundColor: placeholderBg(restaurant.name), alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ fontSize: 64 }}>🍽️</Text>
-                </View>
+              : <Image source={placeholderImage(restaurant.name)} style={styles.heroImg} contentFit="cover" />
             }
 
             {/* Overlay gradient strip */}
