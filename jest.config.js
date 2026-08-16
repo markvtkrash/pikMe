@@ -6,7 +6,7 @@ module.exports = {
     '**/__tests__/**/*.(test|spec).(ts|tsx|js)',
     '**/*.(test|spec).(ts|tsx|js)'
   ],
-  testPathIgnorePatterns: ['/node_modules/', '/.expo/', '/dist/'],
+  testPathIgnorePatterns: ['/node_modules/', '/.expo/', '/dist/', '<rootDir>/user/', '<rootDir>/adminowner/'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {

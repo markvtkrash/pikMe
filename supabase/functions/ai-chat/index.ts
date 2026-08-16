@@ -129,7 +129,7 @@ Maximum 3 bullets per response.`;
       }
 
       const data = await res.json();
-      response = data.choices?.[0]?.message?.content?.trim() ?? 'Sorry, I could not generate a response.';
+      response = data.choices?.[0]?.message?.content?.trim() || 'Sorry, I could not generate a response.';
     } else {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -156,8 +156,10 @@ Maximum 3 bullets per response.`;
       }
 
       const claudeData = await res.json();
-      response = claudeData.content?.[0]?.text?.trim() ?? 'Sorry, I could not generate a response.';
+      response = claudeData.content?.[0]?.text?.trim() || 'Sorry, I could not generate a response.';
     }
+
+    console.log('[ai-chat] AI response:', JSON.stringify(response));
 
     // Save assistant response to DB
     await userClient.rpc('append_chat_message', {

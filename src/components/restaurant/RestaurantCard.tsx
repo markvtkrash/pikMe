@@ -15,6 +15,21 @@ function placeholderBg(name: string) {
   return PLACEHOLDER_BG[name.charCodeAt(0) % PLACEHOLDER_BG.length];
 }
 
+// Generic restaurant/food photos shown when a real photo is missing or its
+// Google photo_reference has expired — same restaurant always gets the same
+// one (keyed off its name, like placeholderBg above) rather than a random one
+// flickering between re-renders.
+const PLACEHOLDER_IMAGES = [
+  require('../../../assets/placeholders/restaurant-1.jpg'),
+  require('../../../assets/placeholders/restaurant-2.jpg'),
+  require('../../../assets/placeholders/food-1.jpg'),
+  require('../../../assets/placeholders/food-2.png'),
+];
+
+function placeholderImage(name: string) {
+  return PLACEHOLDER_IMAGES[name.charCodeAt(0) % PLACEHOLDER_IMAGES.length];
+}
+
 interface Props {
   restaurant: Restaurant;
   selected?: boolean;
@@ -28,12 +43,20 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   const { toggleRestaurant } = useSaved();
   const hoursDisplay = getHoursDisplay(restaurant.openingHours);
   const [couponCount, setCouponCount] = useState(0);
+  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     getActiveCouponsByPlaceId(restaurant.placeId)
       .then((coupons) => setCouponCount(coupons?.length || 0))
       .catch(() => setCouponCount(0));
   }, [restaurant.placeId]);
+
+  // Google's photo_reference tokens can expire independent of our own cache
+  // TTL — reset the failure flag whenever the URL itself changes so a fresh
+  // reference gets a fresh chance to load.
+  useEffect(() => {
+    setImgFailed(false);
+  }, [restaurant.photoUrl]);
 
   const cuisineLabel = restaurant.cuisineTypes
     .slice(0, 2)
@@ -44,7 +67,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
 
   // photoUrl is generated server-side by Edge Function
   // Attribution: Photos from Google Maps are credited in explore.tsx and NearbyMap.tsx
-  const imgUri = restaurant.photoUrl ?? null;
+  const imgUri = !imgFailed ? restaurant.photoUrl ?? null : null;
 
   const navigate = () =>
     router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.placeId } });
@@ -62,10 +85,8 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
       <TouchableOpacity style={[styles.compact, selected && styles.compactSelected]} onPress={navigate} activeOpacity={0.88}>
         <View style={styles.compactImgBox}>
           {imgUri
-            ? <Image source={{ uri: imgUri }} style={styles.compactImg} contentFit="cover" transition={250} />
-            : <View style={[styles.compactImg, { backgroundColor: placeholderBg(restaurant.name), alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 28 }}>🍽️</Text>
-              </View>
+            ? <Image source={{ uri: imgUri }} style={styles.compactImg} contentFit="cover" transition={250} onError={() => setImgFailed(true)} />
+            : <Image source={placeholderImage(restaurant.name)} style={styles.compactImg} contentFit="cover" />
           }
         </View>
         <View style={styles.compactBody}>
@@ -88,10 +109,9 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
               contentFit="cover"
               transition={300}
               placeholder={{ color: placeholderBg(restaurant.name) }}
+              onError={() => setImgFailed(true)}
             />
-          : <View style={[styles.img, { backgroundColor: placeholderBg(restaurant.name), alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={{ fontSize: 52 }}>🍽️</Text>
-            </View>
+          : <Image source={placeholderImage(restaurant.name)} style={styles.img} contentFit="cover" />
         }
 
         {/* Heart */}
