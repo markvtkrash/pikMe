@@ -11,6 +11,8 @@ import { PasswordChangeModal } from './PasswordChangeModal';
 interface Stats {
   totalUsers: number;
   totalRestaurants: number;
+  approvedRestaurants: number;
+  pendingRestaurants: number;
   totalCoupons: number;
   activeCoupons: number;
   pendingClaims: number;
@@ -22,6 +24,8 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     totalRestaurants: 0,
+    approvedRestaurants: 0,
+    pendingRestaurants: 0,
     totalCoupons: 0,
     activeCoupons: 0,
     pendingClaims: 0,
@@ -114,6 +118,16 @@ export default function AdminDashboard() {
         .from('restaurants')
         .select('*', { count: 'exact', head: true });
 
+      const { count: approvedRestaurants } = await supabase
+        .from('restaurants')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'approved');
+
+      const { count: pendingRestaurants } = await supabase
+        .from('restaurants')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
       // Get total coupons
       const { count: totalCoupons } = await supabase
         .from('coupons')
@@ -141,13 +155,15 @@ export default function AdminDashboard() {
       setStats({
         totalUsers: userCount || 0,
         totalRestaurants: restaurantCount || 0,
+        approvedRestaurants: approvedRestaurants || 0,
+        pendingRestaurants: pendingRestaurants || 0,
         totalCoupons: totalCoupons || 0,
         activeCoupons: activeCoupons || 0,
         pendingClaims: pendingClaims || 0,
         openTickets,
       });
 
-      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, totalCoupons, activeCoupons, pendingClaims, openTickets });
+      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, approvedRestaurants, pendingRestaurants, totalCoupons, activeCoupons, pendingClaims, openTickets });
     } catch (error: any) {
       console.error('[admin-index] Error loading stats:', error);
       Alert.alert('Error', 'Failed to load admin stats');
@@ -199,6 +215,7 @@ export default function AdminDashboard() {
           <Text style={styles.statNumber}>{stats.totalUsers}</Text>
           <Text style={styles.statLabel}>Users</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.statBox, styles.statBoxRestaurants]}
           onPress={() => router.push('/admin/restaurants')}
@@ -206,7 +223,13 @@ export default function AdminDashboard() {
           <Text style={styles.statIcon}>🍽️</Text>
           <Text style={styles.statNumber}>{stats.totalRestaurants}</Text>
           <Text style={styles.statLabel}>Restaurants</Text>
+          <Text style={styles.statBreakdownCompact}>
+            <Text style={styles.statBreakdownApproved}>{stats.approvedRestaurants} ✓</Text>
+            <Text style={styles.statBreakdownGap}>  </Text>
+            <Text style={styles.statBreakdownPending}>{stats.pendingRestaurants} ⏳</Text>
+          </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
           style={[styles.statBox, styles.statBoxCoupons]}
           onPress={() => router.push('/admin/coupons?tab=all')}
@@ -214,98 +237,67 @@ export default function AdminDashboard() {
           <Text style={styles.statIcon}>🎫</Text>
           <Text style={styles.statNumber}>{stats.totalCoupons}</Text>
           <Text style={styles.statLabel}>Coupons</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.statBox, styles.statBoxActive]}
-          onPress={() => router.push('/admin/coupons?tab=active')}
-        >
-          <Text style={styles.statIcon}>✅</Text>
-          <Text style={styles.statNumber}>{stats.activeCoupons}</Text>
-          <Text style={styles.statLabel}>Active</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Support Tickets Alert */}
-      <Animated.View style={{ opacity: stats.openTickets > 0 ? blinkAnim : 1, marginHorizontal: 12 }}>
-        <TouchableOpacity
-          style={[styles.ticketsAlert, stats.openTickets > 0 && styles.ticketsAlertActive]}
-          onPress={() => router.push('/admin/tickets?status=open')}
-        >
-          <Text style={styles.ticketsAlertIcon}>🎫</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.ticketsAlertLabel}>Support Tickets</Text>
-            <Text style={styles.ticketsAlertSubtext}>
-              {stats.openTickets > 0 ? 'Needs attention' : 'All caught up'}
-            </Text>
-          </View>
-          <Text style={[styles.ticketsAlertNumber, stats.openTickets > 0 && styles.ticketsAlertNumberActive]}>
-            {stats.openTickets}
+          <Text style={[styles.statBreakdownCompact, styles.statBreakdownApproved]}>
+            {stats.activeCoupons} active
           </Text>
         </TouchableOpacity>
-      </Animated.View>
+
+        <Animated.View style={[styles.statBoxWrapper, { opacity: stats.openTickets > 0 ? blinkAnim : 1 }]}>
+          <TouchableOpacity
+            style={[
+              styles.statBox, styles.statBoxTickets,
+              stats.openTickets > 0 && styles.statBoxTicketsActive,
+              { width: '100%' },
+            ]}
+            onPress={() => router.push('/admin/tickets?status=open')}
+          >
+            <Text style={styles.statIcon}>🎧</Text>
+            <Text style={[styles.statNumber, stats.openTickets > 0 && styles.statNumberAlert]}>
+              {stats.openTickets}
+            </Text>
+            <Text style={styles.statLabel}>Support</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
 
       {/* Admin Sections */}
       <Text style={styles.sectionTitle}>Administration</Text>
 
-      <TouchableOpacity
-        style={styles.adminCard}
-        onPress={() => router.push('/admin/claims')}
-      >
-        <View style={styles.adminCardIcon}>
-          <Text style={styles.adminCardIconText}>📋</Text>
-        </View>
-        <View style={styles.adminCardContent}>
-          <Text style={styles.adminCardTitle}>Pending Claims</Text>
-          <Text style={styles.adminCardSubtitle}>
-            {stats.pendingClaims} restaurants awaiting approval
-          </Text>
-        </View>
-        <Text style={styles.adminCardArrow}>›</Text>
-      </TouchableOpacity>
+      <View style={styles.adminTilesGrid}>
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileClaims]}
+          onPress={() => router.push('/admin/claims')}
+        >
+          {stats.pendingClaims > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.pendingClaims}</Text>
+            </View>
+          )}
+          <Text style={styles.adminTileIcon}>📋</Text>
+          <Text style={styles.adminTileTitle}>Pending Claims</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.adminCard}
-        onPress={() => router.push('/admin/coupons')}
-      >
-        <View style={[styles.adminCardIcon, styles.adminCardIconCoupons]}>
-          <Text style={styles.adminCardIconText}>🎟️</Text>
-        </View>
-        <View style={styles.adminCardContent}>
-          <Text style={styles.adminCardTitle}>Coupon Management</Text>
-          <Text style={styles.adminCardSubtitle}>
-            View, restore, or purge coupons
-          </Text>
-        </View>
-        <Text style={styles.adminCardArrow}>›</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileCoupons]}
+          onPress={() => router.push('/admin/coupons')}
+        >
+          <Text style={styles.adminTileIcon}>🎟️</Text>
+          <Text style={styles.adminTileTitle}>Coupon Management</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={styles.adminCard}
-        onPress={() => router.push('/admin/create-owner')}
-      >
-        <View style={[styles.adminCardIcon, styles.adminCardIconUsers]}>
-          <Text style={styles.adminCardIconText}>➕</Text>
-        </View>
-        <View style={styles.adminCardContent}>
-          <Text style={styles.adminCardTitle}>Create Restaurant Owner</Text>
-          <Text style={styles.adminCardSubtitle}>
-            Provision and approve an owner account
-          </Text>
-        </View>
-        <Text style={styles.adminCardArrow}>›</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileOwner]}
+          onPress={() => router.push('/admin/create-owner')}
+        >
+          <Text style={styles.adminTileIcon}>➕</Text>
+          <Text style={styles.adminTileTitle}>Create Restaurant Owner</Text>
+        </TouchableOpacity>
 
-      <View style={[styles.adminCard, styles.adminCardDisabled]}>
-        <View style={[styles.adminCardIcon, styles.adminCardIconSettings]}>
-          <Text style={styles.adminCardIconText}>⚙️</Text>
+        <View style={[styles.adminTile, styles.adminTileSettings, styles.adminTileDisabled]}>
+          <Text style={styles.adminTileIcon}>⚙️</Text>
+          <Text style={styles.adminTileTitle}>Settings</Text>
+          <Text style={styles.adminTileComingSoon}>Coming soon</Text>
         </View>
-        <View style={styles.adminCardContent}>
-          <Text style={styles.adminCardTitle}>Settings</Text>
-          <Text style={styles.adminCardSubtitle}>
-            Coming soon - system configuration
-          </Text>
-        </View>
-        <Text style={styles.adminCardArrowDisabled}>⏳</Text>
       </View>
       </View>
     </ScrollView>
@@ -381,68 +373,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 12,
-    paddingVertical: 16,
-    gap: 12,
+    paddingVertical: 12,
+    gap: 10,
   },
+  statBoxWrapper: { width: '48%' },
   statBox: {
     width: '48%',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    gap: 3,
   },
   statBoxUsers: { backgroundColor: '#E3F2FD' },
   statBoxRestaurants: { backgroundColor: '#F3E5F5' },
   statBoxCoupons: { backgroundColor: '#FFF3E0' },
-  statBoxActive: { backgroundColor: '#E8F5E9' },
-  statIcon: { fontSize: 32 },
-  statNumber: { fontSize: 24, fontWeight: '800', color: '#222' },
-  statLabel: { fontSize: 11, fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 },
-
-  ticketsAlert: {
-    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F5F5F5',
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-  },
-  ticketsAlertActive: { backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#e53e3e' },
-  ticketsAlertIcon: { fontSize: 28 },
-  ticketsAlertLabel: { fontSize: 14, fontWeight: '800', color: '#222' },
-  ticketsAlertSubtext: { fontSize: 12, color: '#999', marginTop: 2 },
-  ticketsAlertNumber: { fontSize: 28, fontWeight: '800', color: '#999' },
-  ticketsAlertNumberActive: { color: '#e53e3e' },
+  statBoxTickets: { backgroundColor: '#F5F5F5' },
+  statBoxTicketsActive: { backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#e53e3e' },
+  statIcon: { fontSize: 20 },
+  statNumber: { fontSize: 18, fontWeight: '800', color: '#222' },
+  statNumberAlert: { color: '#e53e3e' },
+  statLabel: { fontSize: 9, fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3 },
+  statBreakdownCompact: { fontSize: 11, fontWeight: '800', marginTop: 2 },
+  statBreakdownApproved: { color: '#2e7d32' },
+  statBreakdownPending: { color: '#E65100' },
+  statBreakdownGap: { color: 'transparent' },
 
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#222', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
 
-  adminCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 16,
-    marginBottom: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 12,
+  adminTilesGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 12,
+    paddingBottom: 16,
+    gap: 10,
+  },
+  adminTile: {
+    width: '48%',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 10,
     alignItems: 'center',
-    gap: 12,
+    gap: 6,
     elevation: 1,
+    position: 'relative',
   },
-  adminCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#E3F2FD',
-    justifyContent: 'center',
-    alignItems: 'center',
+  adminTileClaims: { backgroundColor: '#E3F2FD' },
+  adminTileCoupons: { backgroundColor: '#FFF3E0' },
+  adminTileOwner: { backgroundColor: '#F3E5F5' },
+  adminTileSettings: { backgroundColor: '#E8F5E9' },
+  adminTileIcon: { fontSize: 26 },
+  adminTileTitle: { fontSize: 13, fontWeight: '700', color: '#222', textAlign: 'center' },
+  adminTileComingSoon: { fontSize: 10, color: '#999', fontWeight: '600' },
+  adminTileDisabled: { opacity: 0.6 },
+  adminTileBadge: {
+    position: 'absolute', top: 8, right: 8, backgroundColor: '#e53e3e', borderRadius: 10,
+    minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
   },
-  adminCardIconCoupons: { backgroundColor: '#FFF3E0' },
-  adminCardIconUsers: { backgroundColor: '#F3E5F5' },
-  adminCardIconSettings: { backgroundColor: '#E8F5E9' },
-  adminCardIconText: { fontSize: 24 },
-  adminCardContent: { flex: 1 },
-  adminCardTitle: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
-  adminCardSubtitle: { fontSize: 12, color: '#999' },
-  adminCardArrow: { fontSize: 24, color: '#1565C0', fontWeight: '800' },
-  adminCardDisabled: { opacity: 0.6 },
-  adminCardArrowDisabled: { fontSize: 20, color: '#999', fontWeight: '800' },
+  adminTileBadgeText: { fontSize: 11, fontWeight: '800', color: '#fff' },
 
   easterEggOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   easterEggCard: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center', width: '100%', maxWidth: 340 },
