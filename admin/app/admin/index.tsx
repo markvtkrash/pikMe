@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Modal,
   ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -31,7 +31,26 @@ export default function AdminDashboard() {
   const [userEmail, setUserEmail] = useState<string>('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showEasterEgg, setShowEasterEgg] = useState(false);
   const blinkAnim = useRef(new Animated.Value(1)).current;
+  const titleTapCount = useRef(0);
+  const titleTapResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleTitleTap() {
+    titleTapCount.current += 1;
+    if (titleTapResetTimer.current) clearTimeout(titleTapResetTimer.current);
+
+    if (titleTapCount.current >= 7) {
+      titleTapCount.current = 0;
+      setShowEasterEgg(true);
+      return;
+    }
+
+    // Reset the streak if taps stop coming in quickly
+    titleTapResetTimer.current = setTimeout(() => {
+      titleTapCount.current = 0;
+    }, 1500);
+  }
 
   useEffect(() => {
     loadUserInfo();
@@ -151,7 +170,9 @@ export default function AdminDashboard() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>🏢 PikMe Admin</Text>
+          <TouchableOpacity activeOpacity={1} onPress={handleTitleTap}>
+            <Text style={styles.title}>🏢 PikMe Admin</Text>
+          </TouchableOpacity>
           <Text style={styles.subtitle}>Administration Dashboard</Text>
         </View>
         <View style={styles.headerRight}>
@@ -178,11 +199,14 @@ export default function AdminDashboard() {
           <Text style={styles.statNumber}>{stats.totalUsers}</Text>
           <Text style={styles.statLabel}>Users</Text>
         </TouchableOpacity>
-        <View style={[styles.statBox, styles.statBoxRestaurants]}>
+        <TouchableOpacity
+          style={[styles.statBox, styles.statBoxRestaurants]}
+          onPress={() => router.push('/admin/restaurants')}
+        >
           <Text style={styles.statIcon}>🍽️</Text>
           <Text style={styles.statNumber}>{stats.totalRestaurants}</Text>
           <Text style={styles.statLabel}>Restaurants</Text>
-        </View>
+        </TouchableOpacity>
         <TouchableOpacity
           style={[styles.statBox, styles.statBoxCoupons]}
           onPress={() => router.push('/admin/coupons?tab=all')}
@@ -306,6 +330,21 @@ export default function AdminDashboard() {
 
     {/* Password Change Modal Component */}
     <PasswordChangeModal visible={showPasswordModal} userEmail={userEmail} onClose={() => setShowPasswordModal(false)} />
+
+    {/* Easter Egg — tap the header title 7 times */}
+    <Modal visible={showEasterEgg} transparent animationType="fade" onRequestClose={() => setShowEasterEgg(false)}>
+      <View style={styles.easterEggOverlay}>
+        <View style={styles.easterEggCard}>
+          <Text style={styles.easterEggIcon}>🎉</Text>
+          <Text style={styles.easterEggText}>Built with ❤️ by</Text>
+          <Text style={styles.easterEggName}>Vikram R Vallurupalli</Text>
+          <Text style={styles.easterEggRole}>Lead Engineer</Text>
+          <TouchableOpacity style={styles.easterEggCloseBtn} onPress={() => setShowEasterEgg(false)}>
+            <Text style={styles.easterEggCloseBtnText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
     </View>
   );
 }
@@ -404,4 +443,13 @@ const styles = StyleSheet.create({
   adminCardArrow: { fontSize: 24, color: '#1565C0', fontWeight: '800' },
   adminCardDisabled: { opacity: 0.6 },
   adminCardArrowDisabled: { fontSize: 20, color: '#999', fontWeight: '800' },
+
+  easterEggOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  easterEggCard: { backgroundColor: '#fff', borderRadius: 20, paddingVertical: 32, paddingHorizontal: 28, alignItems: 'center', width: '100%', maxWidth: 340 },
+  easterEggIcon: { fontSize: 48, marginBottom: 12 },
+  easterEggText: { fontSize: 14, color: '#666', marginBottom: 4 },
+  easterEggName: { fontSize: 22, fontWeight: '800', color: '#1565C0', textAlign: 'center', marginBottom: 4 },
+  easterEggRole: { fontSize: 13, color: '#999', fontWeight: '600', marginBottom: 24 },
+  easterEggCloseBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
+  easterEggCloseBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

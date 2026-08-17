@@ -75,6 +75,21 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="restaurants"
+        options={{
+          title: '🍽️ Restaurants',
+          headerLeft: () => <BackButton />,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => supabase.auth.signOut().then(() => router.replace('/admin/login'))}
+              style={styles.logoutBtn}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
         name="tickets"
         options={{
           title: '🎫 Support Tickets',
