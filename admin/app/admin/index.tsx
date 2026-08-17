@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated,
   ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { getOpenTicketCount } from '../../src/api/supportTickets';
 import { PasswordChangeModal } from './PasswordChangeModal';
 
 interface Stats {
@@ -13,6 +14,7 @@ interface Stats {
   totalCoupons: number;
   activeCoupons: number;
   pendingClaims: number;
+  openTickets: number;
 }
 
 export default function AdminDashboard() {
@@ -23,16 +25,33 @@ export default function AdminDashboard() {
     totalCoupons: 0,
     activeCoupons: 0,
     pendingClaims: 0,
+    openTickets: 0,
   });
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const blinkAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     loadUserInfo();
     loadStats();
   }, []);
+
+  // Blink the support-ticket count while there's at least one open ticket.
+  useEffect(() => {
+    if (stats.openTickets > 0) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(blinkAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
+          Animated.timing(blinkAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        ])
+      );
+      loop.start();
+      return () => loop.stop();
+    }
+    blinkAnim.setValue(1);
+  }, [stats.openTickets]);
 
   async function loadUserInfo() {
     try {
@@ -66,10 +85,10 @@ export default function AdminDashboard() {
     try {
       console.log('[admin-index] Loading stats');
 
-      // Get user count
-      const { count: userCount } = await supabase
-        .from('auth.users')
-        .select('*', { count: 'exact', head: true });
+      // Get user count — auth.users isn't exposed to PostgREST directly, so
+      // this goes through the same list_all_users() RPC the Users list uses.
+      const { data: allUsers } = await supabase.rpc('list_all_users');
+      const userCount = allUsers?.length ?? 0;
 
       // Get restaurant count
       const { count: restaurantCount } = await supabase
@@ -97,26 +116,25 @@ export default function AdminDashboard() {
         .select('*', { count: 'exact', head: true })
         .is('claimed_at', null);
 
+      // Get open support tickets
+      const openTickets = await getOpenTicketCount();
+
       setStats({
         totalUsers: userCount || 0,
         totalRestaurants: restaurantCount || 0,
         totalCoupons: totalCoupons || 0,
         activeCoupons: activeCoupons || 0,
         pendingClaims: pendingClaims || 0,
+        openTickets,
       });
 
-      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, totalCoupons, activeCoupons, pendingClaims });
+      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, totalCoupons, activeCoupons, pendingClaims, openTickets });
     } catch (error: any) {
       console.error('[admin-index] Error loading stats:', error);
       Alert.alert('Error', 'Failed to load admin stats');
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.replace('/admin/login');
   }
 
   if (loading) {
@@ -149,29 +167,58 @@ export default function AdminDashboard() {
         </View>
       </View>
 
+      <View style={styles.pageWrapper}>
       {/* Stats Overview */}
       <View style={styles.statsGrid}>
-        <View style={[styles.statBox, styles.statBoxUsers]}>
+        <TouchableOpacity
+          style={[styles.statBox, styles.statBoxUsers]}
+          onPress={() => router.push('/admin/users')}
+        >
           <Text style={styles.statIcon}>👥</Text>
           <Text style={styles.statNumber}>{stats.totalUsers}</Text>
           <Text style={styles.statLabel}>Users</Text>
-        </View>
+        </TouchableOpacity>
         <View style={[styles.statBox, styles.statBoxRestaurants]}>
           <Text style={styles.statIcon}>🍽️</Text>
           <Text style={styles.statNumber}>{stats.totalRestaurants}</Text>
           <Text style={styles.statLabel}>Restaurants</Text>
         </View>
-        <View style={[styles.statBox, styles.statBoxCoupons]}>
+        <TouchableOpacity
+          style={[styles.statBox, styles.statBoxCoupons]}
+          onPress={() => router.push('/admin/coupons?tab=all')}
+        >
           <Text style={styles.statIcon}>🎫</Text>
           <Text style={styles.statNumber}>{stats.totalCoupons}</Text>
           <Text style={styles.statLabel}>Coupons</Text>
-        </View>
-        <View style={[styles.statBox, styles.statBoxActive]}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.statBox, styles.statBoxActive]}
+          onPress={() => router.push('/admin/coupons?tab=active')}
+        >
           <Text style={styles.statIcon}>✅</Text>
           <Text style={styles.statNumber}>{stats.activeCoupons}</Text>
           <Text style={styles.statLabel}>Active</Text>
-        </View>
+        </TouchableOpacity>
       </View>
+
+      {/* Support Tickets Alert */}
+      <Animated.View style={{ opacity: stats.openTickets > 0 ? blinkAnim : 1, marginHorizontal: 12 }}>
+        <TouchableOpacity
+          style={[styles.ticketsAlert, stats.openTickets > 0 && styles.ticketsAlertActive]}
+          onPress={() => router.push('/admin/tickets?status=open')}
+        >
+          <Text style={styles.ticketsAlertIcon}>🎫</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.ticketsAlertLabel}>Support Tickets</Text>
+            <Text style={styles.ticketsAlertSubtext}>
+              {stats.openTickets > 0 ? 'Needs attention' : 'All caught up'}
+            </Text>
+          </View>
+          <Text style={[styles.ticketsAlertNumber, stats.openTickets > 0 && styles.ticketsAlertNumberActive]}>
+            {stats.openTickets}
+          </Text>
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* Admin Sections */}
       <Text style={styles.sectionTitle}>Administration</Text>
@@ -236,6 +283,7 @@ export default function AdminDashboard() {
         </View>
         <Text style={styles.adminCardArrowDisabled}>⏳</Text>
       </View>
+      </View>
     </ScrollView>
 
     {/* Settings Dropdown - Rendered at root level to avoid ScrollView clipping */}
@@ -265,6 +313,7 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  pageWrapper: { width: '100%', maxWidth: 900, alignSelf: 'center' },
 
   header: {
     backgroundColor: '#1565C0',
@@ -311,6 +360,17 @@ const styles = StyleSheet.create({
   statIcon: { fontSize: 32 },
   statNumber: { fontSize: 24, fontWeight: '800', color: '#222' },
   statLabel: { fontSize: 11, fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 },
+
+  ticketsAlert: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F5F5F5',
+    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+  },
+  ticketsAlertActive: { backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#e53e3e' },
+  ticketsAlertIcon: { fontSize: 28 },
+  ticketsAlertLabel: { fontSize: 14, fontWeight: '800', color: '#222' },
+  ticketsAlertSubtext: { fontSize: 12, color: '#999', marginTop: 2 },
+  ticketsAlertNumber: { fontSize: 28, fontWeight: '800', color: '#999' },
+  ticketsAlertNumberActive: { color: '#e53e3e' },
 
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#222', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
 

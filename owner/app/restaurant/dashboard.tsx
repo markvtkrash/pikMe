@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons } from '../../src/api/restaurantAuth';
+import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../src/api/supportTickets';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 
 interface Coupon {
@@ -24,6 +25,7 @@ export default function RestaurantDashboardScreen() {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [expiredCount, setExpiredCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
 
   useEffect(() => {
     if (!owner) {
@@ -36,8 +38,27 @@ export default function RestaurantDashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       loadCoupons();
+      loadResolvedTickets();
     }, [restaurant])
   );
+
+  async function loadResolvedTickets() {
+    try {
+      const tickets = await getMyTickets();
+      setResolvedTickets(tickets.filter((t) => t.status === 'resolved' && !t.owner_seen_resolution));
+    } catch (error) {
+      console.error('[dashboard] Failed to load resolved tickets:', error);
+    }
+  }
+
+  async function handleDismissResolution(ticketId: string) {
+    setResolvedTickets((prev) => prev.filter((t) => t.id !== ticketId));
+    try {
+      await markTicketResolutionSeen(ticketId);
+    } catch (error) {
+      console.error('[dashboard] Failed to mark ticket seen:', error);
+    }
+  }
 
   async function loadCoupons() {
     if (!restaurant) {
@@ -124,35 +145,64 @@ export default function RestaurantDashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Resolved ticket notifications */}
+      {resolvedTickets.map((ticket) => (
+        <View key={ticket.id} style={styles.resolvedBanner}>
+          <Text style={styles.resolvedBannerIcon}>✅</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.resolvedBannerTitle}>"{ticket.subject}" has been resolved</Text>
+            {ticket.resolution && (
+              <Text style={styles.resolvedBannerText}>{ticket.resolution}</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.resolvedBannerDismiss}
+            onPress={() => handleDismissResolution(ticket.id)}
+          >
+            <Text style={styles.resolvedBannerDismissText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+
       {/* Stats */}
       <View style={styles.statsRow}>
+        <View style={[styles.statBox, styles.statBoxGreen]}>
+          <Text style={styles.statBoxTitle}>Coupons</Text>
+          <View style={styles.couponLinksRow}>
+            <TouchableOpacity
+              style={styles.couponLink}
+              onPress={() => router.push('/restaurant/menu')}
+            >
+              <Text style={styles.statNumber}>{coupons.length}</Text>
+              <Text style={styles.couponLinkLabel}>Active</Text>
+            </TouchableOpacity>
+            <View style={styles.couponLinkDivider} />
+            <TouchableOpacity
+              style={styles.couponLink}
+              onPress={() => router.push('/restaurant/expired')}
+            >
+              <Text style={[styles.statNumber, { color: '#e53e3e' }]}>{expiredCount}</Text>
+              <Text style={[styles.couponLinkLabel, { color: '#e53e3e' }]}>Expired</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <TouchableOpacity
-          style={[styles.statBox, styles.statBoxGreen]}
-          onPress={() => router.push('/restaurant/menu')}
+          style={[styles.statBox, styles.statBoxSupport]}
+          onPress={() => router.push('/restaurant/support')}
         >
-          <Text style={styles.statNumber}>{coupons.length}</Text>
-          <Text style={styles.statLabel}>Active</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.statBox, styles.statBoxRed]}
-          onPress={() => router.push('/restaurant/expired')}
-        >
-          <Text style={[styles.statNumber, { color: '#e53e3e' }]}>{expiredCount}</Text>
-          <Text style={styles.statLabel}>Expired</Text>
+          <Text style={styles.statIcon}>💬</Text>
+          <Text style={styles.statLabel}>Support</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Menu Items Button */}
+      {/* Menu Items Link */}
       <TouchableOpacity
-        style={styles.menuItemsBtn}
+        style={[styles.headingBlock, styles.headingBlockGreen]}
         onPress={() => router.push('/restaurant/menu')}
       >
-        <Text style={styles.menuItemsIcon}>📋</Text>
-        <View style={styles.menuItemsContent}>
-          <Text style={styles.menuItemsTitle}>Menu Items</Text>
-          <Text style={styles.menuItemsSubtitle}>View and manage all menu items</Text>
-        </View>
-        <Text style={styles.menuItemsArrow}>→</Text>
+        <Text style={styles.headingBlockIcon}>📋</Text>
+        <Text style={[styles.headingBlockText, { color: '#2e7d32' }]}>Add Coupons to Menu Items</Text>
+        <Text style={[styles.headingBlockArrow, { color: '#2e7d32' }]}>→</Text>
       </TouchableOpacity>
 
       {/* Show warning if not approved */}
@@ -165,7 +215,10 @@ export default function RestaurantDashboardScreen() {
 
       {/* Coupon performance table */}
       <View style={styles.couponTableSection}>
-        <Text style={styles.sectionTitle}>Coupon Performance</Text>
+        <View style={[styles.headingBlock, styles.headingBlockBlue, styles.headingBlockNoMargin]}>
+          <Text style={styles.headingBlockIcon}>📊</Text>
+          <Text style={[styles.headingBlockText, { color: '#1565C0' }]}>Coupon Performance</Text>
+        </View>
         {coupons.length === 0 ? (
           <View style={styles.emptyList}>
             <Text style={styles.emptyListText}>No active coupons yet</Text>
@@ -175,26 +228,65 @@ export default function RestaurantDashboardScreen() {
           <View style={styles.table}>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.tableHeaderCell, styles.tableCodeCol]}>Code</Text>
+              <Text style={[styles.tableHeaderCell, styles.tableDiscountCol]}>Discount</Text>
               <Text style={[styles.tableHeaderCell, styles.tableUsedCol]}>Used</Text>
               <Text style={[styles.tableHeaderCell, styles.tableExpiresCol]}>Expires</Text>
+              <View style={styles.tableChevronCol} />
             </View>
-            {coupons.map((coupon) => (
-              <TouchableOpacity
-                key={coupon.id}
-                style={styles.tableRow}
-                onPress={() => router.push(`/restaurant/coupon/${coupon.id}/edit`)}
-              >
-                <Text style={[styles.tableCell, styles.tableCodeCol, styles.tableCodeText]} numberOfLines={1}>
-                  {coupon.coupon_code}
-                </Text>
-                <Text style={[styles.tableCell, styles.tableUsedCol]}>
-                  {coupon.times_used}/{coupon.usage_limit ?? '∞'}
-                </Text>
-                <Text style={[styles.tableCell, styles.tableExpiresCol]}>
-                  {new Date(coupon.expiry_date).toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {coupons.map((coupon, index) => {
+              const usageRatio = coupon.usage_limit
+                ? Math.min(coupon.times_used / coupon.usage_limit, 1)
+                : 0;
+              const daysUntilExpiry = Math.ceil(
+                (new Date(coupon.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+              );
+              const expiringSoon = daysUntilExpiry <= 7;
+
+              return (
+                <TouchableOpacity
+                  key={coupon.id}
+                  style={[styles.tableRow, index % 2 === 1 && styles.tableRowAlt]}
+                  onPress={() => router.push(`/restaurant/coupon/${coupon.id}/edit`)}
+                >
+                  <View style={styles.tableCodeCol}>
+                    <View style={styles.codeBadge}>
+                      <Text style={styles.codeBadgeText} numberOfLines={1}>{coupon.coupon_code}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.tableDiscountCol}>
+                    <View style={styles.discountBadge}>
+                      <Text style={styles.discountBadgeText}>
+                        {coupon.coupon_type.includes('percent')
+                          ? `${coupon.discount_value}%`
+                          : `$${coupon.discount_value}`} off
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.tableUsedCol}>
+                    <Text style={styles.usedText}>
+                      {coupon.times_used}/{coupon.usage_limit ?? '∞'}
+                    </Text>
+                    {coupon.usage_limit ? (
+                      <View style={styles.usageBarTrack}>
+                        <View style={[styles.usageBarFill, { width: `${usageRatio * 100}%` }]} />
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.tableExpiresCol}>
+                    <Text style={[styles.expiresText, expiringSoon && styles.expiresTextSoon]}>
+                      {new Date(coupon.expiry_date).toLocaleDateString()}
+                    </Text>
+                  </View>
+
+                  <View style={styles.tableChevronCol}>
+                    <Text style={styles.rowChevron}>›</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
       </View>
@@ -204,7 +296,7 @@ export default function RestaurantDashboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { paddingBottom: 24, width: '100%', maxWidth: 900, alignSelf: 'center' },
   header: {
     backgroundColor: '#fff',
     paddingHorizontal: 16,
@@ -224,26 +316,48 @@ const styles = StyleSheet.create({
   logoutBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#f0f0f0' },
   logoutText: { fontSize: 12, color: '#e53e3e', fontWeight: '600' },
 
+  resolvedBanner: {
+    backgroundColor: '#E8F5E9', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#4CAF50', flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  resolvedBannerIcon: { fontSize: 20 },
+  resolvedBannerTitle: { fontSize: 13, fontWeight: '700', color: '#2e7d32' },
+  resolvedBannerText: { fontSize: 12, color: '#2e7d32', marginTop: 2 },
+  resolvedBannerDismiss: { backgroundColor: '#4CAF50', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  resolvedBannerDismissText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
   statsRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   statBox: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 12,
+    minHeight: 92,
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 2,
   },
   statBoxGreen: { backgroundColor: '#E8F5E9', borderWidth: 2, borderColor: '#4CAF50' },
-  statBoxRed: { backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#e53e3e' },
-  statNumber: { fontSize: 24, fontWeight: '800', color: '#4CAF50' },
+  statBoxSupport: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#ddd' },
+  statIcon: { fontSize: 24, marginBottom: 4 },
+  statNumber: { fontSize: 22, fontWeight: '800', color: '#4CAF50' },
+  statBoxTitle: { fontSize: 11, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  couponLinksRow: { flexDirection: 'row', alignItems: 'center', width: '100%' },
+  couponLink: { flex: 1, alignItems: 'center' },
+  couponLinkLabel: { fontSize: 11, color: '#4CAF50', fontWeight: '600', marginTop: 2 },
+  couponLinkDivider: { width: 1, height: 32, backgroundColor: 'rgba(0,0,0,0.08)' },
   statLabel: { fontSize: 11, color: '#999', marginTop: 4 },
 
-  menuItemsBtn: { backgroundColor: '#fff', marginHorizontal: 16, marginVertical: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 2 },
-  menuItemsIcon: { fontSize: 24 },
-  menuItemsContent: { flex: 1 },
-  menuItemsTitle: { fontSize: 14, fontWeight: '700', color: '#222' },
-  menuItemsSubtitle: { fontSize: 12, color: '#999', marginTop: 2 },
-  menuItemsArrow: { fontSize: 18, color: '#4CAF50', fontWeight: '600' },
+  headingBlock: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 16,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderLeftWidth: 4,
+  },
+  headingBlockNoMargin: { marginHorizontal: 0, marginTop: 0, marginBottom: 12 },
+  headingBlockGreen: { backgroundColor: '#E8F5E9', borderLeftColor: '#4CAF50' },
+  headingBlockBlue: { backgroundColor: '#E3F2FD', borderLeftColor: '#1565C0' },
+  headingBlockIcon: { fontSize: 18 },
+  headingBlockText: { flex: 1, fontSize: 14, fontWeight: '800' },
+  headingBlockArrow: { fontSize: 16, fontWeight: '800' },
 
   warningBox: { backgroundColor: '#FFF3E0', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#E65100', flexDirection: 'row', alignItems: 'center', gap: 10 },
   warningIcon: { fontSize: 20 },
@@ -273,28 +387,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
     elevation: 2,
   },
   tableHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FAFAFA',
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  tableHeaderCell: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase' },
+  tableHeaderCell: { fontSize: 10, fontWeight: '800', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f5f5f5',
   },
-  tableCell: { fontSize: 13, color: '#444' },
-  tableCodeText: { fontWeight: '700', color: '#222' },
-  tableCodeCol: { flex: 1.4 },
-  tableUsedCol: { flex: 1, textAlign: 'center' },
-  tableExpiresCol: { flex: 1.2, textAlign: 'right' },
+  tableRowAlt: { backgroundColor: '#FAFCFB' },
+  tableCodeCol: { flex: 1.3 },
+  tableDiscountCol: { flex: 1 },
+  tableUsedCol: { flex: 1 },
+  tableExpiresCol: { flex: 1.1, textAlign: 'right', alignItems: 'flex-end' },
+  tableChevronCol: { width: 16, alignItems: 'flex-end' },
+
+  codeBadge: { backgroundColor: '#E8F5E9', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
+  codeBadgeText: { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
+  discountBadge: { backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
+  discountBadgeText: { fontSize: 11, fontWeight: '700', color: '#E65100' },
+  usedText: { fontSize: 12, color: '#444', fontWeight: '600', marginBottom: 4 },
+  usageBarTrack: { height: 4, width: '80%', backgroundColor: '#eee', borderRadius: 2, overflow: 'hidden' },
+  usageBarFill: { height: 4, backgroundColor: '#4CAF50', borderRadius: 2 },
+  expiresText: { fontSize: 12, color: '#666' },
+  expiresTextSoon: { color: '#e53e3e', fontWeight: '700' },
+  rowChevron: { fontSize: 20, color: '#ccc', fontWeight: '700' },
 });

@@ -281,6 +281,7 @@ export default function AdminCreateOwnerScreen() {
   // ── Search ───────────────────────────────────────────────────────────
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.sectionTitle}>Create Restaurant Owner</Text>
         <Text style={styles.headerSubtitle}>
@@ -328,11 +329,13 @@ export default function AdminCreateOwnerScreen() {
         }
       />
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 720, alignSelf: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 12 },
   sectionTitle: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 4 },
   headerSubtitle: { fontSize: 13, color: '#666' },
@@ -359,7 +362,7 @@ const styles = StyleSheet.create({
   resultArrow: { fontSize: 24, color: '#1565C0', fontWeight: '800' },
   emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 40 },
 
-  formContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40 },
+  formContent: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40, width: '100%', maxWidth: 480, alignSelf: 'center' },
   selectedCard: {
     backgroundColor: '#E3F2FD', borderRadius: 12, padding: 14, marginBottom: 20,
     borderLeftWidth: 4, borderLeftColor: '#1565C0',
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: { color: '#1565C0', fontSize: 14, fontWeight: '600' },
   btnDisabled: { opacity: 0.6 },
 
-  successContent: { paddingHorizontal: 16, paddingTop: 40, paddingBottom: 40, alignItems: 'center' },
+  successContent: { paddingHorizontal: 16, paddingTop: 40, paddingBottom: 40, alignItems: 'center', width: '100%', maxWidth: 480, alignSelf: 'center' },
   successIcon: { fontSize: 56, marginBottom: 12 },
   successTitle: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 8 },
   successSubtitle: { fontSize: 13, color: '#666', textAlign: 'center', marginBottom: 24, lineHeight: 19 },

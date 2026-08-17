@@ -139,7 +139,7 @@ export default function EditCouponScreen() {
   }
 
   async function handleDelete() {
-    console.log('[coupon-edit] handleDelete called, coupon:', coupon?.coupon_id);
+    console.log('[coupon-edit] handleDelete called, coupon:', coupon?.id);
     if (!coupon) {
       console.error('[coupon-edit] No coupon found');
       return;
@@ -374,7 +374,7 @@ export default function EditCouponScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   scrollView: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: 560, alignSelf: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
   helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
@@ -450,7 +450,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
   },
-  deleteBtnDisabled: { opacity: 0.6 },
   deleteBtnDisabled: { opacity: 0.6 },
   deleteBtnText: { color: '#e53e3e', fontSize: 14, fontWeight: '700' },
 });

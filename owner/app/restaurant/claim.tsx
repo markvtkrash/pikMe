@@ -155,6 +155,7 @@ export default function ClaimRestaurantScreen() {
 
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.title}>Claim Your Restaurant</Text>
         <Text style={styles.subtitle}>Use your current location or enter a zip code to find it nearby</Text>
@@ -264,11 +265,13 @@ export default function ClaimRestaurantScreen() {
         }
       />
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#666' },

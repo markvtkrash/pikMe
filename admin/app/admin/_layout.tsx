@@ -60,6 +60,43 @@ export default function AdminLayout() {
         }}
       />
       <Stack.Screen
+        name="users"
+        options={{
+          title: '👥 All Users',
+          headerLeft: () => <BackButton />,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => supabase.auth.signOut().then(() => router.replace('/admin/login'))}
+              style={styles.logoutBtn}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
+        name="tickets"
+        options={{
+          title: '🎫 Support Tickets',
+          headerLeft: () => <BackButton />,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => supabase.auth.signOut().then(() => router.replace('/admin/login'))}
+              style={styles.logoutBtn}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen
+        name="tickets/[id]"
+        options={{
+          title: 'Ticket Details',
+          headerLeft: () => <BackButton />,
+        }}
+      />
+      <Stack.Screen
         name="claims"
         options={{
           title: 'Pending Claims',

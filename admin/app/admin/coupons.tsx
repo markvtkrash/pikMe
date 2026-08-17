@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, Alert, TextInput, ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 
 type CouponStatus = 'active' | 'expired' | 'deleted' | 'all';
@@ -23,12 +23,16 @@ interface Coupon {
   created_at: string;
 }
 
+const VALID_TABS: CouponStatus[] = ['active', 'expired', 'deleted', 'all'];
+
 export default function AdminDashboard() {
   const router = useRouter();
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const initialTab = VALID_TABS.includes(tab as CouponStatus) ? (tab as CouponStatus) : 'active';
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<CouponStatus>('active');
+  const [activeTab, setActiveTab] = useState<CouponStatus>(initialTab);
 
   useEffect(() => {
     loadAllCoupons();
@@ -130,6 +134,7 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       {/* Stat Cards */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.statsRow}>
         <View style={[styles.statCard, styles.statActive]}>
@@ -243,11 +248,13 @@ export default function AdminDashboard() {
         />
       )}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   statsRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
@@ -269,8 +276,8 @@ const styles = StyleSheet.create({
   searchInput: { backgroundColor: '#f5f5f5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  couponRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  couponInfo: { flex: 1 },
+  couponRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderLeftWidth: 4, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  couponInfo: { flex: 1, minWidth: 160 },
   couponCode: { fontSize: 14, fontWeight: '800', color: '#222', marginBottom: 2 },
   couponRestaurant: { fontSize: 12, color: '#666', marginBottom: 6 },
   couponDetails: { gap: 4 },
@@ -279,7 +286,7 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#f5f5f5' },
   statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
 
-  actions: { marginLeft: 10, gap: 6 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: 10, gap: 6 },
   actionBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6 },
   actionBtnText: { fontSize: 11, fontWeight: '700', color: '#1565C0' },
   purgeBtn: { backgroundColor: '#FFEBEE' },

@@ -97,6 +97,7 @@ export default function ExpiredCouponsScreen() {
 
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Text style={styles.backBtnText}>← Back</Text>
@@ -166,11 +167,13 @@ export default function ExpiredCouponsScreen() {
         />
       )}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },

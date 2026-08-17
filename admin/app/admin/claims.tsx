@@ -124,6 +124,7 @@ export default function AdminClaimsScreen() {
 
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.title}>Pending Claims</Text>
         <Text style={styles.count}>{claims.length}</Text>
@@ -181,11 +182,13 @@ export default function AdminClaimsScreen() {
         />
       )}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
   title: { fontSize: 24, fontWeight: '800', color: '#222' },

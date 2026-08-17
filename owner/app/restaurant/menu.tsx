@@ -122,6 +122,7 @@ export default function RestaurantMenuScreen() {
 
   return (
     <View style={styles.container}>
+    <View style={styles.pageWrapper}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -242,11 +243,13 @@ export default function RestaurantMenuScreen() {
         />
       )}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
+  pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2 },
   headerTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

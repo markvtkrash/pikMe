@@ -68,7 +68,6 @@ export default function AdminLoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.title}>🔐 Admin Portal</Text>
-        <Text style={styles.subtitle}>Coupon Management System</Text>
 
         <TextInput
           style={styles.input}
@@ -113,9 +112,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingBottom: 40,
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
   },
-  title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
+  title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 32 },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
