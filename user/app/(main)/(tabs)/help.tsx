@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS } from '../../../src/constants/brandTheme';
@@ -37,6 +38,12 @@ const HELP_ITEMS = [
   {
     category: 'Support',
     items: [
+      {
+        icon: '🎫',
+        title: 'Submit a Support Ticket',
+        subtitle: "Tell us what's wrong and we'll follow up",
+        action: 'ticket',
+      },
       {
         icon: '📧',
         title: 'Contact Support',
@@ -82,17 +89,21 @@ function LegalLink({
   subtitle,
   url,
   action,
+  onNavigate,
 }: {
   icon: string;
   title: string;
   subtitle: string;
   url?: string;
   action?: string;
+  onNavigate?: () => void;
 }) {
   const handlePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    if (url) {
+    if (action === 'ticket') {
+      onNavigate?.();
+    } else if (url) {
       try {
         await Linking.openURL(url);
       } catch (error) {
@@ -128,6 +139,7 @@ function LegalLink({
 
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -167,6 +179,7 @@ export default function HelpScreen() {
                   subtitle={item.subtitle}
                   url={item.url}
                   action={item.action}
+                  onNavigate={() => router.push('/(main)/support')}
                 />
               ))}
             </View>

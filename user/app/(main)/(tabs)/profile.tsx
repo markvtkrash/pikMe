@@ -2,13 +2,16 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator, TextInput, Platform, Switch,
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '../../../src/api/supabase';
 import { useUserProfile } from '../../../src/hooks/useUserProfile';
 import { upsertUserProfile, deleteAccount } from '../../../src/api/functions';
+import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../../src/api/supportTickets';
 import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../src/constants/dietaryOptions';
 import { useFaceIdStore } from '../../../src/store/faceIdStore';
+import { BRAND_COLORS } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
 
 // React Native's Alert isn't implemented on react-native-web, so on web we fall
@@ -73,6 +76,7 @@ function ChipRow({
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { data: profile, isLoading, error, refetch } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -80,6 +84,7 @@ export default function ProfileScreen() {
   const [allergenInput, setAllergenInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [faceIdAvailable, setFaceIdAvailable] = useState(false);
+  const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
   const requireFaceId = useFaceIdStore((s) => s.requireFaceId);
   const setRequireFaceId = useFaceIdStore((s) => s.setRequireFaceId);
 
@@ -90,6 +95,30 @@ export default function ProfileScreen() {
       setFaceIdAvailable(hasHardware && isEnrolled);
     })();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadResolvedTickets();
+    }, [])
+  );
+
+  async function loadResolvedTickets() {
+    try {
+      const tickets = await getMyTickets();
+      setResolvedTickets(tickets.filter((t) => t.status === 'resolved' && !t.submitter_seen_resolution));
+    } catch (err) {
+      console.error('[profile] Failed to load resolved tickets:', err);
+    }
+  }
+
+  async function handleDismissResolution(ticketId: string) {
+    setResolvedTickets((prev) => prev.filter((t) => t.id !== ticketId));
+    try {
+      await markTicketResolutionSeen(ticketId);
+    } catch (err) {
+      console.error('[profile] Failed to mark ticket seen:', err);
+    }
+  }
 
   const startEdit = () => {
     if (profile) {
@@ -217,6 +246,25 @@ export default function ProfileScreen() {
           <Text style={styles.displayName}>{form.displayName}</Text>
         )}
       </View>
+
+      {/* Resolved ticket notifications */}
+      {resolvedTickets.map((ticket) => (
+        <View key={ticket.id} style={styles.resolvedBanner}>
+          <Text style={styles.resolvedBannerIcon}>✅</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.resolvedBannerTitle}>"{ticket.subject}" has been resolved</Text>
+            {ticket.resolution && (
+              <Text style={styles.resolvedBannerText}>{ticket.resolution}</Text>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.resolvedBannerDismiss}
+            onPress={() => handleDismissResolution(ticket.id)}
+          >
+            <Text style={styles.resolvedBannerDismissText}>Got it</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
 
       {/* Dietary Restrictions */}
       <View style={styles.section}>
@@ -373,6 +421,22 @@ export default function ProfileScreen() {
         </View>
       )}
 
+      {/* Support */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Support</Text>
+        <TouchableOpacity
+          style={styles.supportBtn}
+          onPress={() => router.push('/(main)/support')}
+        >
+          <Text style={styles.supportBtnIcon}>🎫</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.supportBtnTitle}>Submit a Support Ticket</Text>
+            <Text style={styles.supportBtnSubtitle}>Send us a message or check on an existing one</Text>
+          </View>
+          <Text style={styles.supportBtnArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Sign Out */}
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
@@ -506,4 +570,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   deleteText: { color: '#e53e3e', fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+
+  resolvedBanner: {
+    backgroundColor: BRAND_COLORS.primaryLight, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 10, borderLeftWidth: 4, borderLeftColor: BRAND_COLORS.primary, flexDirection: 'row', alignItems: 'center', gap: 10,
+  },
+  resolvedBannerIcon: { fontSize: 20 },
+  resolvedBannerTitle: { fontSize: 13, fontWeight: '700', color: BRAND_COLORS.primary },
+  resolvedBannerText: { fontSize: 12, color: BRAND_COLORS.primary, marginTop: 2 },
+  resolvedBannerDismiss: { backgroundColor: BRAND_COLORS.primary, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  resolvedBannerDismissText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  supportBtn: {
+    backgroundColor: '#f9f9f9', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  supportBtnIcon: { fontSize: 22 },
+  supportBtnTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
+  supportBtnSubtitle: { fontSize: 12, color: '#888', marginTop: 2 },
+  supportBtnArrow: { fontSize: 18, color: BRAND_COLORS.primary, fontWeight: '600' },
 });

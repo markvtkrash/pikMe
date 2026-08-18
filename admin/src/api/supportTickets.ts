@@ -1,11 +1,14 @@
 import { supabase } from './supabase';
 
 export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type TicketSubmitterType = 'owner' | 'consumer';
 
 export interface AdminSupportTicket {
   id: string;
-  restaurant_id: string;
-  owner_id: string;
+  ticket_type: TicketSubmitterType;
+  restaurant_id: string | null;
+  owner_id: string | null;
+  consumer_id: string | null;
   subject: string;
   message: string;
   status: TicketStatus;
@@ -15,22 +18,43 @@ export interface AdminSupportTicket {
   resolved_at: string | null;
   restaurants: { name: string } | null;
   restaurant_owners: { business_name: string; email: string } | null;
+  user_profiles: { display_name: string } | null;
 }
 
-export async function getOpenTicketCount(): Promise<number> {
-  const { count, error } = await supabase
+export interface OpenTicketCounts {
+  owner: number;
+  consumer: number;
+  total: number;
+}
+
+export async function getOpenTicketCounts(): Promise<OpenTicketCounts> {
+  const { count: ownerCount, error: ownerError } = await supabase
     .from('support_tickets')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['open', 'in_progress']);
+    .in('status', ['open', 'in_progress'])
+    .eq('ticket_type', 'owner');
 
-  if (error) throw error;
-  return count || 0;
+  if (ownerError) throw ownerError;
+
+  const { count: consumerCount, error: consumerError } = await supabase
+    .from('support_tickets')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['open', 'in_progress'])
+    .eq('ticket_type', 'consumer');
+
+  if (consumerError) throw consumerError;
+
+  const owner = ownerCount || 0;
+  const consumer = consumerCount || 0;
+  return { owner, consumer, total: owner + consumer };
 }
+
+const TICKET_SELECT = '*, restaurants:restaurant_id(name), restaurant_owners:owner_id(business_name, email), user_profiles:consumer_id(display_name)';
 
 export async function getAllTickets(): Promise<AdminSupportTicket[]> {
   const { data, error } = await supabase
     .from('support_tickets')
-    .select('*, restaurants:restaurant_id(name), restaurant_owners:owner_id(business_name, email)')
+    .select(TICKET_SELECT)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -40,7 +64,7 @@ export async function getAllTickets(): Promise<AdminSupportTicket[]> {
 export async function getTicketById(id: string): Promise<AdminSupportTicket | null> {
   const { data, error } = await supabase
     .from('support_tickets')
-    .select('*, restaurants:restaurant_id(name), restaurant_owners:owner_id(business_name, email)')
+    .select(TICKET_SELECT)
     .eq('id', id)
     .maybeSingle();
 

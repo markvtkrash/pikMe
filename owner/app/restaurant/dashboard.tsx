@@ -45,7 +45,7 @@ export default function RestaurantDashboardScreen() {
   async function loadResolvedTickets() {
     try {
       const tickets = await getMyTickets();
-      setResolvedTickets(tickets.filter((t) => t.status === 'resolved' && !t.owner_seen_resolution));
+      setResolvedTickets(tickets.filter((t) => t.status === 'resolved' && !t.submitter_seen_resolution));
     } catch (error) {
       console.error('[dashboard] Failed to load resolved tickets:', error);
     }

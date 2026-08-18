@@ -4,9 +4,10 @@ import {
   ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { getAllTickets, AdminSupportTicket, TicketStatus } from '../../src/api/supportTickets';
+import { getAllTickets, AdminSupportTicket, TicketStatus, TicketSubmitterType } from '../../src/api/supportTickets';
 
 type StatusFilter = 'all' | TicketStatus;
+type TypeFilter = 'all' | TicketSubmitterType;
 
 const FILTER_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -16,11 +17,22 @@ const FILTER_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'closed', label: 'Closed' },
 ];
 
+const TYPE_TABS: { key: TypeFilter; label: string }[] = [
+  { key: 'all', label: 'All Types' },
+  { key: 'owner', label: '🍽️ Owner' },
+  { key: 'consumer', label: '🙋 Consumer' },
+];
+
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: string }> = {
   open: { bg: '#E3F2FD', text: '#1976D2', label: 'Open' },
   in_progress: { bg: '#FFF3E0', text: '#E65100', label: 'In Progress' },
   resolved: { bg: '#E8F5E9', text: '#2e7d32', label: 'Resolved' },
   closed: { bg: '#f0f0f0', text: '#666', label: 'Closed' },
+};
+
+const TYPE_COLORS: Record<TicketSubmitterType, { bg: string; text: string; label: string }> = {
+  owner: { bg: '#F3E5F5', text: '#8E24AA', label: '🍽️ Owner' },
+  consumer: { bg: '#E1F5FE', text: '#0277BD', label: '🙋 Consumer' },
 };
 
 export default function AdminTicketsScreen() {
@@ -29,6 +41,7 @@ export default function AdminTicketsScreen() {
   const validKeys = FILTER_TABS.map((t) => t.key);
   const initialTab = validKeys.includes(status as StatusFilter) ? (status as StatusFilter) : 'all';
   const [activeTab, setActiveTab] = useState<StatusFilter>(initialTab);
+  const [activeType, setActiveType] = useState<TypeFilter>('all');
   const [tickets, setTickets] = useState<AdminSupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +63,11 @@ export default function AdminTicketsScreen() {
     }
   }
 
-  const filteredTickets = tickets.filter((t) => activeTab === 'all' || t.status === activeTab);
+  const filteredTickets = tickets.filter((t) => {
+    const matchesStatus = activeTab === 'all' || t.status === activeTab;
+    const matchesType = activeType === 'all' || t.ticket_type === activeType;
+    return matchesStatus && matchesType;
+  });
 
   if (loading) {
     return (
@@ -82,6 +99,20 @@ export default function AdminTicketsScreen() {
         ))}
       </View>
 
+      <View style={[styles.tabsContainer, styles.typeTabsContainer]}>
+        {TYPE_TABS.map((tab) => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.typeTab, activeType === tab.key && styles.typeTabActive]}
+            onPress={() => setActiveType(tab.key)}
+          >
+            <Text style={[styles.typeTabText, activeType === tab.key && styles.typeTabTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
       {filteredTickets.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📭</Text>
@@ -93,15 +124,23 @@ export default function AdminTicketsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const statusInfo = STATUS_COLORS[item.status];
+            const typeInfo = TYPE_COLORS[item.ticket_type];
             return (
               <TouchableOpacity
                 style={styles.ticketRow}
                 onPress={() => router.push(`/admin/tickets/${item.id}`)}
               >
                 <View style={styles.ticketInfo}>
+                  <View style={styles.ticketTitleRow}>
+                    <View style={[styles.typeBadge, { backgroundColor: typeInfo.bg }]}>
+                      <Text style={[styles.typeBadgeText, { color: typeInfo.text }]}>{typeInfo.label}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject}</Text>
                   <Text style={styles.ticketMeta}>
-                    {item.restaurant_owners?.business_name || 'Unknown'} · {item.restaurants?.name || 'Unknown restaurant'}
+                    {item.ticket_type === 'owner'
+                      ? `${item.restaurant_owners?.business_name || 'Unknown'} · ${item.restaurants?.name || 'Unknown restaurant'}`
+                      : item.user_profiles?.display_name || 'Unknown consumer'}
                   </Text>
                   <Text style={styles.ticketDate}>
                     {new Date(item.created_at).toLocaleDateString()}
@@ -135,9 +174,18 @@ const styles = StyleSheet.create({
   tabText: { fontSize: 13, fontWeight: '600', color: '#999' },
   tabTextActive: { color: '#1565C0' },
 
+  typeTabsContainer: { paddingVertical: 6, gap: 8 },
+  typeTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#f0f0f0' },
+  typeTabActive: { backgroundColor: '#1565C0' },
+  typeTabText: { fontSize: 12, fontWeight: '600', color: '#666' },
+  typeTabTextActive: { color: '#fff' },
+
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   ticketRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, elevation: 1 },
   ticketInfo: { flex: 1 },
+  ticketTitleRow: { flexDirection: 'row', marginBottom: 4 },
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  typeBadgeText: { fontSize: 10, fontWeight: '700' },
   ticketSubject: { fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 2 },
   ticketMeta: { fontSize: 12, color: '#1565C0', fontWeight: '600', marginBottom: 2 },
   ticketDate: { fontSize: 11, color: '#999' },

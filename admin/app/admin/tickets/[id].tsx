@@ -73,11 +73,23 @@ export default function AdminTicketDetailScreen() {
           <Text style={styles.backBtnText}>← Back to Tickets</Text>
         </TouchableOpacity>
 
+        <View style={[styles.typeBadge, ticket.ticket_type === 'owner' ? styles.typeBadgeOwner : styles.typeBadgeConsumer]}>
+          <Text style={[styles.typeBadgeText, ticket.ticket_type === 'owner' ? styles.typeBadgeTextOwner : styles.typeBadgeTextConsumer]}>
+            {ticket.ticket_type === 'owner' ? '🍽️ Owner Ticket' : '🙋 Consumer Ticket'}
+          </Text>
+        </View>
+
         <Text style={styles.title}>{ticket.subject}</Text>
-        <Text style={styles.meta}>
-          {ticket.restaurant_owners?.business_name || 'Unknown owner'} ({ticket.restaurant_owners?.email || 'no email'})
-        </Text>
-        <Text style={styles.meta}>{ticket.restaurants?.name || 'Unknown restaurant'}</Text>
+        {ticket.ticket_type === 'owner' ? (
+          <>
+            <Text style={styles.meta}>
+              {ticket.restaurant_owners?.business_name || 'Unknown owner'} ({ticket.restaurant_owners?.email || 'no email'})
+            </Text>
+            <Text style={styles.meta}>{ticket.restaurants?.name || 'Unknown restaurant'}</Text>
+          </>
+        ) : (
+          <Text style={styles.meta}>{ticket.user_profiles?.display_name || 'Unknown consumer'}</Text>
+        )}
         <Text style={styles.date}>
           Submitted {new Date(ticket.created_at).toLocaleString()}
         </Text>
@@ -138,6 +150,13 @@ const styles = StyleSheet.create({
 
   backBtn: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, backgroundColor: '#E3F2FD', marginBottom: 16 },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#1565C0' },
+
+  typeBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginBottom: 10 },
+  typeBadgeOwner: { backgroundColor: '#F3E5F5' },
+  typeBadgeConsumer: { backgroundColor: '#E1F5FE' },
+  typeBadgeText: { fontSize: 11, fontWeight: '800' },
+  typeBadgeTextOwner: { color: '#8E24AA' },
+  typeBadgeTextConsumer: { color: '#0277BD' },
 
   title: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 6 },
   meta: { fontSize: 13, color: '#666', marginBottom: 2 },

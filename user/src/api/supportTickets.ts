@@ -4,8 +4,7 @@ export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
 export interface SupportTicket {
   id: string;
-  restaurant_id: string;
-  owner_id: string;
+  consumer_id: string;
   subject: string;
   message: string;
   status: TicketStatus;
@@ -17,19 +16,17 @@ export interface SupportTicket {
 }
 
 export async function createSupportTicket(params: {
-  restaurantId: string;
-  ownerId: string;
+  consumerId: string;
   subject: string;
   message: string;
 }): Promise<SupportTicket> {
   const { data, error } = await supabase
     .from('support_tickets')
     .insert({
-      restaurant_id: params.restaurantId,
-      owner_id: params.ownerId,
+      consumer_id: params.consumerId,
       subject: params.subject,
       message: params.message,
-      ticket_type: 'owner',
+      ticket_type: 'consumer',
     })
     .select()
     .single();

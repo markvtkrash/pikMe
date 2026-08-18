@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
-import { getOpenTicketCount } from '../../src/api/supportTickets';
+import { getOpenTicketCounts } from '../../src/api/supportTickets';
 import { PasswordChangeModal } from './PasswordChangeModal';
 
 interface Stats {
@@ -17,6 +17,8 @@ interface Stats {
   activeCoupons: number;
   pendingClaims: number;
   openTickets: number;
+  openOwnerTickets: number;
+  openConsumerTickets: number;
 }
 
 export default function AdminDashboard() {
@@ -30,6 +32,8 @@ export default function AdminDashboard() {
     activeCoupons: 0,
     pendingClaims: 0,
     openTickets: 0,
+    openOwnerTickets: 0,
+    openConsumerTickets: 0,
   });
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
@@ -149,8 +153,8 @@ export default function AdminDashboard() {
         .select('*', { count: 'exact', head: true })
         .is('claimed_at', null);
 
-      // Get open support tickets
-      const openTickets = await getOpenTicketCount();
+      // Get open support tickets, split by who filed them
+      const ticketCounts = await getOpenTicketCounts();
 
       setStats({
         totalUsers: userCount || 0,
@@ -160,10 +164,12 @@ export default function AdminDashboard() {
         totalCoupons: totalCoupons || 0,
         activeCoupons: activeCoupons || 0,
         pendingClaims: pendingClaims || 0,
-        openTickets,
+        openTickets: ticketCounts.total,
+        openOwnerTickets: ticketCounts.owner,
+        openConsumerTickets: ticketCounts.consumer,
       });
 
-      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, approvedRestaurants, pendingRestaurants, totalCoupons, activeCoupons, pendingClaims, openTickets });
+      console.log('[admin-index] Stats loaded:', { userCount, restaurantCount, approvedRestaurants, pendingRestaurants, totalCoupons, activeCoupons, pendingClaims, ticketCounts });
     } catch (error: any) {
       console.error('[admin-index] Error loading stats:', error);
       Alert.alert('Error', 'Failed to load admin stats');
@@ -256,6 +262,11 @@ export default function AdminDashboard() {
               {stats.openTickets}
             </Text>
             <Text style={styles.statLabel}>Support</Text>
+            <Text style={styles.statBreakdownCompact}>
+              <Text style={styles.statBreakdownOwner}>{stats.openOwnerTickets} owner</Text>
+              <Text style={styles.statBreakdownGap}>  </Text>
+              <Text style={styles.statBreakdownConsumer}>{stats.openConsumerTickets} consumer</Text>
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -398,6 +409,8 @@ const styles = StyleSheet.create({
   statBreakdownCompact: { fontSize: 11, fontWeight: '800', marginTop: 2 },
   statBreakdownApproved: { color: '#2e7d32' },
   statBreakdownPending: { color: '#E65100' },
+  statBreakdownOwner: { color: '#1565C0' },
+  statBreakdownConsumer: { color: '#8E24AA' },
   statBreakdownGap: { color: 'transparent' },
 
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#222', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
