@@ -83,7 +83,7 @@ We implement industry-standard encryption and security measures to protect your 
 - Right to opt-out of certain processing
 - Right to data portability
 
-Contact us at support@pikme.app to exercise these rights.
+Contact us at support@markvtkrash.com to exercise these rights.
 
 ## Data Retention
 
@@ -97,7 +97,7 @@ We may update this policy periodically. We will notify you of significant change
 
 ---
 
-For questions, contact: support@pikme.app`,
+For questions, contact: support@markvtkrash.com`,
   },
   terms_of_service: {
     title: 'Terms of Service',
@@ -163,7 +163,7 @@ We reserve the right to terminate or suspend your account for:
 
 ## 8. Dispute Resolution
 
-- First: Contact us at support@pikme.app
+- First: Contact us at support@markvtkrash.com
 - Then: Good-faith negotiation
 - Finally: Binding arbitration (if necessary)
 
@@ -270,7 +270,7 @@ By using PikMe, you acknowledge:
 
 **Food Safety Issues:** Report to local health department
 
-**General Questions:** support@pikme.app
+**General Questions:** support@markvtkrash.com
 
 ---
 

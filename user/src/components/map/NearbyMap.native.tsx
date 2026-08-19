@@ -4,7 +4,6 @@ import {
   StyleSheet, TouchableOpacity, Dimensions,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../hooks/useLocation';
 import { useNearbyRestaurants } from '../../hooks/useNearbyRestaurants';
 import { useRestaurantStore } from '../../store/restaurantStore';
@@ -18,7 +17,6 @@ const CARD_WIDTH = width * 0.75;
 export function NearbyMap() {
   const mapRef = useRef<MapView>(null);
   const listRef = useRef<FlatList>(null);
-  const insets = useSafeAreaInsets();
   const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
   const { selectedRestaurantId, setSelectedRestaurantId, searchRadiusMeters } = useRestaurantStore();
   const { data: restaurants = [], isLoading, error: fetchError, refetch } = useNearbyRestaurants(location);
@@ -105,8 +103,9 @@ export function NearbyMap() {
         </MapView>
       )}
 
-      {/* Radius selector overlay */}
-      <View style={[styles.radiusOverlay, { top: insets.top + 8 }]}>
+      {/* Radius selector overlay — flush with the Food/Entertainment bar above,
+          which already accounts for the safe-area top inset. */}
+      <View style={[styles.radiusOverlay, { top: 12 }]}>
         <RadiusSelector />
       </View>
 

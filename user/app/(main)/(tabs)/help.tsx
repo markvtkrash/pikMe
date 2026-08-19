@@ -1,14 +1,16 @@
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS } from '../../../src/constants/brandTheme';
+import { InAppWebViewModal } from '../../../src/components/common/InAppWebViewModal';
 
 const LEGAL_LINKS = {
   privacy: 'https://www.markvtkrash.com/legal/privacy',
   terms: 'https://www.markvtkrash.com/legal/terms',
-  disclaimer: 'https://www.markvtkrash.com/legal/disclaimer',
-  support: 'mailto:support@pikme.app',
+  disclaimer: 'https://www.markvtkrash.com/legal/food-disclaimer',
+  support: 'mailto:support@markvtkrash.com',
 };
 
 const HELP_ITEMS = [
@@ -50,18 +52,6 @@ const HELP_ITEMS = [
         subtitle: 'Email us with questions',
         url: LEGAL_LINKS.support,
       },
-      {
-        icon: '❓',
-        title: 'FAQ',
-        subtitle: 'Common questions answered',
-        action: 'faq',
-      },
-      {
-        icon: '🐛',
-        title: 'Report a Bug',
-        subtitle: 'Found an issue? Let us know',
-        url: LEGAL_LINKS.support,
-      },
     ],
   },
   {
@@ -75,8 +65,8 @@ const HELP_ITEMS = [
       },
       {
         icon: '❤️',
-        title: 'Made with care',
-        subtitle: 'Your personal menu guide',
+        title: 'Elevator Pitch',
+        subtitle: 'What PikMe does in 10 seconds',
         action: 'about',
       },
     ],
@@ -90,6 +80,7 @@ function LegalLink({
   url,
   action,
   onNavigate,
+  onOpenWebView,
 }: {
   icon: string;
   title: string;
@@ -97,27 +88,25 @@ function LegalLink({
   url?: string;
   action?: string;
   onNavigate?: () => void;
+  onOpenWebView?: (url: string, title: string) => void;
 }) {
   const handlePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     if (action === 'ticket') {
       onNavigate?.();
-    } else if (url) {
+    } else if (url?.startsWith('mailto:')) {
       try {
         await Linking.openURL(url);
       } catch (error) {
         Alert.alert('Error', 'Could not open link. Please try again.');
       }
-    } else if (action === 'faq') {
-      Alert.alert(
-        'Frequently Asked Questions',
-        `Q: Are recommendations accurate?\nA: Recommendations are AI-generated suggestions. Always verify with the restaurant.\n\nQ: Is my location data safe?\nA: Yes, location data is never stored. It's only used to find nearby restaurants.\n\nQ: Can I delete my account?\nA: Yes, go to Settings to delete your account and all data.`
-      );
+    } else if (url) {
+      onOpenWebView?.(url, title);
     } else if (action === 'version') {
       Alert.alert('App Version', 'PikMe v1.0.0\n\nBuild: 1\nReleased: June 2026');
     } else if (action === 'about') {
-      Alert.alert('About PikMe', 'PikMe is your personal AI food recommendation assistant.\n\nFind restaurants and menu items that match your dietary preferences, health goals, and allergies.');
+      Alert.alert('Elevator Pitch', "Tell PikMe your allergies, diet, and health goals once — it finds nearby restaurants and the exact menu items that actually fit you, so you stop guessing what's safe to order.");
     }
   };
 
@@ -140,6 +129,7 @@ function LegalLink({
 export default function HelpScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const [webViewState, setWebViewState] = useState<{ url: string; title: string } | null>(null);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -180,6 +170,7 @@ export default function HelpScreen() {
                   url={item.url}
                   action={item.action}
                   onNavigate={() => router.push('/(main)/support')}
+                  onOpenWebView={(url, title) => setWebViewState({ url, title })}
                 />
               ))}
             </View>
@@ -214,6 +205,13 @@ export default function HelpScreen() {
           <Text style={styles.footerCopyright}>© 2026 PikMe. All rights reserved.</Text>
         </View>
       </ScrollView>
+
+      <InAppWebViewModal
+        visible={!!webViewState}
+        url={webViewState?.url || ''}
+        title={webViewState?.title || ''}
+        onClose={() => setWebViewState(null)}
+      />
     </View>
   );
 }

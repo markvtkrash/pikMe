@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView,
+  FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView, Linking,
 } from 'react-native';
 import { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
@@ -219,14 +219,6 @@ export default function RestaurantDetailScreen() {
             {/* Overlay gradient strip */}
             <View style={styles.heroOverlay} />
 
-            {/* Back button */}
-            <TouchableOpacity
-              style={[styles.backBtn, { top: insets.top + 12 }]}
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backIcon}>‹</Text>
-            </TouchableOpacity>
-
             {/* Heart button */}
             <TouchableOpacity
               style={[styles.heroHeart, { top: insets.top + 12 }]}
@@ -261,7 +253,21 @@ export default function RestaurantDetailScreen() {
 
               {cuisineDisplay ? <Text style={styles.cuisine}>{cuisineDisplay}</Text> : null}
               {restaurant.location.address ? (
-                <Text style={styles.address}>{restaurant.location.address}</Text>
+                <>
+                  <Text style={styles.address}>{restaurant.location.address}</Text>
+                  <TouchableOpacity
+                    style={styles.directionsLink}
+                    hitSlop={6}
+                    onPress={() => {
+                      const { latitude, longitude } = restaurant.location;
+                      Linking.openURL(
+                        `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&destination_place_id=${restaurant.placeId}`
+                      );
+                    }}
+                  >
+                    <Text style={styles.directionsLinkText}>🧭 Get Directions</Text>
+                  </TouchableOpacity>
+                </>
               ) : null}
             </View>
 
@@ -458,6 +464,28 @@ export default function RestaurantDetailScreen() {
         ) : null
       }
     />
+
+    {/* Sticky back buttons — stay fixed on screen regardless of scroll position,
+        placed at three heights so one is always within thumb's reach. */}
+    <TouchableOpacity
+      style={[styles.backBtn, styles.backBtnSticky, { top: insets.top + 12 }]}
+      onPress={() => router.back()}
+    >
+      <Text style={styles.backIcon}>‹</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={[styles.backBtn, styles.backBtnSticky, styles.backBtnMiddle]}
+      onPress={() => router.back()}
+    >
+      <Text style={styles.backIcon}>‹</Text>
+    </TouchableOpacity>
+    <TouchableOpacity
+      style={[styles.backBtn, styles.backBtnSticky, { bottom: insets.bottom + 16 }]}
+      onPress={() => router.back()}
+    >
+      <Text style={styles.backIcon}>‹</Text>
+    </TouchableOpacity>
+
     <CouponActivationModal
       visible={!!genericCouponActivation.activeCoupon}
       coupon={genericCouponActivation.activeCoupon}
@@ -516,6 +544,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 3,
   },
+  backBtnSticky: {
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  backBtnMiddle: { top: '50%', marginTop: -19 },
   backIcon: { fontSize: 24, color: '#141414', lineHeight: 28, marginLeft: -2 },
   heroHeart: {
     position: 'absolute',
@@ -555,6 +591,8 @@ const styles = StyleSheet.create({
   metaPillTxt: { fontSize: 12, color: '#444', fontWeight: '600' },
   cuisine: { fontSize: 13, color: '#6B6B6B', marginBottom: 5 },
   address: { fontSize: 13, color: '#888' },
+  directionsLink: { alignSelf: 'flex-start', marginTop: 4 },
+  directionsLinkText: { fontSize: 13, fontWeight: '700', color: BRAND_COLORS.primary },
 
   menuHeader: { paddingHorizontal: 16, paddingBottom: 8 },
   menuTitle: { fontSize: 18, fontWeight: '800', color: '#141414' },

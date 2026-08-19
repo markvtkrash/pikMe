@@ -56,7 +56,7 @@ export default function TabLayout() {
         name="help"
         options={{
           title: 'Help',
-          tabBarIcon: ({ focused }) => <TabIcon emoji="❓" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🛟" focused={focused} />,
         }}
       />
     </Tabs>
