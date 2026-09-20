@@ -11,6 +11,7 @@ import { useUserProfileStore } from '../src/store/userProfileStore';
 import { useSavedStore } from '../src/store/savedStore';
 import { useFaceIdStore } from '../src/store/faceIdStore';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
+import { BRAND_NAME } from '../src/constants/brandTheme';
 
 // Suppress harmless deprecation warnings
 LogBox.ignoreLogs([
@@ -66,7 +67,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   async function unlockWithFaceId() {
     try {
-      const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock PikMe' });
+      const result = await LocalAuthentication.authenticateAsync({ promptMessage: `Unlock ${BRAND_NAME}` });
       if (result.success) setFaceIdStatus('unlocked');
     } catch (err) {
       console.error('[AuthGate] Face ID authentication error:', err);
@@ -187,7 +188,7 @@ function FaceIdLockScreen({ onRetry }: { onRetry: () => void }) {
   return (
     <View style={lockStyles.container}>
       <Text style={lockStyles.icon}>🔒</Text>
-      <Text style={lockStyles.title}>PikMe is Locked</Text>
+      <Text style={lockStyles.title}>{BRAND_NAME} is Locked</Text>
       <Text style={lockStyles.body}>Use Face ID to continue</Text>
       <TouchableOpacity style={lockStyles.button} onPress={onRetry}>
         <Text style={lockStyles.buttonText}>Unlock with Face ID</Text>

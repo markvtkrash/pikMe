@@ -82,10 +82,11 @@ BEGIN
     r->>'photoReference', r->'openingHours', (r->>'openNow')::BOOLEAN, NOW()
   FROM jsonb_array_elements(p_restaurants) AS r
   ON CONFLICT (place_id) DO UPDATE SET
-    rating         = EXCLUDED.rating,
-    opening_hours  = EXCLUDED.opening_hours,
-    open_now       = EXCLUDED.open_now,
-    cached_at      = NOW();
+    rating          = EXCLUDED.rating,
+    photo_reference = EXCLUDED.photo_reference,
+    opening_hours   = EXCLUDED.opening_hours,
+    open_now        = EXCLUDED.open_now,
+    cached_at       = NOW();
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

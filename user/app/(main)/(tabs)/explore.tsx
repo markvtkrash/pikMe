@@ -12,6 +12,7 @@ import { RadiusSelector } from '../../../src/components/common/RadiusSelector';
 import { useRestaurantStore } from '../../../src/store/restaurantStore';
 import { normalizeForSearch } from '../../../src/utils/textMatch';
 import { CUISINE_FILTERS } from '../../../src/constants/cuisines';
+import { BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { Restaurant } from '../../../src/types';
 
 const ALL = 'All';
@@ -113,7 +114,7 @@ export default function ExploreScreen() {
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.staticHeader}>
           <Text style={styles.greeting}>Location needed</Text>
-          <Text style={styles.subGreeting}>PikMe needs your location to find nearby restaurants</Text>
+          <Text style={styles.subGreeting}>{BRAND_NAME} needs your location to find nearby restaurants</Text>
         </View>
         <View style={styles.errorCard}>
           <Text style={styles.errorIcon}>📍</Text>
@@ -278,7 +279,7 @@ export default function ExploreScreen() {
           ListFooterComponent={
             <View style={styles.attribution}>
               <Text style={styles.attributionText}>
-                Restaurant information and photos from Google Maps
+                Restaurant information from Google Maps
               </Text>
             </View>
           }

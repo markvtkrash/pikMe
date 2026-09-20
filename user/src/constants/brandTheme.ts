@@ -1,7 +1,9 @@
 /**
- * PikMe Brand Theme
+ * CraveID Brand Theme
  * Based on BRAND-GUIDELINES.md
  */
+
+export const BRAND_NAME = 'CraveID';
 
 export const BRAND_COLORS = {
   // Primary

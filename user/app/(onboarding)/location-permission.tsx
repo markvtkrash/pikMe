@@ -9,6 +9,7 @@ import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { upsertUserProfile } from '../../src/api/functions';
 import { supabase } from '../../src/api/supabase';
 import { LegalDocumentModal } from '../../src/components/common/LegalDocumentModal';
+import { BRAND_NAME } from '../../src/constants/brandTheme';
 
 export default function LocationPermissionScreen() {
   const router = useRouter();
@@ -93,7 +94,7 @@ export default function LocationPermissionScreen() {
         <Text style={styles.icon}>📍</Text>
         <Text style={styles.title}>Find restaurants near you</Text>
         <Text style={styles.description}>
-          PikMe uses your location to surface nearby restaurants and personalise
+          {BRAND_NAME} uses your location to surface nearby restaurants and personalise
           food recommendations based on what's available around you.
         </Text>
         <Text style={styles.note}>Your location is never stored or shared.</Text>

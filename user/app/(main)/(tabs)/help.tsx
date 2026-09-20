@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { BRAND_COLORS } from '../../../src/constants/brandTheme';
+import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import { InAppWebViewModal } from '../../../src/components/common/InAppWebViewModal';
 
 const LEGAL_LINKS = {
@@ -66,7 +66,7 @@ const HELP_ITEMS = [
       {
         icon: '❤️',
         title: 'Elevator Pitch',
-        subtitle: 'What PikMe does in 10 seconds',
+        subtitle: `What ${BRAND_NAME} does in 10 seconds`,
         action: 'about',
       },
     ],
@@ -104,9 +104,9 @@ function LegalLink({
     } else if (url) {
       onOpenWebView?.(url, title);
     } else if (action === 'version') {
-      Alert.alert('App Version', 'PikMe v1.0.0\n\nBuild: 1\nReleased: June 2026');
+      Alert.alert('App Version', `${BRAND_NAME} v1.0.0\n\nBuild: 1\nReleased: June 2026`);
     } else if (action === 'about') {
-      Alert.alert('Elevator Pitch', "Tell PikMe your allergies, diet, and health goals once — it finds nearby restaurants and the exact menu items that actually fit you, so you stop guessing what's safe to order.");
+      Alert.alert('Elevator Pitch', `Tell ${BRAND_NAME} your allergies, diet, and health goals once — it finds nearby restaurants and the exact menu items that actually fit you, so you stop guessing what's safe to order.`);
     }
   };
 
@@ -151,7 +151,7 @@ export default function HelpScreen() {
           <View style={styles.noticeContent}>
             <Text style={styles.noticeTitle}>Important Notice</Text>
             <Text style={styles.noticeText}>
-              PikMe is an AI recommendation tool. Always verify nutritional info and allergens with the restaurant before ordering.
+              {BRAND_NAME} is an AI recommendation tool. Always verify nutritional info and allergens with the restaurant before ordering.
             </Text>
           </View>
         </View>
@@ -200,9 +200,9 @@ export default function HelpScreen() {
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>PikMe v1.0.0</Text>
+          <Text style={styles.footerText}>{BRAND_NAME} v1.0.0</Text>
           <Text style={styles.footerSubtext}>Your Personal Menu Guide</Text>
-          <Text style={styles.footerCopyright}>© 2026 PikMe. All rights reserved.</Text>
+          <Text style={styles.footerCopyright}>© 2026 {BRAND_NAME}. All rights reserved.</Text>
         </View>
       </ScrollView>
 

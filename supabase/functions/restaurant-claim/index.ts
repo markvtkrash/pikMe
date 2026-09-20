@@ -45,7 +45,13 @@ serve(async (req) => {
       );
     }
 
-    // Verify the place exists on Google Places API (optional, for safety)
+    // Verify the place exists on Google Places API (optional, for safety).
+    // website_url is intentionally NOT sourced from Google here — it's set
+    // by the owner afterward on their Restaurant Profile page instead. See
+    // that page for why (trust boundary: an owner-provided domain isn't
+    // independently verified, unlike a Google-sourced one would have been —
+    // an accepted trade-off since most small restaurants have no Google
+    // website on file at all).
     try {
       const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${googlePlaceId}&key=${GOOGLE_PLACES_KEY}&fields=place_id,name,formatted_address`;
       const placeRes = await fetch(placeDetailsUrl);

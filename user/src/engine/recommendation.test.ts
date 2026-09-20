@@ -146,4 +146,37 @@ describe('scoreAndRankItems', () => {
 
     expect(results).toEqual([]);
   });
+
+  it('excludes unconfirmed items once there are enough verified ones', () => {
+    const profile = makeProfile();
+    const restaurant = makeRestaurant();
+    const verifiedItems = Array.from({ length: 10 }, (_, i) =>
+      makeItem({ itemId: `verified-${i}`, name: `Verified ${i}`, isVerified: true })
+    );
+    const unverifiedItem = makeItem({ itemId: 'unverified-1', name: 'Unverified', isVerified: false });
+
+    const results = scoreAndRankItems(profile, [...verifiedItems, unverifiedItem], restaurant);
+
+    expect(results.every((r) => r.menuItem.isVerified)).toBe(true);
+    expect(results.map((r) => r.menuItem.itemId)).not.toContain('unverified-1');
+  });
+
+  it('backfills with unconfirmed items when there are fewer than 10 verified ones', () => {
+    const profile = makeProfile();
+    const restaurant = makeRestaurant();
+    const verifiedItems = Array.from({ length: 3 }, (_, i) =>
+      makeItem({ itemId: `verified-${i}`, name: `Verified ${i}`, isVerified: true })
+    );
+    const unverifiedItems = Array.from({ length: 3 }, (_, i) =>
+      makeItem({ itemId: `unverified-${i}`, name: `Unverified ${i}`, isVerified: false })
+    );
+
+    const results = scoreAndRankItems(profile, [...verifiedItems, ...unverifiedItems], restaurant);
+
+    expect(results).toHaveLength(6);
+    // All verified items are ranked ahead of every unverified item.
+    const firstUnverifiedIndex = results.findIndex((r) => !r.menuItem.isVerified);
+    const lastVerifiedIndex = results.map((r) => r.menuItem.isVerified).lastIndexOf(true);
+    expect(lastVerifiedIndex).toBeLessThan(firstUnverifiedIndex);
+  });
 });

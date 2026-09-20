@@ -1,6 +1,11 @@
+// Expo's config loader can't resolve TS imports, so this is duplicated from
+// (and must stay in sync with) BRAND_NAME in src/constants/brand.ts — that
+// file is the source of truth for every other UI string in this app.
+const BRAND_NAME = 'CraveID';
+
 export default {
   expo: {
-    name: 'PikMe Owner',
+    name: `${BRAND_NAME} Owner`,
     slug: 'pikme-owner',
     owner: 'venky735',
     version: '1.0.0',
@@ -39,7 +44,7 @@ export default {
         'expo-location',
         {
           locationWhenInUsePermission:
-            'PikMe Owner uses your location to find your restaurant among nearby search results when you claim it.',
+            `${BRAND_NAME} Owner uses your location to find your restaurant among nearby search results when you claim it.`,
         },
       ],
     ],

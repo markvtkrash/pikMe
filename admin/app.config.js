@@ -1,6 +1,11 @@
+// Expo's config loader can't resolve TS imports, so this is duplicated from
+// (and must stay in sync with) BRAND_NAME in src/constants/brand.ts — that
+// file is the source of truth for every other UI string in this app.
+const BRAND_NAME = 'CraveID';
+
 export default {
   expo: {
-    name: 'PikMe Admin',
+    name: `${BRAND_NAME} Admin`,
     slug: 'pikme-admin',
     owner: 'venky735',
     version: '1.0.0',

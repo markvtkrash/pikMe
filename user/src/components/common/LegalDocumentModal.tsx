@@ -2,17 +2,18 @@ import { useState } from 'react';
 import {
   View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
+import { BRAND_NAME } from '../../constants/brandTheme';
 
 export type DocumentType = 'privacy_policy' | 'terms_of_service' | 'food_disclaimer';
 
 const DOCUMENTS: Record<DocumentType, { title: string; content: string }> = {
   privacy_policy: {
     title: 'Privacy Policy',
-    content: `# Privacy Policy - PikMe
+    content: `# Privacy Policy - ${BRAND_NAME}
 
 **Effective Date:** June 17, 2026
 
-PikMe is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
+${BRAND_NAME} is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
 
 ## Information We Collect
 
@@ -101,15 +102,15 @@ For questions, contact: support@markvtkrash.com`,
   },
   terms_of_service: {
     title: 'Terms of Service',
-    content: `# Terms of Service - PikMe
+    content: `# Terms of Service - ${BRAND_NAME}
 
 **Effective Date:** June 17, 2026
 
-Welcome to PikMe! These Terms of Service ("Terms") govern your use of our application. By using PikMe, you agree to these Terms.
+Welcome to ${BRAND_NAME}! These Terms of Service ("Terms") govern your use of our application. By using ${BRAND_NAME}, you agree to these Terms.
 
 ## 1. Use License
 
-PikMe grants you a non-exclusive, non-transferable, revocable license to use the app for personal, non-commercial purposes only.
+${BRAND_NAME} grants you a non-exclusive, non-transferable, revocable license to use the app for personal, non-commercial purposes only.
 
 **You agree NOT to:**
 - Reverse engineer or decompile the app
@@ -128,21 +129,21 @@ PikMe grants you a non-exclusive, non-transferable, revocable license to use the
 
 ## 3. Limitation of Liability
 
-PikMe is provided "as-is" without warranties. We are NOT liable for:
+${BRAND_NAME} is provided "as-is" without warranties. We are NOT liable for:
 - Indirect, incidental, consequential damages
 - Loss of profit or data
 - Interruptions of service
 - Reliance on food recommendations
 
-You use PikMe at your own risk.
+You use ${BRAND_NAME} at your own risk.
 
 ## 4. Indemnification
 
-You agree to indemnify and hold PikMe harmless from claims arising from your use of the app or violation of these Terms.
+You agree to indemnify and hold ${BRAND_NAME} harmless from claims arising from your use of the app or violation of these Terms.
 
 ## 5. Intellectual Property
 
-All content, features, and functionality are owned by PikMe or its licensors. You may not copy or distribute without permission.
+All content, features, and functionality are owned by ${BRAND_NAME} or its licensors. You may not copy or distribute without permission.
 
 ## 6. Prohibited Activities
 
@@ -181,13 +182,13 @@ Last Updated: June 17, 2026`,
   },
   food_disclaimer: {
     title: 'Food Disclaimer',
-    content: `# Food Disclaimer - PikMe
+    content: `# Food Disclaimer - ${BRAND_NAME}
 
-**IMPORTANT: Please Read Before Using PikMe**
+**IMPORTANT: Please Read Before Using ${BRAND_NAME}**
 
 ## Nutritional Information
 
-**Nutritional values provided by PikMe are approximations only:**
+**Nutritional values provided by ${BRAND_NAME} are approximations only:**
 - Values may vary based on preparation methods
 - Portion sizes may differ from descriptions
 - Ingredients and nutritional content can change
@@ -212,7 +213,7 @@ Allergen and dietary restriction information could have changed since our last u
 4. Be cautious of cross-contamination
 5. Verify with current sources
 
-**PikMe is NOT responsible for:**
+**${BRAND_NAME} is NOT responsible for:**
 - Allergic reactions or health issues
 - Inaccurate allergen information
 - Preparation changes
@@ -222,7 +223,7 @@ Allergen and dietary restriction information could have changed since our last u
 
 If you have medical conditions, serious allergies, or dietary restrictions:
 - Consult healthcare professionals
-- Do NOT rely solely on PikMe
+- Do NOT rely solely on ${BRAND_NAME}
 - Verify all information independently
 - Take extra precautions
 
@@ -253,14 +254,14 @@ Religious and cultural dietary requirements require verification:
 
 ## Disclaimer
 
-**PikMe provides information "AS-IS" without warranties of accuracy or completeness.**
+**${BRAND_NAME} provides information "AS-IS" without warranties of accuracy or completeness.**
 
-By using PikMe, you acknowledge:
+By using ${BRAND_NAME}, you acknowledge:
 - You understand nutritional info are approximations
 - You will verify critical information independently
 - You assume responsibility for food safety decisions
 - You will consult healthcare providers for medical advice
-- PikMe is not liable for health issues arising from food
+- ${BRAND_NAME} is not liable for health issues arising from food
 
 ## Need Help?
 

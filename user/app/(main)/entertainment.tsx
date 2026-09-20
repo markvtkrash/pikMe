@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { BRAND_NAME } from '../../src/constants/brandTheme';
 
 export default function EntertainmentScreen() {
   return (
@@ -6,7 +7,7 @@ export default function EntertainmentScreen() {
       <Text style={styles.icon}>🎮</Text>
       <Text style={styles.title}>Entertainment is coming soon</Text>
       <Text style={styles.body}>
-        We're working on bringing movies, events, and more into PikMe. Check back soon!
+        We're working on bringing movies, events, and more into {BRAND_NAME}. Check back soon!
       </Text>
     </View>
   );

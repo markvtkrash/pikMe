@@ -14,6 +14,8 @@ interface Restaurant {
   name: string;
   address: string;
   claimedAt: string;
+  menu_link?: string | null;
+  website_url?: string | null;
 }
 
 interface RestaurantOwnerStore {

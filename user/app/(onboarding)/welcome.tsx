@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BRAND_NAME } from '../../src/constants/brandTheme';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -7,7 +8,7 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.emoji}>🍽️</Text>
-      <Text style={styles.title}>Welcome to PikMe</Text>
+      <Text style={styles.title}>Welcome to {BRAND_NAME}</Text>
       <Text style={styles.subtitle}>
         Let's set up your health profile so we can recommend the best meals for you.
       </Text>

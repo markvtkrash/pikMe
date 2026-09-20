@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import * as Location from 'expo-location';
 import { useRestaurantStore } from '../store/restaurantStore';
 
 export interface Coords {
@@ -7,57 +5,15 @@ export interface Coords {
   longitude: number;
 }
 
+// Thin reader over restaurantStore — the actual GPS watching lives in
+// <LocationTracker>, mounted once in the (main) layout, so every screen that
+// calls this hook shares one live location subscription instead of each
+// starting its own.
 export function useLocation() {
-  const [location, setLocation] = useState<Coords | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const setUserLocation = useRestaurantStore((s) => s.setUserLocation);
+  const location = useRestaurantStore((s) => s.userLocation);
+  const loading = useRestaurantStore((s) => s.locationLoading);
+  const error = useRestaurantStore((s) => s.locationError);
+  const requestLocationRefresh = useRestaurantStore((s) => s.requestLocationRefresh);
 
-  async function requestLocation() {
-    setLoading(true);
-    setError(null);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setError('Location permission denied. Enable it in Settings.');
-        setLoading(false);
-        return;
-      }
-      const pos = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-      setLocation(coords);
-      setUserLocation(coords);
-    } catch (err: any) {
-      setError(err?.message ?? 'Failed to get location');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    let sub: Location.LocationSubscription | null = null;
-
-    async function start() {
-      await requestLocation();
-      try {
-        sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 200 },
-          (pos) => {
-            const coords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
-            setLocation(coords);
-            setUserLocation(coords);
-          }
-        );
-      } catch {
-        // watchPositionAsync not available on all platforms (web may silently fail)
-      }
-    }
-
-    start();
-    return () => { sub?.remove(); };
-  }, []);
-
-  return { location, error, loading, refresh: requestLocation };
+  return { location, error, loading, refresh: requestLocationRefresh };
 }

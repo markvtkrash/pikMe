@@ -163,7 +163,7 @@ export default function ClaimRestaurantScreen() {
 
       <View style={styles.infoBox}>
         <Text style={styles.infoIcon}>⏳</Text>
-        <Text style={styles.infoText}>Your restaurant claim is awaiting admin approval. You'll receive a notification once it's approved.</Text>
+        <Text style={styles.infoText}>Once you claim a restaurant below, an admin will need to review and approve it before you can manage coupons for it.</Text>
       </View>
 
       <TouchableOpacity

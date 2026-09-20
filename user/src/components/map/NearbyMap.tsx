@@ -74,7 +74,7 @@ export function NearbyMap() {
           ListFooterComponent={
             <View style={styles.attribution}>
               <Text style={styles.attributionText}>
-                Restaurant information and photos from Google Maps
+                Restaurant information from Google Maps
               </Text>
             </View>
           }

@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { getRestaurantCoupons } from '../../src/api/restaurantAuth';
+import { getRestaurantCoupons, getRestaurantMenuItems } from '../../src/api/restaurantAuth';
 import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../src/api/supportTickets';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 
@@ -13,17 +13,21 @@ interface Coupon {
   coupon_type: string;
   discount_value: number;
   coupon_code: string;
+  menu_item_id: string | null;
   expiry_date: string;
   usage_limit: number | null;
   times_used: number;
   is_active: boolean;
 }
 
+const ITEM_SPECIFIC_TYPES = ['item_percent', 'item_fixed'];
+
 export default function RestaurantDashboardScreen() {
   const router = useRouter();
   const { owner, restaurant, logout } = useRestaurantOwnerStore();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [expiredCount, setExpiredCount] = useState(0);
+  const [orphanedCount, setOrphanedCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
 
@@ -81,6 +85,13 @@ export default function RestaurantDashboardScreen() {
 
       setCoupons(activeCoupons);
       setExpiredCount(expired.length);
+
+      const menuItems = await getRestaurantMenuItems(restaurant.name);
+      const currentItemIds = new Set(menuItems.map((i: any) => i.item_id));
+      const orphaned = data.filter((c) =>
+        ITEM_SPECIFIC_TYPES.includes(c.coupon_type) && c.menu_item_id && !currentItemIds.has(c.menu_item_id)
+      );
+      setOrphanedCount(orphaned.length);
     } catch (error: any) {
       console.error('[dashboard] Failed to load coupons:', JSON.stringify(error, null, 2));
       console.error('[dashboard] Restaurant object:', JSON.stringify(restaurant, null, 2));
@@ -184,6 +195,18 @@ export default function RestaurantDashboardScreen() {
               <Text style={[styles.statNumber, { color: '#e53e3e' }]}>{expiredCount}</Text>
               <Text style={[styles.couponLinkLabel, { color: '#e53e3e' }]}>Expired</Text>
             </TouchableOpacity>
+            {orphanedCount > 0 && (
+              <>
+                <View style={styles.couponLinkDivider} />
+                <TouchableOpacity
+                  style={styles.couponLink}
+                  onPress={() => router.push('/restaurant/orphaned-coupons')}
+                >
+                  <Text style={[styles.statNumber, { color: '#FFA500' }]}>{orphanedCount}</Text>
+                  <Text style={[styles.couponLinkLabel, { color: '#FFA500' }]}>Orphaned</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
         <TouchableOpacity
@@ -203,6 +226,16 @@ export default function RestaurantDashboardScreen() {
         <Text style={styles.headingBlockIcon}>📋</Text>
         <Text style={[styles.headingBlockText, { color: '#2e7d32' }]}>Add Coupons to Menu Items</Text>
         <Text style={[styles.headingBlockArrow, { color: '#2e7d32' }]}>→</Text>
+      </TouchableOpacity>
+
+      {/* Menu Management */}
+      <TouchableOpacity
+        style={[styles.headingBlock, styles.headingBlockPurple]}
+        onPress={() => router.push('/restaurant/menu-management')}
+      >
+        <Text style={styles.headingBlockIcon}>🍽️</Text>
+        <Text style={[styles.headingBlockText, { color: '#8E24AA' }]}>Menu Management</Text>
+        <Text style={[styles.headingBlockArrow, { color: '#8E24AA' }]}>→</Text>
       </TouchableOpacity>
 
       {/* Show warning if not approved */}
@@ -355,6 +388,7 @@ const styles = StyleSheet.create({
   headingBlockNoMargin: { marginHorizontal: 0, marginTop: 0, marginBottom: 12 },
   headingBlockGreen: { backgroundColor: '#E8F5E9', borderLeftColor: '#4CAF50' },
   headingBlockBlue: { backgroundColor: '#E3F2FD', borderLeftColor: '#1565C0' },
+  headingBlockPurple: { backgroundColor: '#F3E5F5', borderLeftColor: '#8E24AA' },
   headingBlockIcon: { fontSize: 18 },
   headingBlockText: { flex: 1, fontSize: 14, fontWeight: '800' },
   headingBlockArrow: { fontSize: 16, fontWeight: '800' },

@@ -1,10 +1,12 @@
 import { Slot } from 'expo-router';
 import { View, StyleSheet } from 'react-native';
 import { AppModeSwitcher } from '../../src/components/common/AppModeSwitcher';
+import { LocationTracker } from '../../src/components/common/LocationTracker';
 
 export default function MainLayout() {
   return (
     <View style={styles.container}>
+      <LocationTracker />
       <AppModeSwitcher />
       <View style={styles.content}>
         <Slot />

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../src/api/supabase';
 import { LegalDocumentModal, type DocumentType } from '../../src/components/common/LegalDocumentModal';
+import { BRAND_NAME } from '../../src/constants/brandTheme';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -96,7 +97,7 @@ export default function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>🍽️ PikMe</Text>
+        <Text style={styles.logo}>🍽️ {BRAND_NAME}</Text>
         <Text style={styles.subtitle}>
           {mode === 'sign-in' ? 'Sign in to your account' : 'Create an account'}
         </Text>

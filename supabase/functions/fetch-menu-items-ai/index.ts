@@ -254,7 +254,7 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
         imageUrl: null,
         isVerified: false,
       }));
-      await supabase.rpc('upsert_menu_items', { p_items: JSON.stringify(dbPayload) });
+      await supabase.rpc('upsert_menu_items', { p_items: dbPayload });
     }
 
     console.log('[fetch-menu-items-ai] Generated', items.length, 'items');

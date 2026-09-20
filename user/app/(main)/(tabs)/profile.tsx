@@ -11,7 +11,7 @@ import { upsertUserProfile, deleteAccount } from '../../../src/api/functions';
 import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../../src/api/supportTickets';
 import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../src/constants/dietaryOptions';
 import { useFaceIdStore } from '../../../src/store/faceIdStore';
-import { BRAND_COLORS } from '../../../src/constants/brandTheme';
+import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
 
 // React Native's Alert isn't implemented on react-native-web, so on web we fall
@@ -410,7 +410,7 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Security</Text>
           <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Require Face ID to open PikMe</Text>
+            <Text style={styles.switchLabel}>Require Face ID to open {BRAND_NAME}</Text>
             <Switch
               value={requireFaceId ?? true}
               onValueChange={setRequireFaceId}

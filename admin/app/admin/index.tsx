@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { getOpenTicketCounts } from '../../src/api/supportTickets';
 import { PasswordChangeModal } from './PasswordChangeModal';
+import { BRAND_NAME } from '../../src/constants/brand';
 
 interface Stats {
   totalUsers: number;
@@ -193,7 +194,7 @@ export default function AdminDashboard() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity activeOpacity={1} onPress={handleTitleTap}>
-            <Text style={styles.title}>🏢 PikMe Admin</Text>
+            <Text style={styles.title}>🏢 {BRAND_NAME} Admin</Text>
           </TouchableOpacity>
           <Text style={styles.subtitle}>Administration Dashboard</Text>
         </View>

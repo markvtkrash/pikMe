@@ -188,6 +188,13 @@ function buildRecommendation(
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+// Verified (owner-confirmed real) items are preferred over unconfirmed AI
+// guesses — but only as a preference, not a hard exclusion: if a restaurant
+// doesn't have at least this many verified items passing the user's filters,
+// unconfirmed ones are pulled in too (still ranked by relevance) so the
+// customer isn't left with a near-empty or empty list.
+const MIN_VERIFIED_ITEMS = 10;
+
 export function scoreAndRankItems(
   profile: UserProfile,
   items: MenuItem[],
@@ -203,11 +210,15 @@ export function scoreAndRankItems(
     passesHardFilters(item, restrictions, allergens, targets)
   );
 
-  return passed
+  const ranked = passed
     .map((item, i) =>
       buildRecommendation(item, profile, restaurant, weights, cuisineMatch, i + 1)
     )
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 20)
-    .map((rec, i) => ({ ...rec, rank: i + 1 }));
+    .sort((a, b) => b.score - a.score);
+
+  const verified = ranked.filter((r) => r.menuItem.isVerified);
+  const unverified = ranked.filter((r) => !r.menuItem.isVerified);
+  const combined = verified.length >= MIN_VERIFIED_ITEMS ? verified : [...verified, ...unverified];
+
+  return combined.slice(0, 20).map((rec, i) => ({ ...rec, rank: i + 1 }));
 }

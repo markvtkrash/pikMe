@@ -9,25 +9,37 @@ import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
 import { getActiveCouponsByPlaceId } from '../../api/coupons';
 
-const PLACEHOLDER_BG = ['#E8F5E9', '#E3F2FD', '#FFF3E0', '#F3E5F5', '#FCE4EC', '#E0F7FA'];
-
-function placeholderBg(name: string) {
-  return PLACEHOLDER_BG[name.charCodeAt(0) % PLACEHOLDER_BG.length];
-}
-
-// Generic restaurant/food photos shown when a real photo is missing or its
-// Google photo_reference has expired — same restaurant always gets the same
-// one (keyed off its name, like placeholderBg above) rather than a random one
-// flickering between re-renders.
+// Generic restaurant/food photos — the app doesn't call Google's Place
+// Photos API at all (it's billed per view, not per unique place, so it scales
+// with traffic rather than restaurant count). Same restaurant always gets the
+// same one (keyed off its name) rather than a random one flickering between
+// re-renders.
 const PLACEHOLDER_IMAGES = [
-  require('../../../assets/placeholders/restaurant-1.jpg'),
-  require('../../../assets/placeholders/restaurant-2.jpg'),
-  require('../../../assets/placeholders/food-1.jpg'),
-  require('../../../assets/placeholders/food-2.png'),
+  require('../../../assets/placeholders/placeholder-01.jpg'),
+  require('../../../assets/placeholders/placeholder-02.jpg'),
+  require('../../../assets/placeholders/placeholder-03.jpg'),
+  require('../../../assets/placeholders/placeholder-04.jpg'),
+  require('../../../assets/placeholders/placeholder-05.jpg'),
+  require('../../../assets/placeholders/placeholder-06.jpg'),
+  require('../../../assets/placeholders/placeholder-07.jpg'),
+  require('../../../assets/placeholders/placeholder-08.jpg'),
+  require('../../../assets/placeholders/placeholder-09.jpg'),
+  require('../../../assets/placeholders/placeholder-10.jpg'),
+  require('../../../assets/placeholders/placeholder-11.jpg'),
+  require('../../../assets/placeholders/placeholder-12.jpg'),
+  require('../../../assets/placeholders/placeholder-13.jpg'),
+  require('../../../assets/placeholders/placeholder-14.jpg'),
+  require('../../../assets/placeholders/placeholder-15.jpg'),
+  require('../../../assets/placeholders/placeholder-16.jpg'),
 ];
 
+// Sums every character's code rather than just the first — with 16 images,
+// hashing on the first letter alone clusters common starting letters (e.g.
+// "The ...") onto the same handful of images instead of spreading evenly.
 function placeholderImage(name: string) {
-  return PLACEHOLDER_IMAGES[name.charCodeAt(0) % PLACEHOLDER_IMAGES.length];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+  return PLACEHOLDER_IMAGES[hash % PLACEHOLDER_IMAGES.length];
 }
 
 interface Props {
@@ -43,7 +55,6 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   const { toggleRestaurant } = useSaved();
   const hoursDisplay = getHoursDisplay(restaurant.openingHours);
   const [couponCount, setCouponCount] = useState(0);
-  const [imgFailed, setImgFailed] = useState(false);
 
   useEffect(() => {
     getActiveCouponsByPlaceId(restaurant.placeId)
@@ -51,23 +62,12 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
       .catch(() => setCouponCount(0));
   }, [restaurant.placeId]);
 
-  // Google's photo_reference tokens can expire independent of our own cache
-  // TTL — reset the failure flag whenever the URL itself changes so a fresh
-  // reference gets a fresh chance to load.
-  useEffect(() => {
-    setImgFailed(false);
-  }, [restaurant.photoUrl]);
-
   const cuisineLabel = restaurant.cuisineTypes
     .slice(0, 2)
     .map((t) =>
       t.replace(/_restaurant$/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     )
     .join(' · ');
-
-  // photoUrl is generated server-side by Edge Function
-  // Attribution: Photos from Google Maps are credited in explore.tsx and NearbyMap.tsx
-  const imgUri = !imgFailed ? restaurant.photoUrl ?? null : null;
 
   const navigate = () =>
     router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.placeId } });
@@ -84,10 +84,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
     return (
       <TouchableOpacity style={[styles.compact, selected && styles.compactSelected]} onPress={navigate} activeOpacity={0.88}>
         <View style={styles.compactImgBox}>
-          {imgUri
-            ? <Image source={{ uri: imgUri }} style={styles.compactImg} contentFit="cover" transition={250} onError={() => setImgFailed(true)} />
-            : <Image source={placeholderImage(restaurant.name)} style={styles.compactImg} contentFit="cover" />
-          }
+          <Image source={placeholderImage(restaurant.name)} style={styles.compactImg} contentFit="cover" />
         </View>
         <View style={styles.compactBody}>
           <Text style={styles.compactName} numberOfLines={1}>{restaurant.name}</Text>
@@ -102,17 +99,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
     <TouchableOpacity style={[styles.card, selected && styles.cardSelected]} onPress={navigate} onLongPress={showDebugInfo} activeOpacity={0.92}>
       {/* Photo */}
       <View style={styles.imgWrap}>
-        {imgUri
-          ? <Image
-              source={{ uri: imgUri }}
-              style={styles.img}
-              contentFit="cover"
-              transition={300}
-              placeholder={{ color: placeholderBg(restaurant.name) }}
-              onError={() => setImgFailed(true)}
-            />
-          : <Image source={placeholderImage(restaurant.name)} style={styles.img} contentFit="cover" />
-        }
+        <Image source={placeholderImage(restaurant.name)} style={styles.img} contentFit="cover" />
 
         {/* Heart */}
         <TouchableOpacity

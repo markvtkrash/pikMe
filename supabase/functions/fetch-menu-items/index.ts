@@ -150,7 +150,7 @@ serve(async (req) => {
         imageUrl: i.imageUrl,
         isVerified: true,
       }));
-      await supabase.rpc('upsert_menu_items', { p_items: JSON.stringify(dbPayload) });
+      await supabase.rpc('upsert_menu_items', { p_items: dbPayload });
     }
 
     return ok(items);

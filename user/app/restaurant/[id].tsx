@@ -25,24 +25,37 @@ import type { Recommendation, Coupon } from '../../src/types';
 
 const LOADING_EMOJIS = ['🍽️', '🥗', '🍲', '🥘', '🍳'];
 
-const PLACEHOLDER_BG = ['#E8F5E9', '#E3F2FD', '#FFF3E0', '#F3E5F5', '#FCE4EC'];
-function placeholderBg(name: string) {
-  return PLACEHOLDER_BG[name.charCodeAt(0) % PLACEHOLDER_BG.length];
-}
-
-// Generic restaurant/food photos shown when a real photo is missing or its
-// Google photo_reference has expired — same restaurant always gets the same
-// one (keyed off its name, like placeholderBg above) rather than a random one
-// flickering between re-renders.
+// Generic restaurant/food photos — the app doesn't call Google's Place
+// Photos API at all (it's billed per view, not per unique place, so it scales
+// with traffic rather than restaurant count). Same restaurant always gets the
+// same one (keyed off its name) rather than a random one flickering between
+// re-renders.
 const PLACEHOLDER_IMAGES = [
-  require('../../assets/placeholders/restaurant-1.jpg'),
-  require('../../assets/placeholders/restaurant-2.jpg'),
-  require('../../assets/placeholders/food-1.jpg'),
-  require('../../assets/placeholders/food-2.png'),
+  require('../../assets/placeholders/placeholder-01.jpg'),
+  require('../../assets/placeholders/placeholder-02.jpg'),
+  require('../../assets/placeholders/placeholder-03.jpg'),
+  require('../../assets/placeholders/placeholder-04.jpg'),
+  require('../../assets/placeholders/placeholder-05.jpg'),
+  require('../../assets/placeholders/placeholder-06.jpg'),
+  require('../../assets/placeholders/placeholder-07.jpg'),
+  require('../../assets/placeholders/placeholder-08.jpg'),
+  require('../../assets/placeholders/placeholder-09.jpg'),
+  require('../../assets/placeholders/placeholder-10.jpg'),
+  require('../../assets/placeholders/placeholder-11.jpg'),
+  require('../../assets/placeholders/placeholder-12.jpg'),
+  require('../../assets/placeholders/placeholder-13.jpg'),
+  require('../../assets/placeholders/placeholder-14.jpg'),
+  require('../../assets/placeholders/placeholder-15.jpg'),
+  require('../../assets/placeholders/placeholder-16.jpg'),
 ];
 
+// Sums every character's code rather than just the first — with 16 images,
+// hashing on the first letter alone clusters common starting letters (e.g.
+// "The ...") onto the same handful of images instead of spreading evenly.
 function placeholderImage(name: string) {
-  return PLACEHOLDER_IMAGES[name.charCodeAt(0) % PLACEHOLDER_IMAGES.length];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+  return PLACEHOLDER_IMAGES[hash % PLACEHOLDER_IMAGES.length];
 }
 
 const LOADING_STATES = [
@@ -69,7 +82,6 @@ export default function RestaurantDetailScreen() {
   const [couponsOnly, setCouponsOnly] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
-  const [imgFailed, setImgFailed] = useState(false);
 
   const hasSeenNutritionDisclaimer = useUIStore((s) => s.hasSeenNutritionDisclaimer);
   const setHasSeenNutritionDisclaimer = useUIStore((s) => s.setHasSeenNutritionDisclaimer);
@@ -80,13 +92,6 @@ export default function RestaurantDetailScreen() {
   const removeCouponFromList = (couponId: string) =>
     setCoupons((prev) => prev.filter((c) => c.id !== couponId));
   const genericCouponActivation = useCouponActivation({ onClosed: removeCouponFromList });
-
-  // Google's photo_reference tokens can expire independent of our own cache
-  // TTL — reset the failure flag whenever the URL itself changes so a fresh
-  // reference gets a fresh chance to load.
-  useEffect(() => {
-    setImgFailed(false);
-  }, [restaurant?.photoUrl]);
 
   useEffect(() => {
     if (!id) {
@@ -165,8 +170,6 @@ export default function RestaurantDetailScreen() {
     );
   }
 
-  const imgUri = !imgFailed ? restaurant.photoUrl ?? null : null;
-
   const cuisineDisplay = restaurant.cuisineTypes
     .slice(0, 4)
     .map((t) => t.replace(/_restaurant$/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
@@ -204,17 +207,7 @@ export default function RestaurantDetailScreen() {
         <>
           {/* Hero image */}
           <View style={styles.hero}>
-            {imgUri
-              ? <Image
-                  source={{ uri: imgUri }}
-                  style={styles.heroImg}
-                  contentFit="cover"
-                  transition={300}
-                  placeholder={{ color: placeholderBg(restaurant.name) }}
-                  onError={() => setImgFailed(true)}
-                />
-              : <Image source={placeholderImage(restaurant.name)} style={styles.heroImg} contentFit="cover" />
-            }
+            <Image source={placeholderImage(restaurant.name)} style={styles.heroImg} contentFit="cover" />
 
             {/* Overlay gradient strip */}
             <View style={styles.heroOverlay} />
@@ -465,16 +458,9 @@ export default function RestaurantDetailScreen() {
       }
     />
 
-    {/* Sticky back buttons — stay fixed on screen regardless of scroll position,
-        placed at three heights so one is always within thumb's reach. */}
+    {/* Sticky back buttons — stay fixed on screen regardless of scroll position. */}
     <TouchableOpacity
       style={[styles.backBtn, styles.backBtnSticky, { top: insets.top + 12 }]}
-      onPress={() => router.back()}
-    >
-      <Text style={styles.backIcon}>‹</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={[styles.backBtn, styles.backBtnSticky, styles.backBtnMiddle]}
       onPress={() => router.back()}
     >
       <Text style={styles.backIcon}>‹</Text>
@@ -551,7 +537,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 4,
   },
-  backBtnMiddle: { top: '50%', marginTop: -19 },
   backIcon: { fontSize: 24, color: '#141414', lineHeight: 28, marginLeft: -2 },
   heroHeart: {
     position: 'absolute',

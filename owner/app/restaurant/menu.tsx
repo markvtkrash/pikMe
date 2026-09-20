@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Alert, TextInput,
+  ActivityIndicator, Alert, TextInput, Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { getRestaurantMenuItems, refreshRestaurantMenu, getRestaurantCoupons } from '../../src/api/restaurantAuth';
+import { getRestaurantMenuItems, getRestaurantCoupons, verifyMenuItem } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 
 interface MenuItem {
@@ -13,6 +13,7 @@ interface MenuItem {
   calories: number | null;
   protein_g: number | null;
   item_id: string;
+  is_verified: boolean;
 }
 
 interface Coupon {
@@ -33,8 +34,10 @@ export default function RestaurantMenuScreen() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [verifyModalItem, setVerifyModalItem] = useState<MenuItem | null>(null);
+  const [verifyModalName, setVerifyModalName] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (!owner || !restaurant) {
@@ -48,7 +51,7 @@ export default function RestaurantMenuScreen() {
     if (!restaurant) return;
     try {
       const [items, allCoupons] = await Promise.all([
-        getRestaurantMenuItems(restaurant.id),
+        getRestaurantMenuItems(restaurant.name),
         getRestaurantCoupons(restaurant.id),
       ]);
       setMenuItems(items);
@@ -78,37 +81,35 @@ export default function RestaurantMenuScreen() {
     }
   }
 
-  async function handleRefreshMenu() {
-    console.log('[menu] handleRefreshMenu called');
-    if (!restaurant || !session?.access_token) {
-      console.error('[menu] Missing restaurant or session');
-      Alert.alert('Error', 'Session not found');
-      return;
-    }
-    setRefreshing(true);
-    console.log('[menu] Starting refresh for:', restaurant.id, restaurant.name);
-    try {
-      console.log('[menu] Calling refreshRestaurantMenu...');
-      const result = await refreshRestaurantMenu(restaurant.id, restaurant.name, session.access_token);
-      console.log('[menu] Refresh response:', JSON.stringify(result, null, 2));
-      // Reload directly — don't rely on an Alert button callback, which does
-      // not fire on React Native Web (maps to window.alert and ignores onPress).
-      console.log('[menu] Loading items after refresh');
-      await loadMenuItems();
-      Alert.alert('Success', 'Menu refreshed!');
-    } catch (error: any) {
-      console.error('[menu] Refresh error:', error);
-      console.error('[menu] Error details:', JSON.stringify(error, null, 2));
-      Alert.alert('Error', error.message || 'Failed to refresh menu');
-    } finally {
-      console.log('[menu] Refresh finally block');
-      setRefreshing(false);
-    }
-  }
-
   const filteredItems = menuItems.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  function openVerifyModal(item: MenuItem) {
+    setVerifyModalItem(item);
+    setVerifyModalName(item.name);
+  }
+
+  async function confirmVerify() {
+    if (!verifyModalItem) return;
+    const itemId = verifyModalItem.item_id;
+    const trimmedName = verifyModalName.trim();
+    if (!trimmedName) return;
+    setVerifying(true);
+    try {
+      const nameChanged = trimmedName !== verifyModalItem.name;
+      await verifyMenuItem(itemId, nameChanged ? trimmedName : undefined);
+      setMenuItems((prev) =>
+        prev.map((i) => (i.item_id === itemId ? { ...i, name: trimmedName, is_verified: true } : i))
+      );
+      setVerifyModalItem(null);
+    } catch (error: any) {
+      console.error('[menu] Verify error:', error);
+      Alert.alert('Error', error.message || 'Failed to verify item');
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   if (!owner || !restaurant) return null;
 
@@ -133,7 +134,7 @@ export default function RestaurantMenuScreen() {
             <Text style={styles.backBtnText}>← Back</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Menu Items</Text>
+            <Text style={styles.title}>Add Coupons</Text>
             <Text style={styles.subtitle}>{restaurant.name}</Text>
             <Text style={styles.addCouponHint}>Click on an item to add or edit coupon</Text>
           </View>
@@ -143,24 +144,13 @@ export default function RestaurantMenuScreen() {
       {/* Action Buttons */}
       <View style={styles.actionButtonsRow}>
         <TouchableOpacity
-          style={[styles.refreshBtn, refreshing && styles.refreshBtnDisabled]}
-          onPress={handleRefreshMenu}
-          disabled={refreshing}
-        >
-          {refreshing ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.refreshBtnText}>🔄 Refresh</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={styles.expiredBtn}
           onPress={() => router.push('/restaurant/expired')}
         >
           <Text style={styles.expiredBtnText}>📭 Expired</Text>
         </TouchableOpacity>
       </View>
+
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -178,7 +168,7 @@ export default function RestaurantMenuScreen() {
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>📋</Text>
           <Text style={styles.emptyText}>No menu items yet</Text>
-          <Text style={styles.emptySubtext}>Click "Refresh Menu" to load items</Text>
+          <Text style={styles.emptySubtext}>Add items from Menu Management</Text>
         </View>
       ) : (
         <FlatList
@@ -186,6 +176,12 @@ export default function RestaurantMenuScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => {
             const existingCoupon = coupons.find(c => c.menu_item_id === item.item_id);
+            // An unconfirmed item might be a hallucinated AI guess — no
+            // coupon should ever get tied to a dish that might not actually
+            // exist. Editing an already-existing coupon is still allowed
+            // even if the item was unconfirmed afterward; only creating a
+            // brand-new one is blocked.
+            const canAddCoupon = item.is_verified || !!existingCoupon;
             const handlePress = () => {
               if (existingCoupon) {
                 // Edit existing coupon
@@ -199,11 +195,8 @@ export default function RestaurantMenuScreen() {
               }
             };
 
-            return (
-              <TouchableOpacity
-                style={[styles.itemCard, existingCoupon && styles.itemCardWithCoupon]}
-                onPress={handlePress}
-              >
+            const cardContent = (
+              <>
                 <View style={styles.itemInfo}>
                   <View style={styles.itemNameRow}>
                     <Text style={styles.itemName}>{item.name}</Text>
@@ -213,6 +206,9 @@ export default function RestaurantMenuScreen() {
                     {item.calories ? `${Math.round(item.calories)} cal` : 'N/A'} •{' '}
                     {item.protein_g ? `${item.protein_g}g protein` : 'N/A'}
                   </Text>
+                  {!item.is_verified && (
+                    <Text style={styles.unverifiedLabel}>⚠️ Unconfirmed — review in Menu Items</Text>
+                  )}
                   {existingCoupon && (
                     <View style={styles.couponDetailsBox}>
                       <View style={styles.couponHeader}>
@@ -230,9 +226,28 @@ export default function RestaurantMenuScreen() {
                     </View>
                   )}
                 </View>
-                <Text style={styles.actionText}>
-                  {existingCoupon ? '✎ Edit' : '🎟️ Add'}
-                </Text>
+                {canAddCoupon ? (
+                  <Text style={styles.actionText}>{existingCoupon ? '✎ Edit' : '🎟️ Add'}</Text>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.verifyToAddBtn}
+                    onPress={() => openVerifyModal(item)}
+                  >
+                    <Text style={styles.verifyToAddBtnText}>Verify to Add Coupon</Text>
+                  </TouchableOpacity>
+                )}
+              </>
+            );
+
+            if (!canAddCoupon) {
+              return <View style={[styles.itemCard, styles.itemCardDisabled]}>{cardContent}</View>;
+            }
+            return (
+              <TouchableOpacity
+                style={[styles.itemCard, existingCoupon && styles.itemCardWithCoupon]}
+                onPress={handlePress}
+              >
+                {cardContent}
               </TouchableOpacity>
             );
           }}
@@ -243,6 +258,51 @@ export default function RestaurantMenuScreen() {
         />
       )}
     </View>
+
+    <Modal
+      visible={!!verifyModalItem}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setVerifyModalItem(null)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <Text style={styles.modalTitle}>Verify Menu Item</Text>
+          <Text style={styles.modalHint}>
+            Confirm this is really on your menu — fix the name here first if it's not quite right.
+          </Text>
+          <TextInput
+            style={styles.modalInput}
+            placeholder="Item name"
+            placeholderTextColor="#999"
+            value={verifyModalName}
+            onChangeText={setVerifyModalName}
+            autoFocus
+            onSubmitEditing={confirmVerify}
+            returnKeyType="done"
+          />
+          <View style={styles.modalBtnRow}>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnCancel]}
+              onPress={() => setVerifyModalItem(null)}
+            >
+              <Text style={styles.modalBtnCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalBtn, styles.modalBtnConfirm, !verifyModalName.trim() && styles.modalBtnDisabled]}
+              onPress={confirmVerify}
+              disabled={!verifyModalName.trim() || verifying}
+            >
+              {verifying ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.modalBtnConfirmText}>Confirm</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
     </View>
   );
 }
@@ -260,15 +320,6 @@ const styles = StyleSheet.create({
   addCouponHint: { fontSize: 12, color: '#FFA500', fontWeight: '600', marginTop: 4 },
 
   actionButtonsRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 12 },
-  refreshBtn: {
-    flex: 1,
-    backgroundColor: '#4CAF50',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  refreshBtnDisabled: { opacity: 0.6 },
-  refreshBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   expiredBtn: {
     flex: 1,
     backgroundColor: '#fff',
@@ -304,11 +355,13 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   itemCardWithCoupon: { backgroundColor: '#F0F8FF', borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
+  itemCardDisabled: { backgroundColor: '#FAFAFA' },
   itemInfo: { flex: 1 },
   itemNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 4 },
   couponIcon: { fontSize: 16 },
   itemNutrition: { fontSize: 12, color: '#666', marginBottom: 6 },
+  unverifiedLabel: { fontSize: 11, color: '#E65100', fontWeight: '700', marginBottom: 6 },
   couponDetailsBox: { backgroundColor: '#F0F8FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#4CAF50', marginTop: 8 },
   couponHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   couponTicketIcon: { fontSize: 24 },
@@ -316,6 +369,11 @@ const styles = StyleSheet.create({
   couponExpiry: { fontSize: 10, color: '#999', marginTop: 3 },
   couponUsage: { fontSize: 10, color: '#666', fontWeight: '600', marginTop: 2 },
   actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50' },
+  verifyToAddBtn: {
+    backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  verifyToAddBtnText: { fontSize: 11, fontWeight: '800', color: '#E65100', textAlign: 'center' },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
@@ -323,4 +381,24 @@ const styles = StyleSheet.create({
   emptySubtext: { fontSize: 13, color: '#666', textAlign: 'center' },
 
   noResultsText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 20 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#fff', borderRadius: 14, padding: 20, width: '100%', maxWidth: 420, elevation: 4,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: '#222', marginBottom: 4 },
+  modalHint: { fontSize: 13, color: '#888', marginBottom: 14, lineHeight: 18 },
+  modalInput: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 16,
+  },
+  modalBtnRow: { flexDirection: 'row', gap: 10 },
+  modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  modalBtnDisabled: { opacity: 0.6 },
+  modalBtnCancel: { backgroundColor: '#f0f0f0' },
+  modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#555' },
+  modalBtnConfirm: { backgroundColor: '#4CAF50' },
+  modalBtnConfirmText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 });

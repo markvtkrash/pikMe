@@ -1,6 +1,11 @@
+// Expo's config loader can't resolve TS imports, so this is duplicated from
+// (and must stay in sync with) BRAND_NAME in src/constants/brandTheme.ts —
+// that file is the source of truth for every other UI string in this app.
+const BRAND_NAME = 'CraveID';
+
 export default {
   expo: {
-    name: 'PikMe',
+    name: BRAND_NAME,
     slug: 'pikme',
     owner: 'venky735',
     version: '1.0.0',
@@ -38,13 +43,13 @@ export default {
         'expo-location',
         {
           locationWhenInUsePermission:
-            'PikMe uses your location to find restaurants near you and tailor food recommendations.',
+            `${BRAND_NAME} uses your location to find restaurants near you and tailor food recommendations.`,
         },
       ],
       [
         'expo-local-authentication',
         {
-          faceIDPermission: 'PikMe uses Face ID to keep your account secure and locked between sessions.',
+          faceIDPermission: `${BRAND_NAME} uses Face ID to keep your account secure and locked between sessions.`,
         },
       ],
     ],

@@ -86,6 +86,9 @@ Deno.serve(async (req) => {
       console.warn('[fetch-nearby-restaurants] Coverage check failed (treating as not covered):', coverageErr);
     }
 
+    let restaurants: any[] = [];
+    let servedFromCache = false;
+
     if (isCovered && !coverageErr) {
       // Geo filtering + 7-day TTL happen in SQL against the WHOLE table (see
       // migration 021). This returns only rows truly within radiusMeters,
@@ -105,7 +108,7 @@ Deno.serve(async (req) => {
       } else {
         const nearby = cachedNearby ?? [];
         console.log('[fetch-nearby-restaurants] Area already covered by a prior search. Serving', nearby.length, 'cached restaurants within', radiusMeters, 'meters');
-        const transformed = nearby.map((r) => ({
+        restaurants = nearby.map((r) => ({
           placeId: r.place_id,
           name: r.name,
           location: {
@@ -125,144 +128,255 @@ Deno.serve(async (req) => {
           openingHours: r.opening_hours ?? undefined,
           hasNutritionData: false,
         }));
-        return new Response(JSON.stringify(transformed), {
-          headers: { ...CORS, 'Content-Type': 'application/json' },
-        });
+        servedFromCache = true;
       }
     }
 
-    // ── Area not covered yet: call Google Places API (with pagination) ─────────────────
-    console.log('[fetch-nearby-restaurants] Area not covered. Calling Google Places API...');
+    if (!servedFromCache) {
+      // ── Area not covered yet: call Google Places API (with pagination) ─────────────
+      console.log('[fetch-nearby-restaurants] Area not covered. Calling Google Places API...');
 
-    // Google returns max 20 results per page, 60 total across 3 pages (its own
-    // hard ceiling — we can't get more no matter what). Each extra page is a
-    // separate billable call plus a mandatory ~2s wait before its
-    // next_page_token becomes valid, so this is configurable rather than
-    // hardcoded — trade coverage for cost/latency via MAX_RESULT_PAGES.
-    const MAX_RESULT_PAGES = Math.min(Math.max(Number(Deno.env.get('MAX_RESULT_PAGES')) || 1, 1), 3);
+      // Google returns max 20 results per page, 60 total across 3 pages (its own
+      // hard ceiling — we can't get more no matter what). Each extra page is a
+      // separate billable call plus a mandatory ~2s wait before its
+      // next_page_token becomes valid, so this is configurable rather than
+      // hardcoded — trade coverage for cost/latency via MAX_RESULT_PAGES.
+      const MAX_RESULT_PAGES = Math.min(Math.max(Number(Deno.env.get('MAX_RESULT_PAGES')) || 1, 1), 3);
 
-    function buildPlacesUrl(pageToken?: string): URL {
-      const u = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
-      if (pageToken) {
-        // Per Google's docs, a pagetoken request only needs pagetoken + key —
-        // other params are ignored (and re-sending them can trigger errors).
-        u.searchParams.set('pagetoken', pageToken);
-      } else {
-        u.searchParams.set('location', `${latitude},${longitude}`);
-        // radiusMeters is already bounded by MAX_RADIUS_METERS above — no
-        // separate hardcoded clamp here, otherwise raising MAX_RADIUS_METERS
-        // past 5000 would silently do nothing (Google's cap is 50,000m).
-        u.searchParams.set('radius', String(radiusMeters));
-        // `type` is a hard category filter in Nearby Search (unlike Text
-        // Search, where it's just a ranking hint) — `type=restaurant` was
-        // silently excluding places Google categorizes as cafe/bakery/etc
-        // (e.g. Dunkin' Donuts), which never have "restaurant" in their type
-        // list. `keyword` is a soft text match instead, and 'food' is present
-        // on virtually every eatery Google indexes (see GENERIC_TYPES above).
-        u.searchParams.set('keyword', 'food');
+      function buildPlacesUrl(pageToken?: string): URL {
+        const u = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');
+        if (pageToken) {
+          // Per Google's docs, a pagetoken request only needs pagetoken + key —
+          // other params are ignored (and re-sending them can trigger errors).
+          u.searchParams.set('pagetoken', pageToken);
+        } else {
+          u.searchParams.set('location', `${latitude},${longitude}`);
+          // radiusMeters is already bounded by MAX_RADIUS_METERS above — no
+          // separate hardcoded clamp here, otherwise raising MAX_RADIUS_METERS
+          // past 5000 would silently do nothing (Google's cap is 50,000m).
+          u.searchParams.set('radius', String(radiusMeters));
+          // `type` is a hard category filter in Nearby Search (unlike Text
+          // Search, where it's just a ranking hint) — `type=restaurant` was
+          // silently excluding places Google categorizes as cafe/bakery/etc
+          // (e.g. Dunkin' Donuts), which never have "restaurant" in their type
+          // list. `keyword` is a soft text match instead, and 'food' is present
+          // on virtually every eatery Google indexes (see GENERIC_TYPES above).
+          u.searchParams.set('keyword', 'food');
+        }
+        u.searchParams.set('key', GOOGLE_KEY);
+        return u;
       }
-      u.searchParams.set('key', GOOGLE_KEY);
-      return u;
-    }
 
-    let places: any[] = [];
-    let pageToken: string | undefined;
+      let places: any[] = [];
+      let pageToken: string | undefined;
 
-    for (let page = 0; page < MAX_RESULT_PAGES; page++) {
-      if (page > 0) {
+      for (let page = 0; page < MAX_RESULT_PAGES; page++) {
+        if (page > 0) {
+          if (!pageToken) break;
+          // next_page_token isn't valid immediately after it's issued.
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+
+        const placesRes = await fetch(buildPlacesUrl(pageToken).toString());
+        if (!placesRes.ok) {
+          if (page === 0) throw new Error(`Google Places HTTP ${placesRes.status}`);
+          console.warn('[fetch-nearby-restaurants] Pagination request failed, stopping at page', page + 1, '- HTTP', placesRes.status);
+          break;
+        }
+
+        const placesData = await placesRes.json();
+
+        if (placesData.status === 'REQUEST_DENIED' || placesData.status === 'INVALID_REQUEST') {
+          if (page === 0) throw new Error(`Google Places: ${placesData.error_message ?? placesData.status}`);
+          console.warn('[fetch-nearby-restaurants] Pagination stopped at page', page + 1, '-', placesData.status);
+          break;
+        }
+
+        const pageResults = placesData.results ?? [];
+        places = places.concat(pageResults);
+        pageToken = placesData.next_page_token;
+
+        console.log('[fetch-nearby-restaurants] Page', page + 1, 'of', MAX_RESULT_PAGES, '- got', pageResults.length, 'results, more pages available:', !!pageToken);
+
         if (!pageToken) break;
-        // next_page_token isn't valid immediately after it's issued.
-        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
 
-      const placesRes = await fetch(buildPlacesUrl(pageToken).toString());
-      if (!placesRes.ok) {
-        if (page === 0) throw new Error(`Google Places HTTP ${placesRes.status}`);
-        console.warn('[fetch-nearby-restaurants] Pagination request failed, stopping at page', page + 1, '- HTTP', placesRes.status);
-        break;
-      }
-
-      const placesData = await placesRes.json();
-
-      if (placesData.status === 'REQUEST_DENIED' || placesData.status === 'INVALID_REQUEST') {
-        if (page === 0) throw new Error(`Google Places: ${placesData.error_message ?? placesData.status}`);
-        console.warn('[fetch-nearby-restaurants] Pagination stopped at page', page + 1, '-', placesData.status);
-        break;
-      }
-
-      const pageResults = placesData.results ?? [];
-      places = places.concat(pageResults);
-      pageToken = placesData.next_page_token;
-
-      console.log('[fetch-nearby-restaurants] Page', page + 1, 'of', MAX_RESULT_PAGES, '- got', pageResults.length, 'results, more pages available:', !!pageToken);
-
-      if (!pageToken) break;
-    }
-
-    const restaurants = places.map((place) => {
-      const photoReference = place.photos?.[0]?.photo_reference ?? null;
-      return {
-        placeId: place.place_id,
-        name: place.name,
-        location: {
-          latitude: place.geometry.location.lat,
-          longitude: place.geometry.location.lng,
-          address: place.vicinity ?? '',
-          city: '',
-        },
-        distanceMeters: Math.round(
-          haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
-        ),
-        rating: place.rating ?? 0,
-        cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
-        photoUrl: photoReference
-          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_KEY}`
-          : undefined,
-        photoReference, // Keep for caching
-        openNow: place.opening_hours?.open_now ?? false,
-        openingHours: place.opening_hours ? {
-          open_now: place.opening_hours.open_now,
-          weekday_text: place.opening_hours.weekday_text ?? [],
-          periods: place.opening_hours.periods ?? [],
-        } : undefined,
-        hasNutritionData: false,
-      };
-    });
-
-    // Cache restaurants in Supabase (best-effort — don't fail the request if this errors)
-    try {
-      if (restaurants.length > 0) {
-        // SQL reads flat fields (placeId, latitude, longitude, address, city) — not nested location
-        const toCache = restaurants.map((r) => ({
-          placeId:        r.placeId,
-          name:           r.name,
-          latitude:       r.location.latitude,
-          longitude:      r.location.longitude,
-          address:        r.location.address,
-          city:           r.location.city,
-          rating:         r.rating,
-          priceLevel:     null,
-          cuisineTypes:   r.cuisineTypes,
-          photoReference: r.photoReference ?? null,
-          openingHours:   r.openingHours ?? null,
-          openNow:        r.openNow,
-        }));
-        await supabase.rpc('upsert_restaurants', { p_restaurants: toCache });
-      }
-
-      // Record the search regardless of result count — a genuinely sparse
-      // area (0 or few restaurants) should still count as "covered" so it
-      // isn't re-searched via Google on every single request.
-      await supabase.rpc('record_search_area', {
-        p_lat: latitude,
-        p_lng: longitude,
-        p_radius_meters: radiusMeters,
+      restaurants = places.map((place) => {
+        const photoReference = place.photos?.[0]?.photo_reference ?? null;
+        return {
+          placeId: place.place_id,
+          name: place.name,
+          location: {
+            latitude: place.geometry.location.lat,
+            longitude: place.geometry.location.lng,
+            address: place.vicinity ?? '',
+            city: '',
+          },
+          distanceMeters: Math.round(
+            haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
+          ),
+          rating: place.rating ?? 0,
+          cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
+          photoUrl: photoReference
+            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_KEY}`
+            : undefined,
+          photoReference, // Keep for caching
+          openNow: place.opening_hours?.open_now ?? false,
+          openingHours: place.opening_hours ? {
+            open_now: place.opening_hours.open_now,
+            weekday_text: place.opening_hours.weekday_text ?? [],
+            periods: place.opening_hours.periods ?? [],
+          } : undefined,
+          hasNutritionData: false,
+        };
       });
-    } catch (cacheErr) {
-      console.warn('[fetch-nearby-restaurants] Cache upsert / search recording failed (non-fatal):', cacheErr);
+
+      // Cache restaurants in Supabase (best-effort — don't fail the request if this errors)
+      try {
+        if (restaurants.length > 0) {
+          // SQL reads flat fields (placeId, latitude, longitude, address, city) — not nested location
+          const toCache = restaurants.map((r) => ({
+            placeId:        r.placeId,
+            name:           r.name,
+            latitude:       r.location.latitude,
+            longitude:      r.location.longitude,
+            address:        r.location.address,
+            city:           r.location.city,
+            rating:         r.rating,
+            priceLevel:     null,
+            cuisineTypes:   r.cuisineTypes,
+            photoReference: r.photoReference ?? null,
+            openingHours:   r.openingHours ?? null,
+            openNow:        r.openNow,
+          }));
+          await supabase.rpc('upsert_restaurants', { p_restaurants: toCache });
+        }
+
+        // Record the search regardless of result count — a genuinely sparse
+        // area (0 or few restaurants) should still count as "covered" so it
+        // isn't re-searched via Google on every single request.
+        await supabase.rpc('record_search_area', {
+          p_lat: latitude,
+          p_lng: longitude,
+          p_radius_meters: radiusMeters,
+        });
+      } catch (cacheErr) {
+        console.warn('[fetch-nearby-restaurants] Cache upsert / search recording failed (non-fatal):', cacheErr);
+      }
+
+      console.log('[fetch-nearby-restaurants] Got', restaurants.length, 'restaurants from Google API');
     }
 
-    console.log('[fetch-nearby-restaurants] Returning', restaurants.length, 'restaurants from Google API');
+    // ── Guarantee claimed restaurants never go missing from their own area ─────────
+    // Google's Nearby Search ranks by "prominence" (rating + reviews + distance),
+    // not strictly nearest-first, and this function only fetches the first page
+    // by default — a genuinely close, real restaurant can simply not make that
+    // top-20 cut. Once that happens, is_area_covered locks this area into
+    // re-serving the same incomplete cache for up to 7 days. A claimed
+    // restaurant is a small, known set (owners who've actually signed up) — for
+    // any of those missing from this result, fetch it directly via Place
+    // Details (once) and cache it by place_id, which Google's ToS exempts from
+    // the cache-duration limit. After that one lookup it shows up in every
+    // future nearby search's normal geo-scan, cache-hit or not, at no further
+    // API cost for this restaurant.
+    try {
+      const { data: claimedRestaurants, error: claimedErr } = await supabase
+        .from('restaurants')
+        .select('google_place_id, name');
+
+      if (claimedErr) {
+        console.warn('[fetch-nearby-restaurants] Failed to load claimed restaurants (skipping backfill):', claimedErr);
+      } else {
+        const presentPlaceIds = new Set(restaurants.map((r) => r.placeId));
+        const missingClaimed = (claimedRestaurants ?? []).filter(
+          (c) => c.google_place_id && !presentPlaceIds.has(c.google_place_id)
+        );
+
+        for (const claimed of missingClaimed) {
+          try {
+            const detailsUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+            detailsUrl.searchParams.set('place_id', claimed.google_place_id);
+            detailsUrl.searchParams.set(
+              'fields',
+              'place_id,name,geometry,rating,types,vicinity,photos,opening_hours'
+            );
+            detailsUrl.searchParams.set('key', GOOGLE_KEY);
+
+            const detailsRes = await fetch(detailsUrl.toString());
+            if (!detailsRes.ok) {
+              console.warn('[fetch-nearby-restaurants] Place Details HTTP', detailsRes.status, 'for claimed restaurant', claimed.name);
+              continue;
+            }
+            const detailsData = await detailsRes.json();
+            if (detailsData.status !== 'OK' || !detailsData.result?.geometry?.location) {
+              console.warn('[fetch-nearby-restaurants] Place Details returned', detailsData.status, 'for claimed restaurant', claimed.name);
+              continue;
+            }
+
+            const place = detailsData.result;
+            const distance = Math.round(
+              haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
+            );
+            if (distance > radiusMeters) continue; // genuinely outside this search's radius
+
+            const photoReference = place.photos?.[0]?.photo_reference ?? null;
+            const backfilled = {
+              placeId: place.place_id,
+              name: place.name,
+              location: {
+                latitude: place.geometry.location.lat,
+                longitude: place.geometry.location.lng,
+                address: place.vicinity ?? '',
+                city: '',
+              },
+              distanceMeters: distance,
+              rating: place.rating ?? 0,
+              cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
+              photoUrl: photoReference
+                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_KEY}`
+                : undefined,
+              photoReference,
+              openNow: place.opening_hours?.open_now ?? false,
+              openingHours: place.opening_hours ? {
+                open_now: place.opening_hours.open_now,
+                weekday_text: place.opening_hours.weekday_text ?? [],
+                periods: place.opening_hours.periods ?? [],
+              } : undefined,
+              hasNutritionData: false,
+            };
+
+            restaurants.push(backfilled);
+
+            // Cache it (by place_id, exempt from the TTL) so no future search
+            // ever needs another Place Details call for this restaurant.
+            await supabase.rpc('upsert_restaurants', {
+              p_restaurants: [{
+                placeId:        backfilled.placeId,
+                name:           backfilled.name,
+                latitude:       backfilled.location.latitude,
+                longitude:      backfilled.location.longitude,
+                address:        backfilled.location.address,
+                city:           backfilled.location.city,
+                rating:         backfilled.rating,
+                priceLevel:     null,
+                cuisineTypes:   backfilled.cuisineTypes,
+                photoReference: backfilled.photoReference ?? null,
+                openingHours:   backfilled.openingHours ?? null,
+                openNow:        backfilled.openNow,
+              }],
+            });
+
+            console.log('[fetch-nearby-restaurants] Backfilled claimed restaurant missing from Google\'s ranked results:', backfilled.name);
+          } catch (detailsErr) {
+            console.warn('[fetch-nearby-restaurants] Error backfilling claimed restaurant', claimed.name, ':', detailsErr);
+          }
+        }
+      }
+    } catch (fallbackErr) {
+      console.warn('[fetch-nearby-restaurants] Claimed-restaurant backfill failed (non-fatal):', fallbackErr);
+    }
+
+    console.log('[fetch-nearby-restaurants] Returning', restaurants.length, 'restaurants');
     return new Response(JSON.stringify(restaurants), {
       headers: { ...CORS, 'Content-Type': 'application/json' },
     });

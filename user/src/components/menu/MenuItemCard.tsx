@@ -137,13 +137,18 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
               <Text style={styles.heart}>{isSaved ? '❤️' : '🤍'}</Text>
             </TouchableOpacity>
           </View>
-          {!item.isVerified && (
-            <View style={styles.estimatedBadge}>
-              <Text style={styles.estimatedText}>Estimated</Text>
-            </View>
-          )}
         </View>
       </View>
+
+      {!item.isVerified && (
+        <View style={styles.unverifiedBanner}>
+          <Text style={styles.unverifiedIcon}>⚠️</Text>
+          <Text style={styles.unverifiedText}>
+            <Text style={styles.unverifiedTextBold}>Unconfirmed item — </Text>
+            AI estimate, not verified by the restaurant. Details, including whether this dish is actually offered, may be inaccurate.
+          </Text>
+        </View>
+      )}
 
       {/* Divider */}
       <View style={styles.divider} />
@@ -360,15 +365,22 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontSize: 15, fontWeight: '700', color: '#141414', lineHeight: 21 },
   heart: { fontSize: 19, marginTop: 1 },
 
-  estimatedBadge: {
-    alignSelf: 'flex-start',
-    marginTop: 5,
-    backgroundColor: '#F3E5F5',
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  unverifiedBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: '#FFF3E0',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E65100',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 10,
+    marginBottom: 4,
   },
-  estimatedText: { fontSize: 10, color: '#7B1FA2', fontWeight: '700', letterSpacing: 0.3 },
+  unverifiedIcon: { fontSize: 13, lineHeight: 16 },
+  unverifiedText: { flex: 1, fontSize: 11.5, color: '#7A4A00', lineHeight: 16 },
+  unverifiedTextBold: { fontWeight: '800', color: '#E65100' },
 
   divider: { height: 1, backgroundColor: '#F3F3F3', marginBottom: 12 },
 

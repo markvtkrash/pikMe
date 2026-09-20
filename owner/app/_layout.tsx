@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../src/api/supabase';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
+import { useRestaurantOwnerStore } from '../src/store/restaurantOwnerStore';
+import { getRestaurantForOwner } from '../src/api/restaurantAuth';
 
 // Suppress harmless deprecation warnings
 LogBox.ignoreLogs([
@@ -33,6 +35,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [roleCheckComplete, setRoleCheckComplete] = useState(false);
   const router = useRouter();
   const segments = useSegments();
+  const storeOwner = useRestaurantOwnerStore((s) => s.owner);
+  const setStoreOwner = useRestaurantOwnerStore((s) => s.setOwner);
+  const setStoreRestaurant = useRestaurantOwnerStore((s) => s.setRestaurant);
+  const setStoreSession = useRestaurantOwnerStore((s) => s.setSession);
+  // Tracks whether a rehydration attempt has finished (success or failure) —
+  // distinct from storeOwner being set, so a failed fetch doesn't leave the
+  // gate below stuck showing a spinner forever.
+  const [hydrationAttempted, setHydrationAttempted] = useState(false);
 
   // Auth subscription
   useEffect(() => {
@@ -81,6 +91,45 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     })();
   }, [session]);
 
+  // Rehydrate the Zustand store (owner/restaurant/session) whenever a valid
+  // session is confirmed but the store is empty — that's the reload case:
+  // Supabase's own session persists across a page refresh, but this store
+  // doesn't, and it's only otherwise populated by the login form submission
+  // itself. Without this, every restaurant/* screen's own "if (!owner ||
+  // !restaurant) redirect to login" guard fires right after a valid reload.
+  useEffect(() => {
+    if (!session || !roleCheckComplete) return;
+    if (!isRestaurantOwner || storeOwner) {
+      // Nothing to hydrate (not an owner) or already hydrated (login form
+      // already populated the store this session) — don't block on it.
+      setHydrationAttempted(true);
+      return;
+    }
+
+    (async () => {
+      try {
+        const { data: ownerRow, error: ownerError } = await supabase
+          .from('restaurant_owners')
+          .select('id, email, business_name')
+          .eq('id', session.user.id)
+          .single();
+        if (ownerError || !ownerRow) {
+          console.error('[AuthGate] Rehydration: failed to load owner profile:', ownerError);
+          return;
+        }
+        setStoreOwner({ id: ownerRow.id, email: ownerRow.email, businessName: ownerRow.business_name });
+        setStoreSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+
+        const restaurant = await getRestaurantForOwner();
+        if (restaurant) setStoreRestaurant(restaurant);
+      } catch (err) {
+        console.error('[AuthGate] Rehydration failed:', err);
+      } finally {
+        setHydrationAttempted(true);
+      }
+    })();
+  }, [session, isRestaurantOwner, roleCheckComplete, storeOwner]);
+
   // Routing guard — runs whenever session or role state or segment changes
   useEffect(() => {
     if (session === undefined) return;
@@ -111,8 +160,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     if (isRestaurantOwner) {
       const inRestaurant = segments[0] === 'restaurant';
-      if (!inRestaurant) {
-        console.log('[AuthGate] Owner not in restaurant section, redirecting to /restaurant/dashboard');
+      // Only force an authenticated owner off the login/signup/change-
+      // password pages once rehydration has actually confirmed a usable
+      // owner in the store (storeOwner). Gating on isRestaurantOwner alone
+      // caused a loop: if rehydration ever fails to populate storeOwner,
+      // dashboard.tsx's own "if (!owner) redirect to login" guard would send
+      // them back here, and this would immediately bounce them to the
+      // dashboard again — forever. Requiring storeOwner breaks that cycle:
+      // a failed hydration just leaves them on the current page instead of
+      // fighting another redirect over it.
+      if (!inRestaurant || (isRestaurantAuthPage && storeOwner)) {
+        console.log('[AuthGate] Owner already authenticated, redirecting to /restaurant/dashboard');
         router.replace('/restaurant/dashboard');
       }
       return;
@@ -126,9 +184,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       console.log('[AuthGate] Session has no owner role, redirecting to owner login');
       router.replace('/restaurant/auth/login');
     }
-  }, [session, isRestaurantOwner, roleCheckComplete, segments]);
+  }, [session, isRestaurantOwner, roleCheckComplete, segments, storeOwner]);
 
-  if (session === undefined) {
+  // Block on the initial session check, and — when signed in — on the
+  // rehydration attempt above, so pages never render with a signed-in
+  // session but an empty store (which would trip their own "no owner,
+  // redirect to login" guards on a plain page reload).
+  if (session === undefined || (session && !hydrationAttempted)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#4CAF50" />
