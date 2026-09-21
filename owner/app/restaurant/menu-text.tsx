@@ -28,7 +28,7 @@ export default function MenuTextScreen() {
     try {
       let result = await extractMenuFromText(restaurant.id, restaurant.name, menuText, session.access_token);
       result = await confirmAndRetryIfNeeded(result, () =>
-        extractMenuFromText(restaurant.id, restaurant.name, menuText, session.access_token, true)
+        extractMenuFromText(restaurant.id, restaurant.name, menuText, session.access_token, true, result.items)
       );
       if (result.requiresConfirmation) {
         // Owner cancelled at the confirm prompt — nothing was changed.
@@ -36,7 +36,7 @@ export default function MenuTextScreen() {
       }
       Alert.alert(
         'Success',
-        `Saved ${result.itemCount} real menu items read from your text — customers will now see these.`
+        `Added ${result.itemCount} real menu items read from your text to your menu. Edit or remove any of them from Manual Entry.`
       );
       setMenuText('');
       router.push('/restaurant/menu-items');
@@ -67,7 +67,8 @@ export default function MenuTextScreen() {
           <Text style={styles.cardHint}>
             Copy your real menu text from anywhere — a PDF, an email, a document, a site that's hard to
             link — and paste it below. We'll read the real dish names directly from it — we never invent
-            items that aren't in the text. Saving replaces what's currently cached.
+            items that aren't in the text. This adds to your existing menu without removing anything —
+            edit or remove individual items afterward from Manual Entry.
           </Text>
 
           <TextInput

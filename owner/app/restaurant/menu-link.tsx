@@ -44,7 +44,7 @@ export default function MenuLinkScreen() {
         session.access_token
       );
       result = await confirmAndRetryIfNeeded(result, () =>
-        updateRestaurantMenuLink(restaurant.id, restaurant.name, menuLinkInput.trim(), session.access_token, true)
+        updateRestaurantMenuLink(restaurant.id, restaurant.name, menuLinkInput.trim(), session.access_token, true, result.items)
       );
 
       if (result.requiresConfirmation) {

@@ -55,13 +55,23 @@ const NAV_ITEMS: NavItem[] = [
     href: '/restaurant/menu',
     isActive: (p) =>
       pathIs(p, '/restaurant/menu') ||
+      pathIs(p, '/restaurant/coupon-status') ||
+      pathIs(p, '/restaurant/active-coupons') ||
+      pathIs(p, '/restaurant/inactive-coupons') ||
       pathIs(p, '/restaurant/expired') ||
       pathIs(p, '/restaurant/orphaned-coupons') ||
       pathIs(p, '/restaurant/coupon'),
+    // Active/Inactive/Expired/Orphaned used to each be their own nav
+    // destination — replaced by one multi-select status filter row on
+    // Manage Coupons (coupon-status.tsx), since a coupon's statuses aren't
+    // mutually exclusive (e.g. active AND orphaned at once) and a flat list
+    // of nav links can't represent "show me more than one of these together"
+    // the way an in-page filter can. The old standalone pages still exist
+    // (dashboard's Active/Expired stat links point at them) but are no
+    // longer reachable from this nav.
     children: [
       { label: 'Add Coupons', href: '/restaurant/menu' },
-      { label: 'Expired', href: '/restaurant/expired' },
-      { label: 'Orphaned', href: '/restaurant/orphaned-coupons' },
+      { label: 'Manage Coupons', href: '/restaurant/coupon-status' },
     ],
   },
   {

@@ -254,9 +254,11 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
                     ? `${coupon.discount_value}% off`
                     : `$${coupon.discount_value} off`}
                 </Text>
-                <Text style={styles.couponTapHint}>
-                  {coupon.activated_at ? '⏱ Active — tap to view' : 'Tap to activate'}
-                </Text>
+                <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
+                  <Text style={styles.couponTapHintText}>
+                    {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
+                  </Text>
+                </View>
               </View>
               <Text style={styles.couponStarRight}>⭐</Text>
             </TouchableOpacity>
@@ -582,11 +584,21 @@ const styles = StyleSheet.create({
     color: '#E65100',
     textTransform: 'capitalize',
   },
-  couponTapHint: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#D84315',
-    marginTop: 3,
+  couponTapHintPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  couponTapHintPillActive: {
+    backgroundColor: '#1565C0',
+  },
+  couponTapHintText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#fff',
   },
   couponStarRight: {
     fontSize: 24,

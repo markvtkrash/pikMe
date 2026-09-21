@@ -26,6 +26,7 @@ interface Coupon {
   coupon_code: string;
   menu_item_id?: string;
   usage_limit?: number;
+  per_user_limit?: number;
   expiry_date: string;
   is_active: boolean;
 }
@@ -40,6 +41,7 @@ export default function EditCouponScreen() {
   const [code, setCode] = useState('');
   const [menuItemId, setMenuItemId] = useState('');
   const [usageLimit, setUsageLimit] = useState('');
+  const [perUserLimit, setPerUserLimit] = useState('1');
   const [expiryDate, setExpiryDate] = useState(new Date());
   const [isActive, setIsActive] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -47,6 +49,7 @@ export default function EditCouponScreen() {
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [usageLimitError, setUsageLimitError] = useState<string | undefined>();
+  const [perUserLimitError, setPerUserLimitError] = useState<string | undefined>();
 
   useEffect(() => {
     loadCoupon();
@@ -70,6 +73,7 @@ export default function EditCouponScreen() {
         setCode(found.coupon_code);
         setMenuItemId(found.menu_item_id || '');
         setUsageLimit(found.usage_limit?.toString() || '');
+        setPerUserLimit(found.per_user_limit?.toString() || '1');
         setExpiryDate(new Date(found.expiry_date));
         setIsActive(found.is_active);
       } else {
@@ -103,6 +107,18 @@ export default function EditCouponScreen() {
     }
     setUsageLimitError(undefined);
 
+    if (!perUserLimit.trim()) {
+      setPerUserLimitError('Usage limit per consumer is required');
+      Alert.alert('Error', 'Usage limit per consumer is required');
+      return;
+    }
+    if (!Number.isInteger(Number(perUserLimit)) || Number(perUserLimit) <= 0) {
+      setPerUserLimitError('Enter a whole number greater than 0');
+      Alert.alert('Error', 'Usage limit per consumer must be a whole number greater than 0');
+      return;
+    }
+    setPerUserLimitError(undefined);
+
     console.log('[coupon-edit] Validation passed, updating...');
     setUpdating(true);
     try {
@@ -113,6 +129,7 @@ export default function EditCouponScreen() {
         expiryDate: expiryDate.toISOString(),
         menuItemId: menuItemId.trim() || undefined,
         usageLimit: parseInt(usageLimit, 10),
+        perUserLimit: parseInt(perUserLimit, 10),
         isActive,
       });
 
@@ -269,6 +286,25 @@ export default function EditCouponScreen() {
             }}
           />
           {usageLimitError && <Text style={styles.errorText}>{usageLimitError}</Text>}
+
+          {/* Usage Limit Per Consumer */}
+          <Text style={styles.label}>Usage Limit per Consumer *</Text>
+          <Text style={styles.helpText}>
+            How many times the SAME customer can redeem this coupon. Set to 1 for a one-time-per-person
+            deal, or higher to let a customer use it repeatedly (still counted against the total above).
+          </Text>
+          <TextInput
+            style={[styles.input, perUserLimitError && styles.inputError]}
+            placeholder="e.g., 1"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+            value={perUserLimit}
+            onChangeText={(text) => {
+              setPerUserLimit(text);
+              if (text.trim()) setPerUserLimitError(undefined);
+            }}
+          />
+          {perUserLimitError && <Text style={styles.errorText}>{perUserLimitError}</Text>}
 
           {/* Expiry Date */}
           <Text style={styles.label}>Expiry Date</Text>

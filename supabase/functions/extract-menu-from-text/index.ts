@@ -67,8 +67,11 @@ async function extractItemsFromText(menuText: string, restaurantName: string): P
   const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
   const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
   const QUICKSILVER_MODEL = Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  console.log('[extract-menu-from-text] Using provider:', AI_PROVIDER, 'model:', AI_PROVIDER === 'quicksilver' ? QUICKSILVER_MODEL : CLAUDE_MODEL);
 
-  const prompt = `A restaurant owner for "${restaurantName}" pasted the following raw text, copied from their real menu (could be from a PDF, website, email, or document). Extract the ACTUAL menu items explicitly present in this text. Do NOT invent, guess, or add items that aren't there. If this text does not appear to contain a real menu, return an empty JSON array: [].
+  const prompt = `A restaurant owner for "${restaurantName}" typed or pasted the following text, listing real dish name(s) from their own menu. It may be as short as a single dish name with no prices, descriptions, or formatting — that's still valid; a real menu item name by itself is exactly what you should extract, don't require extra context, structure, or corroborating detail before trusting it as real.
+
+Extract every dish/item name explicitly present in this text, exactly as given. Do NOT invent, guess, or add items that aren't there. Only return an empty JSON array ([]) if the text is genuinely unrelated to food entirely (e.g. random gibberish, a question, an address) — a short or single food/dish name is a valid extraction, not a reason to return [].
 
 For each real item found, estimate reasonable nutrition values (this app shows nutrition estimates for restaurant food, so approximate is fine — but the item NAME must be real, taken directly from the text).
 
@@ -82,6 +85,9 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
 - sodium_mg (number)
 - dietaryFiber_g (number)
 - sugars_g (number)
+
+Example — if the pasted text were just the single word "Dosa" with nothing else, the correct response is NOT an empty array. It's:
+[{"name":"Dosa","calories":133,"protein_g":2.7,"totalCarbs_g":22,"totalFat_g":3.7,"saturatedFat_g":0.5,"sodium_mg":220,"dietaryFiber_g":1.2,"sugars_g":0.5}]
 
 Pasted menu text:
 """
@@ -147,6 +153,12 @@ ${menuText}
     rawText = claudeData.content?.[0]?.text ?? '';
   }
 
+  // Always log the raw model response before any parsing — otherwise a
+  // model that legitimately (or wrongly) returns "[]" leaves no trace of
+  // what it actually said, and the eventual "no items" error is
+  // undiagnosable from the logs alone.
+  console.log('[extract-menu-from-text] Raw model response:', rawText.slice(0, 1000));
+
   const cleaned = rawText
     .replace(/^```json\s*/i, '')
     .replace(/^```\s*/i, '')
@@ -170,7 +182,7 @@ ${menuText}
 
   const items = await Promise.all(
     (rawItems as Record<string, unknown>[])
-      .filter((i) => i.name && typeof i.calories === 'number' && (i.calories as number) > 0)
+      .filter((i) => i.name && Number(i.calories) > 0)
       .map(async (i) => ({
         itemId: await deterministicId(restaurantName, String(i.name)),
         restaurantName,
@@ -191,6 +203,13 @@ ${menuText}
       }))
   );
 
+  if (items.length === 0 && (rawItems as unknown[]).length > 0) {
+    // Parsing succeeded and the model returned rows, but every one got
+    // filtered out — log the raw rows so a future zero-item report can be
+    // diagnosed without needing to reproduce it live.
+    console.warn('[extract-menu-from-text] Model returned', (rawItems as unknown[]).length, 'row(s) but all were filtered out. Raw:', JSON.stringify(rawItems).slice(0, 500));
+  }
+
   if (items.length === 0) {
     return { items: [], error: 'No real menu items were found in that text.' };
   }
@@ -204,11 +223,14 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('Unauthorized', 401);
 
-    const { restaurantId, restaurantName, menuText, force } = await req.json();
+    const { restaurantId, restaurantName, menuText, force, items: providedItems } = await req.json();
     if (!restaurantId || !restaurantName?.trim() || !menuText?.trim()) {
       return err('restaurantId, restaurantName, and menuText are required', 400);
     }
-    if (menuText.trim().length < 5) {
+    // Just enough to reject empty/junk input (a stray character, whitespace)
+    // without rejecting genuinely short real dish names — "idly", "dosa",
+    // "pho", "dal" are all 3-4 characters and perfectly valid single items.
+    if (menuText.trim().length < 2) {
       return err('That text is too short to contain real menu items', 400);
     }
 
@@ -231,22 +253,38 @@ serve(async (req) => {
       return err('Forbidden', 403);
     }
 
-    const trimmedText = String(menuText).trim().slice(0, MAX_TEXT_LENGTH);
-    const extracted = await extractItemsFromText(trimmedText, restaurantName);
-    if (extracted.items.length === 0) {
-      return err(extracted.error || 'Could not extract a menu from that text.', 400);
+    // If the client already has extracted items from a prior call on this
+    // same text (i.e. this is the force:true retry after a coupon-orphan
+    // confirmation), reuse them instead of re-running the LLM extraction —
+    // that call isn't free, and re-running it is non-deterministic: it can
+    // legitimately come back with fewer (or zero) items the second time,
+    // which previously surfaced as a confusing failure right after the
+    // owner had just confirmed they wanted to proceed.
+    let items: unknown[];
+    if (Array.isArray(providedItems) && providedItems.length > 0) {
+      items = providedItems;
+    } else {
+      const trimmedText = String(menuText).trim().slice(0, MAX_TEXT_LENGTH);
+      const extracted = await extractItemsFromText(trimmedText, restaurantName);
+      if (extracted.items.length === 0) {
+        return err(extracted.error || 'Could not extract a menu from that text.', 400);
+      }
+      items = extracted.items;
     }
-    const items = extracted.items;
 
-    // ── Hand off to the shared replace function — same coupon-orphan check
-    // and delete-then-upsert as every other menu source. ────────────────
+    // ── Hand off to the shared replace function, scope 'add' — pasted text
+    // is often a partial menu, not the full thing, so this adds these items
+    // alongside whatever's already cached instead of wiping out everything
+    // else (which was silently orphaning coupons tied to items missing from
+    // the pasted text). Owners can edit/remove individual items afterward
+    // via Manual Entry. ──────────────────────────────────────────────────
     const replaceRes = await fetch(`${SUPABASE_URL}/functions/v1/replace-restaurant-menu-items`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force }),
+      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force, scope: 'add' }),
     });
     const replaceData = await replaceRes.json();
     if (!replaceRes.ok) {
@@ -254,7 +292,10 @@ serve(async (req) => {
     }
 
     console.log('[extract-menu-from-text] Extracted', items.length, 'real items for', restaurantName);
-    return ok(replaceData);
+    // Send the extracted items back alongside a requiresConfirmation
+    // response so a force:true retry can pass them straight back in
+    // (see providedItems above) rather than re-extracting from scratch.
+    return ok(replaceData.requiresConfirmation ? { ...replaceData, items } : replaceData);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal server error';
     console.error('[extract-menu-from-text] Unhandled error:', e);

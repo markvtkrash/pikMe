@@ -61,7 +61,7 @@ export default function MenuPhotoScreen() {
     try {
       let result = await extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, session.access_token);
       result = await confirmAndRetryIfNeeded(result, () =>
-        extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, session.access_token, true)
+        extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, session.access_token, true, result.items)
       );
       if (result.requiresConfirmation) {
         // Owner cancelled at the confirm prompt — nothing was changed.
@@ -69,7 +69,7 @@ export default function MenuPhotoScreen() {
       }
       Alert.alert(
         'Success',
-        `Saved ${result.itemCount} real menu items read from your photo — customers will now see these.`
+        `Added ${result.itemCount} real menu items read from your photo to your menu. Edit or remove any of them from Manual Entry.`
       );
       setPreviewUri(null);
       setImageDataUrl(null);
@@ -100,7 +100,8 @@ export default function MenuPhotoScreen() {
           <Text style={styles.cardTitle}>📷 Scan a Menu Photo</Text>
           <Text style={styles.cardHint}>
             Upload a clear photo of your printed menu. We'll read the real dish names directly from it —
-            we never invent items that aren't in the photo. Saving replaces what's currently cached.
+            we never invent items that aren't in the photo. This adds to your existing menu without
+            removing anything — edit or remove individual items afterward from Manual Entry.
           </Text>
 
           {previewUri && (

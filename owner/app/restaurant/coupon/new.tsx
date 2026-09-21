@@ -35,6 +35,7 @@ export default function NewCouponScreen() {
   const [menuItemId, setMenuItemId] = useState(params?.menuItemId || '');
   const [selectedMenuItemName, setSelectedMenuItemName] = useState(params?.menuItemName || '');
   const [usageLimit, setUsageLimit] = useState('');
+  const [perUserLimit, setPerUserLimit] = useState('1');
   const [expiryDate, setExpiryDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 7);
@@ -42,7 +43,7 @@ export default function NewCouponScreen() {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ code?: string; discount?: string; menuItem?: string; usageLimit?: string }>({});
+  const [errors, setErrors] = useState<{ code?: string; discount?: string; menuItem?: string; usageLimit?: string; perUserLimit?: string }>({});
 
   // Validate on input change
   const validateForm = () => {
@@ -54,6 +55,11 @@ export default function NewCouponScreen() {
       newErrors.usageLimit = 'Usage limit is required';
     } else if (!Number.isInteger(Number(usageLimit)) || Number(usageLimit) <= 0) {
       newErrors.usageLimit = 'Enter a whole number greater than 0';
+    }
+    if (!perUserLimit.trim()) {
+      newErrors.perUserLimit = 'Usage limit per consumer is required';
+    } else if (!Number.isInteger(Number(perUserLimit)) || Number(perUserLimit) <= 0) {
+      newErrors.perUserLimit = 'Enter a whole number greater than 0';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -118,6 +124,7 @@ export default function NewCouponScreen() {
         expiryDate: expiryDate.toISOString(),
         menuItemId: finalMenuItemId,
         usageLimit: parseInt(usageLimit, 10),
+        perUserLimit: parseInt(perUserLimit, 10),
       });
 
       console.log('[coupon-new] createCoupon called with:', { couponType, menuItemId: finalMenuItemId });
@@ -250,6 +257,25 @@ export default function NewCouponScreen() {
           }}
         />
         {errors.usageLimit && <Text style={styles.errorText}>{errors.usageLimit}</Text>}
+
+        {/* Usage Limit Per Consumer */}
+        <Text style={styles.label}>Usage Limit per Consumer *</Text>
+        <Text style={styles.helpText}>
+          How many times the SAME customer can redeem this coupon. Set to 1 for a one-time-per-person
+          deal, or higher to let a customer use it repeatedly (still counted against the total above).
+        </Text>
+        <TextInput
+          style={[styles.input, errors.perUserLimit && styles.inputError]}
+          placeholder="e.g., 1"
+          placeholderTextColor="#999"
+          keyboardType="number-pad"
+          value={perUserLimit}
+          onChangeText={(text) => {
+            setPerUserLimit(text);
+            if (text.trim()) setErrors(prev => ({ ...prev, perUserLimit: undefined }));
+          }}
+        />
+        {errors.perUserLimit && <Text style={styles.errorText}>{errors.perUserLimit}</Text>}
 
         {/* Expiry Date */}
         <Text style={styles.label}>Expiry Date</Text>
