@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Restaurant } from '../types';
 
 // Owner/admin-only functions, split out of the original restaurantAuth.ts
 // (which mixed these in with customer-facing coupon functions — those now
@@ -28,6 +29,30 @@ export async function geocodeLocation(query: string): Promise<GeocodedLocation> 
   const data = await response.json();
   if (!response.ok) throw new Error(data.error);
   return data;
+}
+
+// Finds a restaurant by NAME (via Google Places Text Search) within a given
+// radius of a geocoded location — for the case where Nearby Search's
+// prominence-ranked browse doesn't surface it (a real but less-reviewed
+// local restaurant can miss that top-~20 cutoff entirely). Still bounded to
+// radiusMeters of a real location, same trust guarantee as the plain nearby
+// browse — this only changes how the match happens, not whether it's
+// location-constrained.
+export async function searchRestaurantByName(
+  businessName: string,
+  latitude: number,
+  longitude: number,
+  radiusMeters: number
+): Promise<Restaurant[]> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-name-search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ businessName, latitude, longitude, radiusMeters }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to search by business name');
+  return data.results || [];
 }
 
 export async function signUpRestaurantOwner(email: string, password: string, businessName: string) {

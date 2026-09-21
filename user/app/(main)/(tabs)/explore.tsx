@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, RefreshControl,
+  StyleSheet, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../../src/hooks/useLocation';
@@ -88,6 +88,7 @@ export default function ExploreScreen() {
 
   function chipLabel(type: string) {
     if (type === ALL) return 'All';
+    if (type === 'cafe') return 'Cafe/Coffee';
     return type.replace(/_restaurant$/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
@@ -185,46 +186,42 @@ export default function ExploreScreen() {
 
         {showMoreFilters && (
           <>
-            {/* Type chips (cafe, bar, etc.) */}
+            {/* Type chips (cafe, bar, etc.) — wrapping row, not horizontal
+                scroll: horizontal ScrollView doesn't reliably respond to
+                desktop mouse-wheel/trackpad scroll on web, which was cutting
+                off longer labels like "Meal Delivery" and "Bakery" at the
+                edge of the viewport. */}
             {typeOptions.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chips}
-              >
+              <View style={styles.chips}>
                 {typeOptions.map((type) => (
                   <TouchableOpacity
                     key={type}
                     style={[styles.chip, activeType === type && styles.chipActive]}
-                    onPress={() => setActiveType(type)}
+                    onPress={() => { setActiveType(type); setActiveCuisine(ALL); }}
                   >
                     <Text style={[styles.chipText, activeType === type && styles.chipTextActive]}>
                       {chipLabel(type)}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
             )}
 
             {/* Cuisine chips (Italian, Mexican, Indian, etc.) */}
             {cuisineOptions.length > 1 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chips}
-              >
+              <View style={styles.chips}>
                 {cuisineOptions.map((cuisine) => (
                   <TouchableOpacity
                     key={cuisine}
                     style={[styles.chip, activeCuisine === cuisine && styles.chipActive]}
-                    onPress={() => setActiveCuisine(cuisine)}
+                    onPress={() => { setActiveCuisine(cuisine); setActiveType(ALL); }}
                   >
                     <Text style={[styles.chipText, activeCuisine === cuisine && styles.chipTextActive]}>
                       {cuisine === ALL ? 'All Cuisines' : cuisine}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
             )}
           </>
         )}
@@ -370,7 +367,7 @@ const styles = StyleSheet.create({
   moreFiltersChevron: { fontSize: 13, color: '#2e7d32', fontWeight: '700' },
   moreFiltersTextActive: { color: '#fff' },
 
-  chips: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   chip: {
     paddingVertical: 7,
     paddingHorizontal: 16,
