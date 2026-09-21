@@ -427,7 +427,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 1,
   },
-  itemInfo: { flex: 1 },
+  // minWidth:0 lets this shrink below its own content width (name text)
+  // when the row is tight — without it, a flex:1 item's default min-width
+  // is "big enough to fit its content," so it refuses to shrink and pushes
+  // the action button / delete button off the visible row instead of just
+  // wrapping the name text.
+  itemInfo: { flex: 1, minWidth: 0 },
   itemName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 4 },
   itemNutrition: { fontSize: 12, color: '#666' },
   unconfirmedHint: { fontSize: 11, color: '#E65100', fontWeight: '600', marginTop: 4 },
@@ -436,7 +441,7 @@ const styles = StyleSheet.create({
   // Shared sizing so the verify and unconfirm buttons occupy the exact same
   // slot regardless of which state an item is in — only actionBtn's own
   // color variant (unconfirmBtn / verifyBtn) differs.
-  itemAction: { width: 132, alignItems: 'flex-end' },
+  itemAction: { width: 132, alignItems: 'flex-end', flexShrink: 0 },
   actionBtn: {
     width: '100%', alignItems: 'center', justifyContent: 'center',
     borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10,
@@ -445,7 +450,10 @@ const styles = StyleSheet.create({
   unconfirmBtnText: { fontSize: 12, color: '#E65100', fontWeight: '800' },
   verifyBtn: { backgroundColor: '#4CAF50', elevation: 1 },
   verifyBtnText: { fontSize: 12, color: '#fff', fontWeight: '800', textAlign: 'center' },
-  deleteBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#FFEBEE', alignItems: 'center', justifyContent: 'center' },
+  deleteBtn: {
+    width: 32, height: 32, borderRadius: 8, backgroundColor: '#FFEBEE',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
   deleteBtnText: { fontSize: 14, fontWeight: '700', color: '#e53e3e' },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30, paddingTop: 60 },

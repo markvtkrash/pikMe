@@ -439,14 +439,22 @@ const styles = StyleSheet.create({
   cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
 
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  // minWidth:0 lets this shrink below its own content width when the row is
+  // tight (a flex item's default min-width is "big enough to fit its
+  // content," not 0) — without it, this refuses to shrink and pushes the
+  // badge/verify/remove buttons off the visible row entirely instead of
+  // just making the input narrower. Same underlying issue as the nav bug.
   itemInput: {
-    flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
+    flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222',
   },
-  removeBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFEBEE', alignItems: 'center', justifyContent: 'center' },
+  removeBtn: {
+    width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFEBEE',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
   removeBtnText: { fontSize: 15, fontWeight: '700', color: '#e53e3e' },
 
-  verifiedBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  verifiedBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexShrink: 0 },
   verifiedBadgeYes: { backgroundColor: '#E8F5E9' },
   verifiedBadgeNo: { backgroundColor: '#FFF3E0' },
   verifiedBadgeText: { fontSize: 10.5, fontWeight: '700' },
@@ -455,11 +463,14 @@ const styles = StyleSheet.create({
 
   unconfirmBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, flexShrink: 0,
   },
   unconfirmBtnText: { fontSize: 11, color: '#E65100', fontWeight: '800' },
 
-  verifyBtn: { backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
+  verifyBtn: {
+    backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    elevation: 1, flexShrink: 0,
+  },
   verifyBtnText: { fontSize: 12, color: '#fff', fontWeight: '800' },
 
   addBtn: { alignSelf: 'flex-start', paddingVertical: 8, marginBottom: 14 },

@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   itemCardWithCoupon: { backgroundColor: '#F0F8FF', borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
   itemCardDisabled: { backgroundColor: '#FAFAFA' },
-  itemInfo: { flex: 1 },
+  itemInfo: { flex: 1, minWidth: 0 },
   itemNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   itemName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 4 },
   couponIcon: { fontSize: 16 },
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
   couponCode: { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
   couponExpiry: { fontSize: 10, color: '#999', marginTop: 3 },
   couponUsage: { fontSize: 10, color: '#666', fontWeight: '600', marginTop: 2 },
-  actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50' },
+  actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50', flexShrink: 0 },
   verifyToAddBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, flexShrink: 0,
   },
   verifyToAddBtnText: { fontSize: 11, fontWeight: '800', color: '#E65100', textAlign: 'center' },
 
