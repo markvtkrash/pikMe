@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
-import { claimRestaurant, geocodeLocation } from '../../src/api/restaurantAuth';
+import { claimRestaurant, geocodeLocation, searchRestaurantByName } from '../../src/api/restaurantAuth';
 import { fetchNearbyRestaurants } from '../../src/api/functions';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { supabase } from '../../src/api/supabase';
@@ -18,8 +18,10 @@ const OWNER_SEARCH_RADIUS_KM = OWNER_SEARCH_RADIUS_METERS / 1000;
 
 export default function ClaimRestaurantScreen() {
   const router = useRouter();
-  const { session, setRestaurant } = useRestaurantOwnerStore();
+  const { session, restaurant: claimedRestaurant, setRestaurant } = useRestaurantOwnerStore();
   const [locationQuery, setLocationQuery] = useState('');
+  const [businessNameQuery, setBusinessNameQuery] = useState('');
+  const [radiusMiles, setRadiusMiles] = useState('10');
   const [nameFilter, setNameFilter] = useState('');
   const [geocodedAddress, setGeocodedAddress] = useState<string | null>(null);
   const [results, setResults] = useState<Restaurant[]>([]);
@@ -27,6 +29,16 @@ export default function ClaimRestaurantScreen() {
   const [hasSearched, setHasSearched] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimedRestaurants, setClaimedRestaurants] = useState<Set<string>>(new Set());
+
+  // One owner claims exactly one restaurant — once this owner already has
+  // one, this whole search/claim UI has no legitimate reason to show again
+  // (and every search here is a billable Google API call). Bounce to the
+  // dashboard immediately rather than letting the search form ever render.
+  useEffect(() => {
+    if (claimedRestaurant) {
+      router.replace('/restaurant/dashboard');
+    }
+  }, [claimedRestaurant]);
 
   // Load all claimed restaurants
   useEffect(() => {
@@ -54,6 +66,24 @@ export default function ClaimRestaurantScreen() {
     return results.filter((r) => normalizeForSearch(r.name).includes(target));
   }, [results, nameFilter]);
 
+  const MILES_TO_METERS = 1609.34;
+
+  // Shared by both search entry points below — if a business name was
+  // typed, uses location-biased Text Search (name-matching, finds real but
+  // less-reviewed local places Nearby Search's prominence ranking can miss);
+  // otherwise falls back to the existing prominence-ranked nearby browse.
+  async function searchNear(latitude: number, longitude: number) {
+    const name = businessNameQuery.trim();
+    if (name) {
+      const radiusMeters = (Number(radiusMiles) || 10) * MILES_TO_METERS;
+      const found = await searchRestaurantByName(name, latitude, longitude, radiusMeters);
+      setResults(found);
+    } else {
+      const nearby = await fetchNearbyRestaurants(latitude, longitude, OWNER_SEARCH_RADIUS_METERS);
+      setResults(nearby);
+    }
+  }
+
   async function handleLocationSearch() {
     if (!locationQuery.trim()) return;
 
@@ -62,13 +92,12 @@ export default function ClaimRestaurantScreen() {
     setResults([]);
     setGeocodedAddress(null);
     try {
-      // Geocode the entered zip/city, then reuse the EXACT same nearby-search
-      // customers use (same radius, same function) — so an owner only ever
-      // sees restaurants a real customer at that location could also find.
+      // Geocode the entered zip/city first either way — a business-name
+      // search still needs a real location to bound the radius around, same
+      // trust guarantee as the plain nearby browse.
       const geo = await geocodeLocation(locationQuery.trim());
       setGeocodedAddress(geo.formattedAddress);
-      const nearby = await fetchNearbyRestaurants(geo.latitude, geo.longitude, OWNER_SEARCH_RADIUS_METERS);
-      setResults(nearby);
+      await searchNear(geo.latitude, geo.longitude);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to find restaurants near that location');
     } finally {
@@ -89,8 +118,7 @@ export default function ClaimRestaurantScreen() {
       }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setGeocodedAddress('your current location');
-      const nearby = await fetchNearbyRestaurants(pos.coords.latitude, pos.coords.longitude, OWNER_SEARCH_RADIUS_METERS);
-      setResults(nearby);
+      await searchNear(pos.coords.latitude, pos.coords.longitude);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to get your current location');
     } finally {
@@ -127,17 +155,18 @@ export default function ClaimRestaurantScreen() {
       if (claimResult?.restaurant) {
         console.log('[claim] Restaurant claimed successfully, setting in store');
         setRestaurant(claimResult.restaurant);
-        Alert.alert('Success', 'Restaurant claimed! 🎉', [
-          { text: 'OK', onPress: () => {
-            console.log('[claim] Navigating to dashboard');
-            router.replace('/restaurant/dashboard');
-          }},
-        ]);
+        // Navigate immediately rather than gating it behind an Alert button
+        // press — Alert.alert with a custom button array + onPress is
+        // unreliable on React Native Web (same issue worked around in
+        // coupon/new.tsx), so waiting for that click could leave the owner
+        // stuck on this screen with no visible feedback even though the
+        // claim itself succeeded.
+        router.replace('/restaurant/dashboard');
+        setTimeout(() => Alert.alert('Success', 'Restaurant claimed! 🎉'), 500);
       } else if (claimResult?.message === 'You already own this restaurant') {
         console.log('[claim] Already owns restaurant');
-        Alert.alert('Info', claimResult.message, [
-          { text: 'OK', onPress: () => router.replace('/restaurant/dashboard') },
-        ]);
+        router.replace('/restaurant/dashboard');
+        setTimeout(() => Alert.alert('Info', claimResult.message), 500);
       } else {
         console.warn('[claim] Unexpected response:', JSON.stringify(claimResult, null, 2));
         Alert.alert('Info', claimResult?.message || 'Restaurant claimed');
@@ -152,6 +181,11 @@ export default function ClaimRestaurantScreen() {
       setClaimingId(null);
     }
   }
+
+  // Redirect is in flight — render nothing rather than flashing the search
+  // form (and risking a search actually firing) for an owner who already
+  // has a restaurant.
+  if (claimedRestaurant) return null;
 
   return (
     <View style={styles.container}>
@@ -175,6 +209,30 @@ export default function ClaimRestaurantScreen() {
       </TouchableOpacity>
 
       <Text style={styles.orDivider}>or</Text>
+
+      <Text style={styles.businessNameLabel}>Know the exact name? Search for it directly:</Text>
+      <Text style={styles.businessNameHint}>
+        Finds your restaurant by name instead of just browsing what's nearby — helpful if it doesn't show
+        up in the browse list above (a real place can still be missed by that if it has fewer reviews).
+      </Text>
+      <View style={styles.businessNameRow}>
+        <TextInput
+          style={[styles.searchInput, styles.businessNameInput]}
+          placeholder="Business name (optional), e.g. Mocha Point Coffee"
+          placeholderTextColor="#999"
+          value={businessNameQuery}
+          onChangeText={setBusinessNameQuery}
+          onSubmitEditing={handleLocationSearch}
+        />
+        <TextInput
+          style={[styles.searchInput, styles.radiusInput]}
+          placeholder="Miles"
+          placeholderTextColor="#999"
+          keyboardType="number-pad"
+          value={radiusMiles}
+          onChangeText={setRadiusMiles}
+        />
+      </View>
 
       <View style={styles.searchBox}>
         <TextInput
@@ -201,7 +259,9 @@ export default function ClaimRestaurantScreen() {
       {geocodedAddress && (
         <View style={styles.radiusBanner}>
           <Text style={styles.radiusBannerText}>
-            📍 Showing restaurants within {OWNER_SEARCH_RADIUS_KM}km of {geocodedAddress}.
+            {businessNameQuery.trim()
+              ? `📍 Showing matches for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of ${geocodedAddress}.`
+              : `📍 Showing restaurants within ${OWNER_SEARCH_RADIUS_KM}km of ${geocodedAddress}.`}
           </Text>
         </View>
       )}
@@ -258,7 +318,11 @@ export default function ClaimRestaurantScreen() {
           !hasSearched ? (
             <Text style={styles.emptyText}>Enter your zip code or city to see nearby restaurants</Text>
           ) : loading ? null : results.length === 0 ? (
-            <Text style={styles.emptyText}>No restaurants found within {OWNER_SEARCH_RADIUS_KM}km of that location</Text>
+            <Text style={styles.emptyText}>
+              {businessNameQuery.trim()
+                ? `No match for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of that location`
+                : `No restaurants found within ${OWNER_SEARCH_RADIUS_KM}km of that location`}
+            </Text>
           ) : (
             <Text style={styles.emptyText}>No matches for "{nameFilter}"</Text>
           )
@@ -287,6 +351,11 @@ const styles = StyleSheet.create({
   },
   currentLocationBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   orDivider: { textAlign: 'center', fontSize: 12, color: '#999', marginVertical: 10 },
+  businessNameLabel: { fontSize: 13, fontWeight: '700', color: '#222', marginHorizontal: 16, marginBottom: 2 },
+  businessNameHint: { fontSize: 11.5, color: '#888', lineHeight: 16, marginHorizontal: 16, marginBottom: 8 },
+  businessNameRow: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  businessNameInput: { flex: 3, marginBottom: 0 },
+  radiusInput: { flex: 1, marginBottom: 0, textAlign: 'center' },
   searchBox: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   searchInput: {
     flex: 1,

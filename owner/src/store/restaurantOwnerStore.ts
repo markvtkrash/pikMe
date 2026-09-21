@@ -7,13 +7,21 @@ interface RestaurantOwner {
   businessName: string;
 }
 
+// Matches the actual public.restaurants row shape returned by
+// getRestaurantForOwner()'s `select('*')` — snake_case, straight off the
+// table, not a client-side camelCase mapping.
 interface Restaurant {
   id: string;
-  ownerId: string;
-  googlePlaceId: string;
+  owner_id: string;
+  google_place_id: string;
   name: string;
   address: string;
-  claimedAt: string;
+  claimed_at: string;
+  created_at?: string;
+  updated_at?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_at?: string | null;
+  approved_by?: string | null;
   menu_link?: string | null;
   website_url?: string | null;
 }

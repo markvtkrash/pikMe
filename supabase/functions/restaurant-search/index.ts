@@ -27,11 +27,16 @@ serve(async (req) => {
       );
     }
 
+    console.log("[restaurant-search] Geocoding query:", query);
+
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${GOOGLE_PLACES_KEY}`;
     const response = await fetch(geocodeUrl);
+    console.log("[restaurant-search] Google HTTP status:", response.status);
     const data = await response.json();
+    console.log("[restaurant-search] Google status field:", data.status, "- result count:", data.results?.length ?? 0);
 
     if (data.status !== "OK" || !data.results?.length) {
+      console.warn("[restaurant-search] Geocode failed or empty:", data.status, data.error_message);
       return new Response(
         JSON.stringify({ error: "Could not find that location. Try a zip code or city name." }),
         { status: 404, headers: { "Content-Type": "application/json" } }
@@ -39,6 +44,7 @@ serve(async (req) => {
     }
 
     const top = data.results[0];
+    console.log("[restaurant-search] Resolved to:", top.formatted_address, top.geometry.location);
     return new Response(
       JSON.stringify({
         latitude: top.geometry.location.lat,

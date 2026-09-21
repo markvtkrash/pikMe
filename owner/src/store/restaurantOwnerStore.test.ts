@@ -26,7 +26,7 @@ describe('restaurantOwnerStore', () => {
 
   it('setOwner, setRestaurant, setSession, and setLoading set fields independently', () => {
     const owner = { id: 'o1', email: 'a@b.com', businessName: 'Diner Inc' };
-    const restaurant = { id: 'r1', ownerId: 'o1', googlePlaceId: 'gp1', name: 'Diner', address: 'addr', claimedAt: '2024-01-01' };
+    const restaurant = { id: 'r1', owner_id: 'o1', google_place_id: 'gp1', name: 'Diner', address: 'addr', claimed_at: '2024-01-01', status: 'approved' as const };
     const session = { access_token: 'a', refresh_token: 'r' };
 
     useRestaurantOwnerStore.getState().setOwner(owner);
@@ -45,7 +45,7 @@ describe('restaurantOwnerStore', () => {
     signOut.mockResolvedValue({ error: null });
     useRestaurantOwnerStore.setState({
       owner: { id: 'o1', email: 'a@b.com', businessName: 'Diner Inc' },
-      restaurant: { id: 'r1', ownerId: 'o1', googlePlaceId: 'gp1', name: 'Diner', address: 'addr', claimedAt: '2024-01-01' },
+      restaurant: { id: 'r1', owner_id: 'o1', google_place_id: 'gp1', name: 'Diner', address: 'addr', claimed_at: '2024-01-01', status: 'approved' },
       session: { access_token: 'a', refresh_token: 'r' },
       loading: true,
     });
