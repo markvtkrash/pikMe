@@ -133,6 +133,10 @@ export async function createCoupon(params: {
   menuItemId?: string;
   usageLimit?: number;
   conditions?: Record<string, any>;
+  // Max times the SAME customer may redeem this coupon (usageLimit above
+  // stays the combined cap across all customers). Defaults to 1 — the
+  // once-per-customer behavior every coupon had before this field existed.
+  perUserLimit?: number;
 }) {
   console.log('[ai-request] createCoupon params:', JSON.stringify(params, null, 2));
 
@@ -145,6 +149,7 @@ export async function createCoupon(params: {
     p_menu_item_id: params.menuItemId || null,
     p_usage_limit: params.usageLimit || null,
     p_conditions: params.conditions || null,
+    p_per_user_limit: params.perUserLimit || 1,
   });
 
   if (error) {
@@ -165,6 +170,9 @@ export async function updateCoupon(
     usageLimit?: number;
     conditions?: Record<string, any>;
     isActive?: boolean;
+    // Max times the SAME customer may redeem this coupon. Omit to leave
+    // unchanged.
+    perUserLimit?: number;
   }
 ) {
   const { data, error } = await supabase.rpc('update_coupon', {
@@ -177,6 +185,7 @@ export async function updateCoupon(
     p_usage_limit: params.usageLimit || null,
     p_conditions: params.conditions || null,
     p_is_active: params.isActive !== undefined ? params.isActive : null,
+    p_per_user_limit: params.perUserLimit || null,
   });
 
   if (error) throw error;
@@ -278,6 +287,13 @@ export interface MenuReplaceResult {
   // used the restaurant's real website instead of falling back to a pure
   // AI guess.
   usedRealWebsite?: boolean;
+  // Present alongside requiresConfirmation on the link/photo/text extraction
+  // results — the items already extracted this call. Pass these back in on
+  // the force:true retry (see the extractedItems param on those functions
+  // below) so the retry doesn't re-run the underlying AI extraction from
+  // scratch, which is both wasteful and non-deterministic enough to
+  // legitimately come back with fewer/zero items the second time.
+  items?: unknown[];
 }
 
 export async function refreshRestaurantMenu(
@@ -309,7 +325,8 @@ export async function updateRestaurantMenuLink(
   restaurantName: string,
   menuUrl: string,
   authToken: string,
-  force = false
+  force = false,
+  extractedItems?: unknown[]
 ): Promise<MenuReplaceResult> {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-menu-from-link`, {
     method: 'POST',
@@ -317,7 +334,7 @@ export async function updateRestaurantMenuLink(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ restaurantId, restaurantName, menuUrl, force }),
+    body: JSON.stringify({ restaurantId, restaurantName, menuUrl, force, items: extractedItems }),
   });
 
   const data = await response.json();
@@ -333,7 +350,8 @@ export async function extractMenuFromImage(
   restaurantName: string,
   imageBase64: string,
   authToken: string,
-  force = false
+  force = false,
+  extractedItems?: unknown[]
 ): Promise<MenuReplaceResult> {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-menu-from-image`, {
     method: 'POST',
@@ -341,7 +359,7 @@ export async function extractMenuFromImage(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ restaurantId, restaurantName, imageBase64, force }),
+    body: JSON.stringify({ restaurantId, restaurantName, imageBase64, force, items: extractedItems }),
   });
 
   const data = await response.json();
@@ -357,7 +375,8 @@ export async function extractMenuFromText(
   restaurantName: string,
   menuText: string,
   authToken: string,
-  force = false
+  force = false,
+  extractedItems?: unknown[]
 ): Promise<MenuReplaceResult> {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-menu-from-text`, {
     method: 'POST',
@@ -365,7 +384,7 @@ export async function extractMenuFromText(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ restaurantId, restaurantName, menuText, force }),
+    body: JSON.stringify({ restaurantId, restaurantName, menuText, force, items: extractedItems }),
   });
 
   const data = await response.json();

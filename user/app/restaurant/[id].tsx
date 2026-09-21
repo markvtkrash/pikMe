@@ -289,9 +289,11 @@ export default function RestaurantDetailScreen() {
                     <Text style={styles.couponDiscount}>
                       {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'} off • Any Item
                     </Text>
-                    <Text style={styles.couponTapHint}>
-                      {coupon.activated_at ? '⏱ Active — tap to view' : 'Tap to activate'}
-                    </Text>
+                    <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
+                      <Text style={styles.couponTapHintText}>
+                        {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
+                      </Text>
+                    </View>
                   </View>
                   <View style={styles.couponBadgeRight}>
                     <Text style={styles.couponValue}>
@@ -348,15 +350,12 @@ export default function RestaurantDetailScreen() {
                     onPress={() => setCouponsOnly((prev) => !prev)}
                     style={[
                       styles.keywordButton,
-                      {
-                        backgroundColor: '#FFF3E0',
-                        borderColor: '#E65100',
-                        borderWidth: couponsOnly ? 2 : 1,
-                        opacity: couponsOnly ? 1 : 0.6,
-                      },
+                      couponsOnly
+                        ? { backgroundColor: '#E65100', borderColor: '#E65100', borderWidth: 2 }
+                        : { backgroundColor: '#fff', borderColor: '#E65100', borderWidth: 1.5 },
                     ]}
                   >
-                    <Text style={[styles.keywordText, { color: '#E65100' }]}>
+                    <Text style={[styles.keywordText, { color: couponsOnly ? '#fff' : '#E65100' }]}>
                       {couponsOnly ? '✓ ' : ''}🎟️ Coupons only
                     </Text>
                   </TouchableOpacity>
@@ -375,15 +374,12 @@ export default function RestaurantDetailScreen() {
                       }}
                       style={[
                         styles.keywordButton,
-                        {
-                          backgroundColor: filter.color,
-                          borderColor: filter.textColor,
-                          borderWidth: isSelected ? 2 : 1,
-                          opacity: isSelected ? 1 : 0.6,
-                        },
+                        isSelected
+                          ? { backgroundColor: filter.textColor, borderColor: filter.textColor, borderWidth: 2 }
+                          : { backgroundColor: '#fff', borderColor: filter.textColor, borderWidth: 1.5 },
                       ]}
                     >
-                      <Text style={[styles.keywordText, { color: filter.textColor }]}>
+                      <Text style={[styles.keywordText, { color: isSelected ? '#fff' : filter.textColor }]}>
                         {isSelected ? '✓ ' : ''}{filter.label}
                       </Text>
                     </TouchableOpacity>
@@ -618,15 +614,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   keywordButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   keywordText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   resultsCount: {
     fontSize: 12,
@@ -726,7 +722,12 @@ const styles = StyleSheet.create({
   couponInfo: { flex: 1 },
   couponCode: { fontSize: 15, fontWeight: '900', color: '#D84315', marginBottom: 3 },
   couponDiscount: { fontSize: 13, color: '#E65100', fontWeight: '700' },
-  couponTapHint: { fontSize: 10.5, color: '#D84315', fontWeight: '700', marginTop: 3 },
+  couponTapHintPill: {
+    alignSelf: 'flex-start', backgroundColor: '#4CAF50', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4, marginTop: 6,
+  },
+  couponTapHintPillActive: { backgroundColor: '#1565C0' },
+  couponTapHintText: { fontSize: 11.5, color: '#fff', fontWeight: '800' },
   couponBadgeRight: { backgroundColor: '#FF6F00', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', elevation: 2 },
   couponValue: { fontSize: 18, fontWeight: '900', color: '#fff' },
 

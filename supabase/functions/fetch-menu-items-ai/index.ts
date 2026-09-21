@@ -217,7 +217,7 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
 
     const items = await Promise.all(
       (rawItems as Record<string, unknown>[])
-        .filter((i) => i.name && typeof i.calories === 'number' && (i.calories as number) > 0)
+        .filter((i) => i.name && Number(i.calories) > 0)
         .map(async (i) => ({
           itemId: await deterministicId(restaurantName, String(i.name)),
           restaurantName,

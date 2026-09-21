@@ -131,9 +131,15 @@ export interface Coupon {
   expiry_date: string;
   usage_limit: number | null;
   times_used: number;
+  // Max times THIS customer may redeem it, and how many times they already
+  // have — once user_uses_count reaches per_user_limit, the coupon stops
+  // being returned for them by get_active_coupons_for_restaurant.
+  per_user_limit: number;
+  user_uses_count: number;
   created_at: string;
   updated_at: string;
-  // Present only if the current customer already activated this coupon.
+  // Present only if the current customer has an open (not yet closed)
+  // activation on this coupon right now.
   activated_at: string | null;
   expires_at: string | null;
 }

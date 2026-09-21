@@ -50,12 +50,19 @@ serve(async (req) => {
     if (!restaurantId || !restaurantName?.trim() || !Array.isArray(items)) {
       return err('restaurantId, restaurantName, and items[] are required', 400);
     }
-    // 'all' (default) replaces everything for this restaurant — used by link
-    // extraction, manual entry, and a full AI refresh. 'unverified_only' is
-    // for a partial AI refresh: verified items (link/manual/already-verified
-    // AI guesses) are structurally untouched, only currently-unverified rows
-    // are cleared and replaced with a fresh AI-guessed batch.
-    const replaceScope: 'all' | 'unverified_only' = scope === 'unverified_only' ? 'unverified_only' : 'all';
+    // 'all' (default) replaces everything for this restaurant — used by
+    // manual entry and a full AI refresh. 'unverified_only' is for a partial
+    // AI refresh: verified items (link/manual/already-verified AI guesses)
+    // are structurally untouched, only currently-unverified rows are cleared
+    // and replaced with a fresh AI-guessed batch. 'add' never deletes
+    // anything at all — it just upserts the incoming items alongside
+    // whatever's already there, for sources (link/photo/text extraction)
+    // that only found a subset of the real menu and shouldn't wipe out
+    // everything else on that basis. Because nothing is deleted, 'add' can
+    // never orphan a coupon or downgrade a verified item, so it skips the
+    // coupon check and confirmation step entirely.
+    const replaceScope: 'all' | 'unverified_only' | 'add' =
+      scope === 'unverified_only' ? 'unverified_only' : scope === 'add' ? 'add' : 'all';
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -64,73 +71,76 @@ serve(async (req) => {
 
     const namePattern = `%${restaurantName.split(' ')[0]}%`;
 
-    // ── Find what's currently cached for this restaurant ────────────────────
-    const { data: allCurrentItems, error: currentItemsError } = await supabase
-      .from('menu_items')
-      .select('item_id, is_verified')
-      .ilike('restaurant_name', namePattern);
+    if (replaceScope !== 'add') {
+      // ── Find what's currently cached for this restaurant ──────────────────
+      const { data: allCurrentItems, error: currentItemsError } = await supabase
+        .from('menu_items')
+        .select('item_id, is_verified')
+        .ilike('restaurant_name', namePattern);
 
-    if (currentItemsError) {
-      console.error('[replace-restaurant-menu-items] Failed to read current items:', currentItemsError);
-      return err('Failed to check existing menu items');
-    }
-
-    // In unverified_only scope, only the unverified rows are actually in
-    // play — verified rows are never read for the coupon check or touched by
-    // the delete below, so there is nothing to warn about for them.
-    const currentItems =
-      replaceScope === 'unverified_only'
-        ? (allCurrentItems ?? []).filter((r) => !r.is_verified)
-        : (allCurrentItems ?? []);
-    const currentItemIds = currentItems.map((r) => r.item_id);
-
-    // A full refresh (AI-guessed, isVerified: false on every incoming item)
-    // is about to silently downgrade real data — link-extracted or manually
-    // typed items the owner already confirmed are accurate — back into
-    // unverified guesses. That's worth its own warning, independent of
-    // whether any coupons happen to be affected. Doesn't apply in
-    // unverified_only scope, which by construction never touches a verified row.
-    const verifiedCount = replaceScope === 'all' ? currentItems.filter((r) => r.is_verified).length : 0;
-    const incomingIsUnverified =
-      items.length === 0 || (items as NormalizedItem[]).every((i) => !i.isVerified);
-    const overwritesVerified = replaceScope === 'all' && verifiedCount > 0 && incomingIsUnverified;
-
-    // ── Check for coupons that would be orphaned by removing those items ────
-    let affectedCoupons: { id: string; coupon_code: string }[] = [];
-    if (currentItemIds.length > 0) {
-      const { data, error: couponsError } = await supabase
-        .from('coupons')
-        .select('id, coupon_code, menu_item_id')
-        .in('menu_item_id', currentItemIds)
-        .eq('is_deleted', false)
-        .in('coupon_type', ['item_percent', 'item_fixed']);
-
-      if (couponsError) {
-        console.error('[replace-restaurant-menu-items] Failed to check coupons:', couponsError);
-        return err('Failed to check existing coupons');
+      if (currentItemsError) {
+        console.error('[replace-restaurant-menu-items] Failed to read current items:', currentItemsError);
+        return err('Failed to check existing menu items');
       }
-      affectedCoupons = data ?? [];
+
+      // In unverified_only scope, only the unverified rows are actually in
+      // play — verified rows are never read for the coupon check or touched
+      // by the delete below, so there is nothing to warn about for them.
+      const currentItems =
+        replaceScope === 'unverified_only'
+          ? (allCurrentItems ?? []).filter((r) => !r.is_verified)
+          : (allCurrentItems ?? []);
+      const currentItemIds = currentItems.map((r) => r.item_id);
+
+      // A full refresh (AI-guessed, isVerified: false on every incoming item)
+      // is about to silently downgrade real data — link-extracted or manually
+      // typed items the owner already confirmed are accurate — back into
+      // unverified guesses. That's worth its own warning, independent of
+      // whether any coupons happen to be affected. Doesn't apply in
+      // unverified_only scope, which by construction never touches a verified row.
+      const verifiedCount = replaceScope === 'all' ? currentItems.filter((r) => r.is_verified).length : 0;
+      const incomingIsUnverified =
+        items.length === 0 || (items as NormalizedItem[]).every((i) => !i.isVerified);
+      const overwritesVerified = replaceScope === 'all' && verifiedCount > 0 && incomingIsUnverified;
+
+      // ── Check for coupons that would be orphaned by removing those items ──
+      let affectedCoupons: { id: string; coupon_code: string }[] = [];
+      if (currentItemIds.length > 0) {
+        const { data, error: couponsError } = await supabase
+          .from('coupons')
+          .select('id, coupon_code, menu_item_id')
+          .in('menu_item_id', currentItemIds)
+          .eq('is_deleted', false)
+          .in('coupon_type', ['item_percent', 'item_fixed']);
+
+        if (couponsError) {
+          console.error('[replace-restaurant-menu-items] Failed to check coupons:', couponsError);
+          return err('Failed to check existing coupons');
+        }
+        affectedCoupons = data ?? [];
+      }
+
+      if ((affectedCoupons.length > 0 || overwritesVerified) && !force) {
+        return ok({
+          requiresConfirmation: true,
+          affectedCoupons: affectedCoupons.map((c) => ({ id: c.id, couponCode: c.coupon_code })),
+          overwritesVerifiedCount: overwritesVerified ? verifiedCount : 0,
+        });
+      }
+
+      // ── Clean out the stale items ────────────────────────────────────────
+      let deleteQuery = supabase.from('menu_items').delete().ilike('restaurant_name', namePattern);
+      if (replaceScope === 'unverified_only') {
+        deleteQuery = deleteQuery.eq('is_verified', false);
+      }
+      const { error: deleteError } = await deleteQuery;
+      if (deleteError) {
+        console.error('[replace-restaurant-menu-items] Delete failed:', deleteError);
+        return err('Failed to clear stale menu items');
+      }
     }
 
-    if ((affectedCoupons.length > 0 || overwritesVerified) && !force) {
-      return ok({
-        requiresConfirmation: true,
-        affectedCoupons: affectedCoupons.map((c) => ({ id: c.id, couponCode: c.coupon_code })),
-        overwritesVerifiedCount: overwritesVerified ? verifiedCount : 0,
-      });
-    }
-
-    // ── Clean out the stale items, then write the new ones ───────────────────
-    let deleteQuery = supabase.from('menu_items').delete().ilike('restaurant_name', namePattern);
-    if (replaceScope === 'unverified_only') {
-      deleteQuery = deleteQuery.eq('is_verified', false);
-    }
-    const { error: deleteError } = await deleteQuery;
-    if (deleteError) {
-      console.error('[replace-restaurant-menu-items] Delete failed:', deleteError);
-      return err('Failed to clear stale menu items');
-    }
-
+    // ── Write the new ones (the only step 'add' scope performs) ─────────────
     if (items.length > 0) {
       const dbPayload = (items as NormalizedItem[]).map((item) => ({
         itemId: item.itemId,
@@ -163,7 +173,12 @@ serve(async (req) => {
       }
     }
 
-    console.log('[replace-restaurant-menu-items] Replaced menu for', restaurantName, 'with', items.length, 'items');
+    console.log(
+      '[replace-restaurant-menu-items]',
+      replaceScope === 'add' ? 'Added' : 'Replaced menu for',
+      restaurantName, 'with', items.length, 'items',
+      `(scope: ${replaceScope})`
+    );
     return ok({ success: true, itemCount: items.length });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal server error';

@@ -198,7 +198,7 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
 
   const items = await Promise.all(
     (rawItems as Record<string, unknown>[])
-      .filter((i) => i.name && typeof i.calories === 'number' && (i.calories as number) > 0)
+      .filter((i) => i.name && Number(i.calories) > 0)
       .map(async (i) => ({
         itemId: await deterministicId(restaurantName, String(i.name)),
         restaurantName,
@@ -232,7 +232,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('Unauthorized', 401);
 
-    const { restaurantId, restaurantName, imageBase64, force } = await req.json();
+    const { restaurantId, restaurantName, imageBase64, force, items: providedItems } = await req.json();
     if (!restaurantId || !restaurantName?.trim() || !imageBase64?.trim()) {
       return err('restaurantId, restaurantName, and imageBase64 are required', 400);
     }
@@ -269,22 +269,36 @@ serve(async (req) => {
       return err('Forbidden', 403);
     }
 
-    const extracted = await extractItemsFromImage(parsed.mediaType, parsed.base64, restaurantName);
-    if (extracted.items.length === 0) {
-      return err(extracted.error || 'Could not extract a menu from that photo.', 400);
+    // Reuse items from a prior call on this same photo instead of re-running
+    // the vision extraction — that call isn't free, and it's non-
+    // deterministic, so a force:true retry (after a coupon-orphan
+    // confirmation) could legitimately come back with fewer/zero items on a
+    // second pass, surfacing as a confusing failure right after the owner
+    // just confirmed they wanted to proceed.
+    let items: unknown[];
+    if (Array.isArray(providedItems) && providedItems.length > 0) {
+      items = providedItems;
+    } else {
+      const extracted = await extractItemsFromImage(parsed.mediaType, parsed.base64, restaurantName);
+      if (extracted.items.length === 0) {
+        return err(extracted.error || 'Could not extract a menu from that photo.', 400);
+      }
+      items = extracted.items;
     }
-    const items = extracted.items;
 
-    // ── Hand off to the shared replace function — same coupon-orphan check
-    // and delete-then-upsert as every other menu source. No menuUrl here —
-    // there's no link to persist for a photo-sourced menu. ────────────────
+    // ── Hand off to the shared replace function, scope 'add' — a photo often
+    // only shows part of the menu, so this adds these items alongside
+    // whatever's already cached instead of wiping out everything else (which
+    // was silently orphaning coupons tied to items missing from the photo).
+    // Owners can edit/remove individual items afterward via Manual Entry.
+    // No menuUrl here — there's no link to persist for a photo-sourced menu.
     const replaceRes = await fetch(`${SUPABASE_URL}/functions/v1/replace-restaurant-menu-items`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force }),
+      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force, scope: 'add' }),
     });
     const replaceData = await replaceRes.json();
     if (!replaceRes.ok) {
@@ -292,7 +306,7 @@ serve(async (req) => {
     }
 
     console.log('[extract-menu-from-image] Extracted', items.length, 'real items for', restaurantName);
-    return ok(replaceData);
+    return ok(replaceData.requiresConfirmation ? { ...replaceData, items } : replaceData);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal server error';
     console.error('[extract-menu-from-image] Unhandled error:', e);

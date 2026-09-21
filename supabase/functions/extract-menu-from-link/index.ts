@@ -369,7 +369,7 @@ ${pageText}
 
   const items = await Promise.all(
     (rawItems as Record<string, unknown>[])
-      .filter((i) => i.name && typeof i.calories === 'number' && (i.calories as number) > 0)
+      .filter((i) => i.name && Number(i.calories) > 0)
       .map(async (i) => ({
         itemId: await deterministicId(restaurantName, String(i.name)),
         restaurantName,
@@ -458,7 +458,7 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('Unauthorized', 401);
 
-    const { restaurantId, restaurantName, menuUrl, force } = await req.json();
+    const { restaurantId, restaurantName, menuUrl, force, items: providedItems } = await req.json();
     if (!restaurantId || !restaurantName?.trim() || !menuUrl?.trim()) {
       return err('restaurantId, restaurantName, and menuUrl are required', 400);
     }
@@ -527,11 +527,22 @@ serve(async (req) => {
       }
     }
 
-    const extracted = await extractMenuFromUrl(parsedUrl, restaurantName);
-    if (extracted.items.length === 0) {
-      return err(extracted.error || 'Could not extract a menu from that link.', 400);
+    // Reuse items from a prior call on this same link instead of re-fetching
+    // and re-running extraction — a force:true retry (after a coupon-orphan
+    // confirmation) re-running the fetch/scrape + LLM step is both wasteful
+    // and non-deterministic, so it could legitimately come back with
+    // fewer/zero items on a second pass right after the owner just
+    // confirmed they wanted to proceed.
+    let items: unknown[];
+    if (Array.isArray(providedItems) && providedItems.length > 0) {
+      items = providedItems;
+    } else {
+      const extracted = await extractMenuFromUrl(parsedUrl, restaurantName);
+      if (extracted.items.length === 0) {
+        return err(extracted.error || 'Could not extract a menu from that link.', 400);
+      }
+      items = extracted.items;
     }
-    const items = extracted.items;
 
     // ── Hand off to the shared replace function — it owns the coupon-orphan
     // check and the actual delete-then-upsert, so this stays in sync with
@@ -550,7 +561,7 @@ serve(async (req) => {
     }
 
     console.log('[extract-menu-from-link] Extracted', items.length, 'real items for', restaurantName);
-    return ok(replaceData);
+    return ok(replaceData.requiresConfirmation ? { ...replaceData, items } : replaceData);
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal server error';
     console.error('[extract-menu-from-link] Unhandled error:', e);
