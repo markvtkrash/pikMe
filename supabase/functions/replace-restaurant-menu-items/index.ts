@@ -71,6 +71,35 @@ serve(async (req) => {
 
     const namePattern = `%${restaurantName.split(' ')[0]}%`;
 
+    // 'add' scope's incoming items get their own item_id per source
+    // (text_/image_/link_/manual_ prefix on a hash of the item name), so the
+    // *same* menu item typed manually and later found again via a text/photo
+    // upload would otherwise land as two separate rows instead of being
+    // recognized as the same dish. Skip anything whose name already matches
+    // an existing item for this restaurant instead of re-adding it.
+    let incomingItems = items as NormalizedItem[];
+    if (replaceScope === 'add' && incomingItems.length > 0) {
+      const { data: existingForDedup, error: existingForDedupError } = await supabase
+        .from('menu_items')
+        .select('name')
+        .ilike('restaurant_name', namePattern);
+
+      if (existingForDedupError) {
+        console.error('[replace-restaurant-menu-items] Failed to check existing items for dedup:', existingForDedupError);
+        return err('Failed to check existing menu items');
+      }
+
+      const existingNames = new Set(
+        (existingForDedup ?? []).map((r) => r.name.trim().toLowerCase())
+      );
+      const beforeCount = incomingItems.length;
+      incomingItems = incomingItems.filter((i) => !existingNames.has(i.name.trim().toLowerCase()));
+      const skippedCount = beforeCount - incomingItems.length;
+      if (skippedCount > 0) {
+        console.log('[replace-restaurant-menu-items] Skipped', skippedCount, 'item(s) already on the menu (name match)');
+      }
+    }
+
     if (replaceScope !== 'add') {
       // ── Find what's currently cached for this restaurant ──────────────────
       const { data: allCurrentItems, error: currentItemsError } = await supabase
@@ -141,8 +170,8 @@ serve(async (req) => {
     }
 
     // ── Write the new ones (the only step 'add' scope performs) ─────────────
-    if (items.length > 0) {
-      const dbPayload = (items as NormalizedItem[]).map((item) => ({
+    if (incomingItems.length > 0) {
+      const dbPayload = incomingItems.map((item) => ({
         itemId: item.itemId,
         restaurantName: item.restaurantName,
         name: item.name,
@@ -173,13 +202,14 @@ serve(async (req) => {
       }
     }
 
+    const skippedAsDuplicates = items.length - incomingItems.length;
     console.log(
       '[replace-restaurant-menu-items]',
       replaceScope === 'add' ? 'Added' : 'Replaced menu for',
-      restaurantName, 'with', items.length, 'items',
-      `(scope: ${replaceScope})`
+      restaurantName, 'with', incomingItems.length, 'items',
+      `(scope: ${replaceScope}, skipped ${skippedAsDuplicates} duplicate name(s))`
     );
-    return ok({ success: true, itemCount: items.length });
+    return ok({ success: true, itemCount: incomingItems.length, skippedAsDuplicates });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Internal server error';
     console.error('[replace-restaurant-menu-items] Unhandled error:', e);

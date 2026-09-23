@@ -13,12 +13,14 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'pending', label: 'Pending' },
   { key: 'approved', label: 'Approved' },
   { key: 'rejected', label: 'Rejected' },
+  { key: 'closed', label: 'Closed' },
 ];
 
 const STATUS_COLORS: Record<RestaurantStatus, { bg: string; text: string; label: string }> = {
   pending: { bg: '#FFF3E0', text: '#E65100', label: 'Pending' },
   approved: { bg: '#E8F5E9', text: '#2e7d32', label: 'Approved' },
   rejected: { bg: '#FFEBEE', text: '#c62828', label: 'Rejected' },
+  closed: { bg: '#e53e3e', text: '#fff', label: 'Closed' },
 };
 
 export default function AdminRestaurantsScreen() {

@@ -8,6 +8,10 @@ interface Props {
   coupon: Coupon | null;
   expiresAt: string | null;
   onDone: () => void;
+  // The menu item's actual name, for an item-specific coupon -- without it,
+  // staff at checkout only see "off this item" with no way to tell which
+  // dish it applies to.
+  itemName?: string;
 }
 
 function formatCountdown(msRemaining: number): string {
@@ -23,7 +27,7 @@ function formatDiscount(coupon: Coupon): string {
   return `${coupon.discount_value}${unit} off ${scope}`;
 }
 
-export function CouponActivationModal({ visible, coupon, expiresAt, onDone }: Props) {
+export function CouponActivationModal({ visible, coupon, expiresAt, onDone, itemName }: Props) {
   const [msRemaining, setMsRemaining] = useState(0);
   const hasAutoClosed = useRef(false);
 
@@ -65,6 +69,7 @@ export function CouponActivationModal({ visible, coupon, expiresAt, onDone }: Pr
 
         <View style={styles.detailsCard}>
           <Text style={styles.discount}>{formatDiscount(coupon)}</Text>
+          {!!itemName && <Text style={styles.itemName}>🍽️ {itemName}</Text>}
           <Text style={styles.code}>Code: {coupon.coupon_code}</Text>
           <Text style={styles.dateTime}>{dateLabel} · {timeLabel}</Text>
         </View>
@@ -126,6 +131,12 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     color: BRAND_COLORS.primary,
+  },
+  itemName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#141414',
+    textAlign: 'center',
   },
   code: {
     fontSize: 15,

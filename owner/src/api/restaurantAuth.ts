@@ -13,6 +13,36 @@ export interface GeocodedLocation {
   formattedAddress: string;
 }
 
+export interface RelocationEligibility {
+  eligible: boolean;
+  reason: 'pending_request' | 'cooldown' | null;
+  retry_after: string | null;
+}
+
+export async function getRelocationEligibility(restaurantId: string): Promise<RelocationEligibility | null> {
+  const { data, error } = await supabase.rpc('get_relocation_eligibility', {
+    p_restaurant_id: restaurantId,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export async function requestRestaurantRelocation(params: {
+  restaurantId: string;
+  newGooglePlaceId: string;
+  newName: string;
+  newAddress: string;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc('request_restaurant_relocation', {
+    p_restaurant_id: params.restaurantId,
+    p_new_google_place_id: params.newGooglePlaceId,
+    p_new_name: params.newName,
+    p_new_address: params.newAddress,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 // Turns a free-text zip code/city/address into coordinates via the
 // restaurant-search edge function (which calls Google's Geocoding API).
 // Used by the owner claim flow so it can then call the exact same
@@ -235,6 +265,53 @@ export async function getRestaurantCoupons(restaurantId: string) {
   return data || [];
 }
 
+export interface RedemptionsOverTimeRow {
+  week_start: string;
+  redemption_count: number;
+}
+
+export async function getRedemptionsOverTime(restaurantId: string): Promise<RedemptionsOverTimeRow[]> {
+  const { data, error } = await supabase.rpc('owner_report_redemptions_over_time', {
+    p_restaurant_id: restaurantId,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
+export interface CouponStatusSnapshot {
+  active_count: number;
+  inactive_count: number;
+  expired_count: number;
+  orphaned_count: number;
+}
+
+export async function getCouponStatusSnapshot(restaurantId: string): Promise<CouponStatusSnapshot | null> {
+  const { data, error } = await supabase.rpc('owner_report_coupon_status_snapshot', {
+    p_restaurant_id: restaurantId,
+  });
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
+export interface TopCouponRow {
+  coupon_id: string;
+  coupon_code: string;
+  coupon_type: string;
+  discount_value: number;
+  usage_limit: number | null;
+  times_used: number;
+  redemption_count: number;
+}
+
+export async function getTopCoupons(restaurantId: string, limit = 10): Promise<TopCouponRow[]> {
+  const { data, error } = await supabase.rpc('owner_report_top_coupons', {
+    p_restaurant_id: restaurantId,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  return data || [];
+}
+
 // Reads from menu_items — the same cache the consumer app's recommendation
 // engine reads from — so the owner sees exactly what customers see, instead
 // of a separately-drifting restaurant_menu_items copy.
@@ -439,4 +516,12 @@ export async function submitManualMenuItems(
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Failed to save your menu items');
   return data;
+}
+
+export async function setRestaurantPaused(restaurantId: string, paused: boolean): Promise<void> {
+  const { error } = await supabase.rpc('owner_set_restaurant_paused', {
+    p_restaurant_id: restaurantId,
+    p_paused: paused,
+  });
+  if (error) throw error;
 }

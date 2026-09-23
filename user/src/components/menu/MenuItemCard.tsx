@@ -12,6 +12,7 @@ import { useCouponActivation } from '../../hooks/useCouponActivation';
 import { getItemWarnings, getSafeIndicator } from './menuItemWarnings';
 import { CouponActivationModal } from '../coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
+import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../utils/couponDisplay';
 
 interface Props {
   recommendation: Recommendation;
@@ -254,10 +255,22 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
                     ? `${coupon.discount_value}% off`
                     : `$${coupon.discount_value} off`}
                 </Text>
-                <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
-                  <Text style={styles.couponTapHintText}>
-                    {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
-                  </Text>
+                <View style={styles.couponBottomRow}>
+                  <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
+                    <Text style={styles.couponTapHintText}>
+                      {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
+                    </Text>
+                  </View>
+                  <View style={styles.usesLeftPill}>
+                    <Text style={styles.usesLeftText}>
+                      🔁 {remainingPersonalUses(coupon)} more {remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'}
+                    </Text>
+                  </View>
+                  {isLowStock(coupon) && (
+                    <View style={styles.lowStockPill}>
+                      <Text style={styles.lowStockText}>🔥 {remainingTotalUses(coupon)} left</Text>
+                    </View>
+                  )}
                 </View>
               </View>
               <Text style={styles.couponStarRight}>⭐</Text>
@@ -323,6 +336,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
       coupon={couponActivation.activeCoupon}
       expiresAt={couponActivation.expiresAt}
       onDone={couponActivation.handleDone}
+      itemName={recommendation.menuItem.name}
     />
     <CouponConfirmModal
       visible={!!couponActivation.pendingCoupon}
@@ -590,7 +604,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginTop: 6,
   },
   couponTapHintPillActive: {
     backgroundColor: '#1565C0',
@@ -599,6 +612,41 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '800',
     color: '#fff',
+  },
+  couponBottomRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  usesLeftPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#E8F5E9',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  usesLeftText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#2e7d32',
+  },
+  lowStockPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: '#e53e3e',
+  },
+  lowStockText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#c62828',
   },
   couponStarRight: {
     fontSize: 24,

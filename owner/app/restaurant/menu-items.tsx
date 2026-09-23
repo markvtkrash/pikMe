@@ -195,7 +195,7 @@ export default function MenuItemsScreen() {
           <Text style={styles.refreshBoxHint}>
             Pull menu items to add to your existing menu using AI. If we know your restaurant's website, it
             tries to pull real items from it automatically — otherwise it falls back to an AI guess from
-            just your restaurant name (least accurate; use Manual Entry or add items from a photo when you can). Your
+            just your restaurant name (least accurate; use Edit Menu or add items from a photo when you can). Your
             already-verified items are never touched.
           </Text>
           <TouchableOpacity

@@ -6,6 +6,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getRestaurantMenuItems, getRestaurantCoupons, verifyMenuItem } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
+import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 
 interface MenuItem {
   id: string;
@@ -31,6 +33,7 @@ export default function RestaurantMenuScreen() {
   const params = useLocalSearchParams<{ addCoupon?: string }>();
   const isAddingCoupon = params?.addCoupon === 'true';
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { favorites, toggleFavorite } = useFavoritePages();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,23 +137,19 @@ export default function RestaurantMenuScreen() {
             <Text style={styles.backBtnText}>← Back</Text>
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Add Coupons</Text>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>Add Coupons</Text>
+              <FavoriteHeart
+                active={favorites.has('coupon-add-coupons')}
+                onPress={() => toggleFavorite('coupon-add-coupons')}
+                size="large"
+              />
+            </View>
             <Text style={styles.subtitle}>{restaurant.name}</Text>
             <Text style={styles.addCouponHint}>Click on an item to add or edit coupon</Text>
           </View>
         </View>
       </View>
-
-      {/* Action Buttons */}
-      <View style={styles.actionButtonsRow}>
-        <TouchableOpacity
-          style={styles.expiredBtn}
-          onPress={() => router.push('/restaurant/expired')}
-        >
-          <Text style={styles.expiredBtnText}>📭 Expired</Text>
-        </TouchableOpacity>
-      </View>
-
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -211,23 +210,30 @@ export default function RestaurantMenuScreen() {
                   )}
                   {existingCoupon && (
                     <View style={styles.couponDetailsBox}>
-                      <View style={styles.couponHeader}>
-                        <Text style={styles.couponTicketIcon}>🎫</Text>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.couponCode}>{existingCoupon.coupon_code}</Text>
-                          <Text style={styles.couponExpiry}>
-                            Expires: {new Date(existingCoupon.expiry_date).toLocaleDateString()}
-                          </Text>
-                          <Text style={styles.couponUsage}>
-                            Used {existingCoupon.times_used}/{existingCoupon.usage_limit ?? '∞'} times
+                      <View style={styles.couponRow}>
+                        <View style={styles.couponMetaCol}>
+                          <Text style={styles.couponMetaLabel}>Coupon Id</Text>
+                          <Text style={styles.couponMetaValue} numberOfLines={1}>{existingCoupon.coupon_code}</Text>
+                        </View>
+                        <View style={styles.couponMetaCol}>
+                          <Text style={styles.couponMetaLabel}>Expires</Text>
+                          <Text style={styles.couponMetaValue}>
+                            {new Date(existingCoupon.expiry_date).toLocaleDateString()}
                           </Text>
                         </View>
+                        <View style={styles.couponMetaCol}>
+                          <Text style={styles.couponMetaLabel}>Used</Text>
+                          <Text style={styles.couponMetaValue}>
+                            {existingCoupon.times_used}/{existingCoupon.usage_limit ?? '∞'}
+                          </Text>
+                        </View>
+                        <Text style={styles.couponRowEdit}>✎ Edit</Text>
                       </View>
                     </View>
                   )}
                 </View>
                 {canAddCoupon ? (
-                  <Text style={styles.actionText}>{existingCoupon ? '✎ Edit' : '🎟️ Add'}</Text>
+                  existingCoupon ? null : <Text style={styles.actionText}>🎟️ Add</Text>
                 ) : (
                   <TouchableOpacity
                     style={styles.verifyToAddBtn}
@@ -315,21 +321,10 @@ const styles = StyleSheet.create({
   headerTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666' },
   addCouponHint: { fontSize: 12, color: '#FFA500', fontWeight: '600', marginTop: 4 },
-
-  actionButtonsRow: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginTop: 12 },
-  expiredBtn: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderWidth: 2,
-    borderColor: '#e53e3e',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  expiredBtnText: { color: '#e53e3e', fontSize: 14, fontWeight: '700' },
 
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12 },
   searchInput: {
@@ -363,11 +358,11 @@ const styles = StyleSheet.create({
   itemNutrition: { fontSize: 12, color: '#666', marginBottom: 6 },
   unverifiedLabel: { fontSize: 11, color: '#E65100', fontWeight: '700', marginBottom: 6 },
   couponDetailsBox: { backgroundColor: '#F0F8FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#4CAF50', marginTop: 8 },
-  couponHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  couponTicketIcon: { fontSize: 24 },
-  couponCode: { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
-  couponExpiry: { fontSize: 10, color: '#999', marginTop: 3 },
-  couponUsage: { fontSize: 10, color: '#666', fontWeight: '600', marginTop: 2 },
+  couponRow: { flexDirection: 'row', alignItems: 'center' },
+  couponMetaCol: { flex: 1, minWidth: 0, gap: 1 },
+  couponMetaLabel: { fontSize: 10, fontWeight: '800', color: '#555', textTransform: 'uppercase', letterSpacing: 0.3 },
+  couponMetaValue: { fontSize: 12, fontWeight: '500', color: '#444' },
+  couponRowEdit: { fontSize: 12, fontWeight: '700', color: '#4CAF50', flexShrink: 0, marginLeft: 10 },
   actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50', flexShrink: 0 },
   verifyToAddBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',

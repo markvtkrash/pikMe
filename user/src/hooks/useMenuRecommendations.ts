@@ -5,11 +5,15 @@ import { useUserProfile } from './useUserProfile';
 import { supabase } from '../api/supabase';
 import type { Restaurant, Recommendation } from '../types';
 
-export function useMenuRecommendations(restaurant: Restaurant | null) {
+export function useMenuRecommendations(restaurant: Restaurant | null, couponItemIds?: Set<string>) {
   const { data: profile } = useUserProfile();
+  // Sorted + joined so the query key is stable regardless of Set iteration
+  // order, and only actually changes (triggering a refetch) when the set of
+  // coupon item ids itself changes.
+  const couponKey = couponItemIds ? Array.from(couponItemIds).sort().join(',') : '';
 
   return useQuery<Recommendation[]>({
-    queryKey: ['menuRecommendations', restaurant?.placeId],
+    queryKey: ['menuRecommendations', restaurant?.placeId, couponKey],
     queryFn: async () => {
       if (!restaurant || !profile) return [];
 
@@ -48,7 +52,7 @@ export function useMenuRecommendations(restaurant: Restaurant | null) {
       }
 
       if (!items.length) return [];
-      return scoreAndRankItems(profile, items, restaurant);
+      return scoreAndRankItems(profile, items, restaurant, couponItemIds);
     },
     enabled: !!restaurant && !!profile,
     staleTime: 10 * 60 * 1000,

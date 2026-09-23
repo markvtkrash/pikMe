@@ -6,6 +6,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, unverifyMenuItem } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { supabase } from '../../src/api/supabase';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 
 const MAX_ITEMS = 30;
@@ -132,6 +133,10 @@ export default function ManualMenuScreen() {
     setVerifyingIndex(index);
     try {
       const nameChanged = trimmedName !== item.name;
+      // TEMP DEBUG — remove once the "Not authorized" mismatch is diagnosed.
+      console.log('[manual-menu] [debug] logged-in owner.id:', owner?.id, '| restaurant.owner_id:', restaurant?.owner_id, '| restaurant.name:', restaurant?.name);
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      console.log('[manual-menu] [debug] SDK session at call time — user.id:', sessionCheck.session?.user?.id, '| access_token present:', !!sessionCheck.session?.access_token, '| expires_at:', sessionCheck.session?.expires_at);
       await verifyMenuItem(item.itemId, nameChanged ? trimmedName : undefined);
       setItems((prev) =>
         prev.map((it, i) => (i === index ? { ...it, name: trimmedName, isVerified: true } : it))
@@ -193,7 +198,7 @@ export default function ManualMenuScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Manual Entry</Text>
+          <Text style={styles.title}>Edit Menu</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
         <TouchableOpacity

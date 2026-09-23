@@ -198,7 +198,12 @@ const MIN_VERIFIED_ITEMS = 10;
 export function scoreAndRankItems(
   profile: UserProfile,
   items: MenuItem[],
-  restaurant: Restaurant
+  restaurant: Restaurant,
+  // Item ids with an active coupon. Any of these that fall outside the top-20
+  // cap are appended after it (in their existing score order) rather than
+  // dropped — a coupon shouldn't silently disappear from the page just
+  // because personalization ranked it below the cutoff.
+  couponItemIds?: Set<string>
 ): Recommendation[] {
   const weights = getWeights(profile.healthGoals);
   const cuisineMatch = hasCuisineMatch(restaurant, profile.cuisinePreferences);
@@ -220,5 +225,16 @@ export function scoreAndRankItems(
   const unverified = ranked.filter((r) => !r.menuItem.isVerified);
   const combined = verified.length >= MIN_VERIFIED_ITEMS ? verified : [...verified, ...unverified];
 
-  return combined.slice(0, 20).map((rec, i) => ({ ...rec, rank: i + 1 }));
+  const top20 = combined.slice(0, 20);
+
+  let final = top20;
+  if (couponItemIds && couponItemIds.size > 0) {
+    const includedIds = new Set(top20.map((r) => r.menuItem.itemId));
+    const missedCoupons = combined.filter(
+      (r) => couponItemIds.has(r.menuItem.itemId) && !includedIds.has(r.menuItem.itemId)
+    );
+    if (missedCoupons.length > 0) final = [...top20, ...missedCoupons];
+  }
+
+  return final.map((rec, i) => ({ ...rec, rank: i + 1 }));
 }

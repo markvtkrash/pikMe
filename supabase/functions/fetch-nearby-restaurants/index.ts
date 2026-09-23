@@ -282,17 +282,78 @@ Deno.serve(async (req) => {
     try {
       const { data: claimedRestaurants, error: claimedErr } = await supabase
         .from('restaurants')
-        .select('google_place_id, name');
+        .select('google_place_id, name, status, is_paused');
 
       if (claimedErr) {
         console.warn('[fetch-nearby-restaurants] Failed to load claimed restaurants (skipping backfill):', claimedErr);
       } else {
+        // A restaurant marked "closed" by an admin (out of business, permanent)
+        // or "paused" by its owner (temporary, self-service) should never
+        // reach a customer, even if Google's own listing is still live --
+        // filter it out of whatever this search already turned up, on top of
+        // never backfilling it below.
+        const hiddenPlaceIds = new Set(
+          (claimedRestaurants ?? [])
+            .filter((c) => c.status === 'closed' || c.is_paused)
+            .map((c) => c.google_place_id)
+        );
+        if (hiddenPlaceIds.size > 0) {
+          const beforeCount = restaurants.length;
+          restaurants = restaurants.filter((r) => !hiddenPlaceIds.has(r.placeId));
+          if (restaurants.length !== beforeCount) {
+            console.log('[fetch-nearby-restaurants] Filtered out', beforeCount - restaurants.length, 'closed/paused restaurant(s)');
+          }
+        }
+
         const presentPlaceIds = new Set(restaurants.map((r) => r.placeId));
         const missingClaimed = (claimedRestaurants ?? []).filter(
-          (c) => c.google_place_id && !presentPlaceIds.has(c.google_place_id)
+          (c) => c.google_place_id && c.status !== 'closed' && !c.is_paused && !presentPlaceIds.has(c.google_place_id)
         );
 
+        // Most claimed restaurants are already cached (either from claim time,
+        // or from a previous backfill) and exempt from the TTL (migration
+        // 050) -- check the cache first so re-adding one to `restaurants`
+        // costs a DB read, not a Google Place Details call. Only a claim
+        // that's genuinely never been cached falls through to a live fetch.
+        let alreadyCachedIds = new Set<string>();
+        if (missingClaimed.length > 0) {
+          const { data: alreadyCached, error: alreadyCachedErr } = await supabase
+            .from('cached_restaurants')
+            .select('*')
+            .in('place_id', missingClaimed.map((c) => c.google_place_id));
+
+          if (alreadyCachedErr) {
+            console.warn('[fetch-nearby-restaurants] Failed to check cache for claimed restaurants (falling back to live fetch):', alreadyCachedErr);
+          } else {
+            for (const row of alreadyCached ?? []) {
+              const distance = Math.round(haversine(latitude, longitude, row.latitude, row.longitude));
+              if (distance > radiusMeters) continue; // genuinely outside this search's radius
+
+              restaurants.push({
+                placeId: row.place_id,
+                name: row.name,
+                location: { latitude: row.latitude, longitude: row.longitude, address: row.address, city: row.city },
+                distanceMeters: distance,
+                rating: row.rating,
+                cuisineTypes: row.cuisine_types,
+                photoUrl: row.photo_reference
+                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${row.photo_reference}&key=${GOOGLE_KEY}`
+                  : undefined,
+                photoReference: row.photo_reference,
+                openNow: row.open_now,
+                openingHours: row.opening_hours ?? undefined,
+                hasNutritionData: false,
+              });
+              alreadyCachedIds.add(row.place_id);
+            }
+            if (alreadyCachedIds.size > 0) {
+              console.log('[fetch-nearby-restaurants] Restored', alreadyCachedIds.size, 'claimed restaurant(s) from cache -- no Google call needed');
+            }
+          }
+        }
+
         for (const claimed of missingClaimed) {
+          if (alreadyCachedIds.has(claimed.google_place_id)) continue;
           try {
             const detailsUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
             detailsUrl.searchParams.set('place_id', claimed.google_place_id);

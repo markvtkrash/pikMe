@@ -48,7 +48,7 @@ serve(async (req) => {
     // Verify restaurant owner record exists
     const { data: ownerData, error: ownerError } = await supabase
       .from("restaurant_owners")
-      .select("id, business_name, email, must_change_password")
+      .select("id, business_name, email, must_change_password, is_active")
       .eq("id", data.user.id)
       .single();
 
@@ -56,6 +56,17 @@ serve(async (req) => {
       console.error("[restaurant-auth-login] Owner record not found:", ownerError);
       return new Response(
         JSON.stringify({ error: "Not a restaurant owner account" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Admin-deactivated accounts authenticate fine at the Supabase Auth layer
+    // (we don't touch GoTrue's own ban state) but must not get a session back
+    // from this app's login flow -- the owner app only ever obtains a session
+    // through this endpoint, so this is sufficient to block them from here.
+    if (ownerData.is_active === false) {
+      return new Response(
+        JSON.stringify({ error: "This account has been deactivated. Contact support for assistance." }),
         { status: 403, headers: { "Content-Type": "application/json" } }
       );
     }
