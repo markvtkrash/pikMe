@@ -36,7 +36,7 @@ export default function MenuTextScreen() {
       }
       Alert.alert(
         'Success',
-        `Added ${result.itemCount} real menu items read from your text to your menu. Edit or remove any of them from Manual Entry.`
+        `Added ${result.itemCount} real menu items read from your text to your menu. Edit or remove any of them from Edit Menu.`
       );
       setMenuText('');
       router.push('/restaurant/menu-items');
@@ -56,7 +56,7 @@ export default function MenuTextScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Add Menu Items From Text</Text>
+          <Text style={styles.title}>Update Menu Items From Text</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
       </View>
@@ -68,7 +68,7 @@ export default function MenuTextScreen() {
             Copy your real menu text from anywhere — a PDF, an email, a document, a site that's hard to
             link — and paste it below. We'll read the real dish names directly from it — we never invent
             items that aren't in the text. This adds to your existing menu without removing anything —
-            edit or remove individual items afterward from Manual Entry.
+            edit or remove individual items afterward from Edit Menu.
           </Text>
 
           <TextInput

@@ -6,6 +6,8 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, getRestaurantMenuItems, updateCoupon, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
+import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 
 interface Coupon {
   id: string;
@@ -17,6 +19,7 @@ interface Coupon {
   menu_item_id?: string | null;
   usage_limit?: number;
   times_used?: number;
+  per_user_limit?: number;
 }
 
 interface MenuItem {
@@ -57,6 +60,7 @@ function computeStatuses(c: Coupon, currentItemIds: Set<string>): Set<StatusKey>
 export default function CouponStatusScreen() {
   const router = useRouter();
   const { restaurant } = useRestaurantOwnerStore();
+  const { favorites, toggleFavorite } = useFavoritePages();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [currentItems, setCurrentItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -138,7 +142,11 @@ export default function CouponStatusScreen() {
   async function handleReassign(couponId: string, newItemId: string) {
     setBusyId(couponId);
     try {
-      await updateCoupon(couponId, { menuItemId: newItemId });
+      // Reassigning is meant to fix the coupon back to a valid, redeemable
+      // state — auto-deactivated by the orphan trigger (044) when its old
+      // item was deleted, so pointing it at a real item again should turn it
+      // back on rather than leaving the owner to notice and flip it manually.
+      await updateCoupon(couponId, { menuItemId: newItemId, isActive: true });
       setExpandedId(null);
       await loadData();
     } catch (error: any) {
@@ -181,7 +189,14 @@ export default function CouponStatusScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Manage Coupons</Text>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Manage Coupons</Text>
+            <FavoriteHeart
+              active={favorites.has('coupon-manage-coupons')}
+              onPress={() => toggleFavorite('coupon-manage-coupons')}
+              size="large"
+            />
+          </View>
           <Text style={styles.count}>{filteredRows.length} shown</Text>
         </View>
       </View>
@@ -246,12 +261,20 @@ export default function CouponStatusScreen() {
                       : '⚠️ Menu item no longer exists'
                     : '🎉 Any item'}
                 </Text>
-                <Text style={styles.expiryText}>Expires {new Date(coupon.expiry_date).toLocaleDateString()}</Text>
-                {(coupon.times_used !== undefined || coupon.usage_limit) && (
-                  <Text style={styles.usageText}>
-                    Used: {coupon.times_used || 0}{coupon.usage_limit ? `/${coupon.usage_limit}` : '/∞'} times
-                  </Text>
-                )}
+                <View style={styles.couponMetaRow}>
+                  <View style={styles.couponMetaCol}>
+                    <Text style={styles.couponMetaLabel}>Expires</Text>
+                    <Text style={styles.couponMetaValue}>{new Date(coupon.expiry_date).toLocaleDateString()}</Text>
+                  </View>
+                  {(coupon.times_used !== undefined || coupon.usage_limit) && (
+                    <View style={styles.couponMetaCol}>
+                      <Text style={styles.couponMetaLabel}>Used</Text>
+                      <Text style={styles.couponMetaValue}>
+                        {coupon.times_used || 0}{coupon.usage_limit ? `/${coupon.usage_limit}` : '/∞'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 <View style={styles.actionsRow}>
                   {statuses.has('orphaned') && (
@@ -287,6 +310,23 @@ export default function CouponStatusScreen() {
                     disabled={busy}
                   >
                     <Text style={styles.editBtnText}>✎ Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.duplicateBtn}
+                    onPress={() => router.push({
+                      pathname: '/restaurant/coupon/new',
+                      params: {
+                        couponType: coupon.coupon_type,
+                        discountValue: String(coupon.discount_value),
+                        usageLimit: coupon.usage_limit ? String(coupon.usage_limit) : undefined,
+                        perUserLimit: coupon.per_user_limit ? String(coupon.per_user_limit) : undefined,
+                        menuItemId: coupon.menu_item_id ?? undefined,
+                        menuItemName: coupon.menu_item_id ? itemNameById.get(coupon.menu_item_id) : undefined,
+                      },
+                    })}
+                    disabled={busy}
+                  >
+                    <Text style={styles.duplicateBtnText}>⧉ Duplicate</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.deleteBtn}
@@ -333,6 +373,7 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   count: { fontSize: 12, color: '#999' },
 
@@ -362,12 +403,16 @@ const styles = StyleSheet.create({
   couponCode: { fontSize: 16, fontWeight: '800', color: '#222' },
   discountValue: { fontSize: 14, fontWeight: '700', color: '#4CAF50' },
   itemNameText: { fontSize: 12.5, color: '#555', fontWeight: '600', marginBottom: 4 },
-  expiryText: { fontSize: 11, color: '#999' },
-  usageText: { fontSize: 11, color: '#666', fontWeight: '600', marginTop: 2 },
+  couponMetaRow: { flexDirection: 'row', marginTop: 4, marginBottom: 4 },
+  couponMetaCol: { flex: 1, minWidth: 0, gap: 1 },
+  couponMetaLabel: { fontSize: 10, fontWeight: '800', color: '#555', textTransform: 'uppercase', letterSpacing: 0.3 },
+  couponMetaValue: { fontSize: 12, fontWeight: '500', color: '#444' },
 
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   editBtn: { backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  duplicateBtn: { backgroundColor: '#F3E5F5', borderWidth: 1.5, borderColor: '#8E24AA', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  duplicateBtnText: { fontSize: 12, fontWeight: '700', color: '#8E24AA' },
   deleteBtn: { backgroundColor: '#FFEBEE', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   deleteBtnText: { fontSize: 12, fontWeight: '700', color: '#e53e3e' },
   deactivateBtn: { backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },

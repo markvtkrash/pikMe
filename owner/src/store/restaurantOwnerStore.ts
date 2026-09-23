@@ -19,11 +19,13 @@ interface Restaurant {
   claimed_at: string;
   created_at?: string;
   updated_at?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'closed';
   approved_at?: string | null;
   approved_by?: string | null;
   menu_link?: string | null;
   website_url?: string | null;
+  is_paused?: boolean;
+  paused_at?: string | null;
 }
 
 interface RestaurantOwnerStore {

@@ -110,6 +110,89 @@ export async function claimRestaurant(
   return data;
 }
 
+export interface AdminOwnerRow {
+  owner_id: string;
+  business_name: string;
+  email: string;
+  is_active: boolean;
+  restaurant_id: string | null;
+  restaurant_name: string | null;
+  restaurant_status: string | null;
+  claimed_at: string | null;
+}
+
+export async function adminListOwners(): Promise<AdminOwnerRow[]> {
+  const { data, error } = await supabase.rpc('admin_list_owners');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adminSetOwnerActive(ownerId: string, isActive: boolean) {
+  const { error } = await supabase.rpc('admin_set_owner_active', {
+    p_owner_id: ownerId,
+    p_is_active: isActive,
+  });
+  if (error) throw error;
+}
+
+export async function adminSetRestaurantStatus(restaurantId: string, status: 'approved' | 'closed') {
+  const { error } = await supabase.rpc('admin_set_restaurant_status', {
+    p_restaurant_id: restaurantId,
+    p_status: status,
+  });
+  if (error) throw error;
+}
+
+export async function adminUpdateOwner(params: {
+  ownerId: string;
+  businessName: string;
+  email: string;
+  accessToken: string;
+}) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-update-owner`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${params.accessToken}`,
+    },
+    body: JSON.stringify({
+      ownerId: params.ownerId,
+      businessName: params.businessName,
+      email: params.email,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to update owner');
+  return data;
+}
+
+export async function adminReassignOwner(params: {
+  restaurantId: string;
+  newOwnerEmail: string;
+  newOwnerPassword: string;
+  newOwnerBusinessName: string;
+  accessToken: string;
+}) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-reassign-owner`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${params.accessToken}`,
+    },
+    body: JSON.stringify({
+      restaurantId: params.restaurantId,
+      newOwnerEmail: params.newOwnerEmail,
+      newOwnerPassword: params.newOwnerPassword,
+      newOwnerBusinessName: params.newOwnerBusinessName,
+    }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to reassign restaurant');
+  return data;
+}
+
 export async function getRestaurantForOwner() {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error('Not authenticated');
@@ -225,5 +308,50 @@ export async function refreshRestaurantMenu(restaurantId: string, restaurantName
   const data = await response.json();
   console.log('[ai-request] refreshRestaurantMenu response:', JSON.stringify({ status: response.status, data }, null, 2));
   if (!response.ok) throw new Error(data.error || JSON.stringify(data));
+  return data;
+}
+
+export interface RelocationRequest {
+  id: string;
+  restaurant_id: string;
+  business_name: string;
+  owner_email: string;
+  old_name: string;
+  old_address: string;
+  new_name: string;
+  new_address: string;
+  requested_at: string;
+}
+
+export async function adminListRelocationRequests(): Promise<RelocationRequest[]> {
+  const { data, error } = await supabase.rpc('admin_list_relocation_requests');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function adminRejectRelocationRequest(requestId: string, adminNote?: string) {
+  const { error } = await supabase.rpc('admin_reject_relocation_request', {
+    p_request_id: requestId,
+    p_admin_note: adminNote ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function adminApproveRelocationRequest(params: {
+  requestId: string;
+  adminNote?: string;
+  accessToken: string;
+}) {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-approve-relocation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${params.accessToken}`,
+    },
+    body: JSON.stringify({ requestId: params.requestId, adminNote: params.adminNote ?? null }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to approve relocation request');
   return data;
 }

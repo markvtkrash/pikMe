@@ -19,6 +19,37 @@ declare global {
 
 type CouponType = 'item_percent' | 'item_fixed' | 'generic_percent' | 'generic_fixed';
 
+// First word of a name, letters/digits only, uppercased and capped -- used
+// for the restaurant-name fallback on a generic (non-item) coupon, where the
+// name is usually already a short, distinctive brand name on its own.
+function slugFromName(name: string, maxLen: number): string {
+  const firstWord = name.replace(/[^a-zA-Z0-9\s]/g, '').trim().split(/\s+/)[0] || '';
+  return firstWord.toUpperCase().slice(0, maxLen) || 'DEAL';
+}
+
+const STOP_WORDS = new Set(['and', 'the', 'a', 'an', 'with', 'of', 'in', 'on', 'or', 'to']);
+
+// Menu item names carry more identity than a single word ("Bacon, Egg &
+// Cheese Bagel" is really "bacon egg cheese bagel" -- the dish is the last
+// word as much as the first). Combines the first and last significant word
+// (skipping filler words) so the code stays recognizable as *this* item, not
+// just whatever happened to be typed first -- falls back to the one word
+// available for single-word names.
+function slugFromItemName(name: string): string {
+  const words = name
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0 && !STOP_WORDS.has(w.toLowerCase()));
+
+  if (words.length === 0) return 'DEAL';
+  if (words.length === 1) return words[0].toUpperCase().slice(0, 8);
+
+  const first = words[0].toUpperCase().slice(0, 4);
+  const last = words[words.length - 1].toUpperCase().slice(0, 4);
+  return first === last ? first : `${first}${last}`;
+}
+
 interface MenuItem {
   id: string;
   name: string;
@@ -27,15 +58,21 @@ interface MenuItem {
 
 export default function NewCouponScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ menuItemId?: string; menuItemName?: string }>();
+  const params = useLocalSearchParams<{
+    menuItemId?: string; menuItemName?: string;
+    couponType?: string; discountValue?: string; usageLimit?: string; perUserLimit?: string;
+  }>();
   const { restaurant } = useRestaurantOwnerStore();
-  const [couponType, setCouponType] = useState<CouponType>('generic_percent');
-  const [discount, setDiscount] = useState('');
+  const isDuplicating = !!params?.couponType;
+  const [couponType, setCouponType] = useState<CouponType>(
+    (params?.couponType as CouponType) || 'generic_percent'
+  );
+  const [discount, setDiscount] = useState(params?.discountValue || '');
   const [code, setCode] = useState('');
   const [menuItemId, setMenuItemId] = useState(params?.menuItemId || '');
   const [selectedMenuItemName, setSelectedMenuItemName] = useState(params?.menuItemName || '');
-  const [usageLimit, setUsageLimit] = useState('');
-  const [perUserLimit, setPerUserLimit] = useState('1');
+  const [usageLimit, setUsageLimit] = useState(params?.usageLimit || '');
+  const [perUserLimit, setPerUserLimit] = useState(params?.perUserLimit || '1');
   const [expiryDate, setExpiryDate] = useState(() => {
     const date = new Date();
     date.setDate(date.getDate() + 7);
@@ -72,13 +109,27 @@ export default function NewCouponScreen() {
     }
   }, [params?.menuItemId]);
 
-  // Generate random coupon code
+  // Smart-generated code: item name (or restaurant name for a generic
+  // coupon) + discount amount + a type letter, so the code is meaningful at
+  // a glance instead of a fully random string -- plus a short random
+  // suffix so re-generating (or two similar coupons) never collides.
   const generateCode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let newCode = '';
-    for (let i = 0; i < 8; i++) {
-      newCode += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    // Digits only, not alphanumeric -- easier to read aloud/type/remember,
+    // and avoids the classic O/0, I/1 ambiguity. 4 digits (10,000
+    // combinations) keeps a similar collision safety margin to the 3-char
+    // alphanumeric suffix this replaced (36^3 = 46,656).
+    const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+
+    const namePart = couponType.includes('item') && selectedMenuItemName
+      ? slugFromItemName(selectedMenuItemName)
+      : slugFromName(restaurant?.name || 'DEAL', 6);
+
+    const discountNum = discount.trim() && !Number.isNaN(Number(discount))
+      ? String(Math.round(Number(discount)))
+      : '';
+    const typeLetter = couponType.includes('percent') ? 'P' : 'F';
+
+    const newCode = `${namePart}${discountNum}${typeLetter}${randomSuffix}`;
     setCode(newCode);
     if (errors.code) setErrors(prev => ({ ...prev, code: undefined }));
   };
@@ -161,6 +212,13 @@ export default function NewCouponScreen() {
       <ScrollView style={styles.container}>
         <View style={styles.content}>
         <Text style={styles.title}>Create New Coupon</Text>
+        {isDuplicating && (
+          <View style={styles.duplicateBanner}>
+            <Text style={styles.duplicateBannerText}>
+              ⧉ Pre-filled from an existing coupon — review and generate a new code before saving.
+            </Text>
+          </View>
+        )}
 
         {/* Coupon Type */}
         <Text style={styles.label}>Coupon Type</Text>
@@ -370,6 +428,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: 560, alignSelf: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 20 },
+  duplicateBanner: { backgroundColor: '#F3E5F5', borderRadius: 10, padding: 12, marginTop: -12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#8E24AA' },
+  duplicateBannerText: { fontSize: 12.5, color: '#6A1B9A', fontWeight: '600', lineHeight: 17 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
   helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },

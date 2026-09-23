@@ -2,7 +2,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView, Linking,
 } from 'react-native';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Image } from 'expo-image';
 import { BRAND_COLORS } from '../../src/constants/brandTheme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -19,6 +19,7 @@ import { useCouponActivation } from '../../src/hooks/useCouponActivation';
 import { CouponActivationModal } from '../../src/components/coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../../src/components/coupon/CouponConfirmModal';
 import { NutritionDisclaimerModal } from '../../src/components/restaurant/NutritionDisclaimerModal';
+import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../src/utils/couponDisplay';
 import { supabase } from '../../src/api/supabase';
 import { useUIStore } from '../../src/store/uiStore';
 import type { Recommendation, Coupon } from '../../src/types';
@@ -87,7 +88,15 @@ export default function RestaurantDetailScreen() {
   const setHasSeenNutritionDisclaimer = useUIStore((s) => s.setHasSeenNutritionDisclaimer);
   const [showNutritionDisclaimer, setShowNutritionDisclaimer] = useState(!hasSeenNutritionDisclaimer);
 
-  const { data: recommendations, isLoading, error } = useMenuRecommendations(restaurant);
+  // Item-specific coupon ids for this restaurant — any of these that
+  // personalized ranking would otherwise cut off past the top-20 still need
+  // to show up (appended at the end), so a real deal never silently
+  // disappears from the page.
+  const couponItemIds = useMemo(
+    () => new Set(coupons.filter((c) => c.menu_item_id).map((c) => c.menu_item_id as string)),
+    [coupons]
+  );
+  const { data: recommendations, isLoading, error } = useMenuRecommendations(restaurant, couponItemIds);
 
   const removeCouponFromList = (couponId: string) =>
     setCoupons((prev) => prev.filter((c) => c.id !== couponId));
@@ -289,10 +298,22 @@ export default function RestaurantDetailScreen() {
                     <Text style={styles.couponDiscount}>
                       {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'} off • Any Item
                     </Text>
-                    <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
-                      <Text style={styles.couponTapHintText}>
-                        {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
-                      </Text>
+                    <View style={styles.couponBottomRow}>
+                      <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
+                        <Text style={styles.couponTapHintText}>
+                          {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
+                        </Text>
+                      </View>
+                      <View style={styles.usesLeftPill}>
+                        <Text style={styles.usesLeftText}>
+                          🔁 {remainingPersonalUses(coupon)} more {remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'}
+                        </Text>
+                      </View>
+                      {isLowStock(coupon) && (
+                        <View style={styles.lowStockPill}>
+                          <Text style={styles.lowStockText}>🔥 Only {remainingTotalUses(coupon)} left</Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                   <View style={styles.couponBadgeRight}>
@@ -724,10 +745,21 @@ const styles = StyleSheet.create({
   couponDiscount: { fontSize: 13, color: '#E65100', fontWeight: '700' },
   couponTapHintPill: {
     alignSelf: 'flex-start', backgroundColor: '#4CAF50', borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 4, marginTop: 6,
+    paddingHorizontal: 10, paddingVertical: 4,
   },
   couponTapHintPillActive: { backgroundColor: '#1565C0' },
   couponTapHintText: { fontSize: 11.5, color: '#fff', fontWeight: '800' },
+  couponBottomRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6 },
+  usesLeftPill: {
+    alignSelf: 'flex-start', backgroundColor: '#E8F5E9', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#4CAF50',
+  },
+  usesLeftText: { fontSize: 11.5, color: '#2e7d32', fontWeight: '800' },
+  lowStockPill: {
+    alignSelf: 'flex-start', backgroundColor: '#FFEBEE', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#e53e3e',
+  },
+  lowStockText: { fontSize: 11.5, color: '#c62828', fontWeight: '800' },
   couponBadgeRight: { backgroundColor: '#FF6F00', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', elevation: 2 },
   couponValue: { fontSize: 18, fontWeight: '900', color: '#fff' },
 

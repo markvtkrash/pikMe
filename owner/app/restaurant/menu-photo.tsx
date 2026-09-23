@@ -69,7 +69,7 @@ export default function MenuPhotoScreen() {
       }
       Alert.alert(
         'Success',
-        `Added ${result.itemCount} real menu items read from your photo to your menu. Edit or remove any of them from Manual Entry.`
+        `Added ${result.itemCount} real menu items read from your photo to your menu. Edit or remove any of them from Edit Menu.`
       );
       setPreviewUri(null);
       setImageDataUrl(null);
@@ -90,7 +90,7 @@ export default function MenuPhotoScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Add Menu Items Using a Photo</Text>
+          <Text style={styles.title}>Update Menu Items Using a Photo</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
       </View>
@@ -101,7 +101,7 @@ export default function MenuPhotoScreen() {
           <Text style={styles.cardHint}>
             Upload a clear photo of your printed menu. We'll read the real dish names directly from it —
             we never invent items that aren't in the photo. This adds to your existing menu without
-            removing anything — edit or remove individual items afterward from Manual Entry.
+            removing anything — edit or remove individual items afterward from Edit Menu.
           </Text>
 
           {previewUri && (

@@ -5,6 +5,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const GOOGLE_PLACES_KEY = Deno.env.get("GOOGLE_PLACES_KEY")!;
 
+const GENERIC_TYPES = new Set([
+  "restaurant", "food", "point_of_interest", "establishment",
+  "store", "health", "premise",
+]);
+
 serve(async (req) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
@@ -52,8 +57,19 @@ serve(async (req) => {
     // independently verified, unlike a Google-sourced one would have been —
     // an accepted trade-off since most small restaurants have no Google
     // website on file at all).
+    //
+    // This same call also pulls the fields needed to seed cached_restaurants
+    // right now (step 1 of the consumer-side cost fix) -- an owner claiming
+    // is a small, known, one-time event per restaurant, unlike the old
+    // design where a random future customer search would have to discover
+    // and cache it instead, sometimes repeatedly. Combined with 050's TTL
+    // exemption for claimed restaurants, this restaurant never needs a
+    // Google Place Details call from the consumer side again.
+    let verifiedPlace: any = null;
     try {
-      const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${googlePlaceId}&key=${GOOGLE_PLACES_KEY}&fields=place_id,name,formatted_address`;
+      const placeDetailsUrl =
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${googlePlaceId}` +
+        `&key=${GOOGLE_PLACES_KEY}&fields=place_id,name,formatted_address,geometry,rating,types,photos,opening_hours`;
       const placeRes = await fetch(placeDetailsUrl);
       const placeData = await placeRes.json();
 
@@ -63,6 +79,7 @@ serve(async (req) => {
           { status: 400, headers: { "Content-Type": "application/json" } }
         );
       }
+      verifiedPlace = placeData.result;
     } catch (error) {
       console.warn("[restaurant-claim] Could not verify with Google Places:", error);
       // Continue anyway - allow claim even if verification fails
@@ -113,6 +130,40 @@ serve(async (req) => {
         JSON.stringify({ error: claimError.message }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // Seed the consumer-facing cache right now (best-effort -- a failure
+    // here shouldn't fail the claim itself; worst case it just falls back to
+    // the old discover-on-demand backfill path).
+    if (verifiedPlace?.geometry?.location) {
+      try {
+        const photoReference = verifiedPlace.photos?.[0]?.photo_reference ?? null;
+        await supabase.rpc("upsert_restaurants", {
+          p_restaurants: [{
+            placeId:        googlePlaceId,
+            name:           verifiedPlace.name ?? restaurantName,
+            latitude:       verifiedPlace.geometry.location.lat,
+            longitude:      verifiedPlace.geometry.location.lng,
+            address:        verifiedPlace.formatted_address ?? address,
+            city:           "",
+            rating:         verifiedPlace.rating ?? 0,
+            priceLevel:     null,
+            cuisineTypes:   (verifiedPlace.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
+            photoReference,
+            openingHours:   verifiedPlace.opening_hours
+              ? {
+                  open_now: verifiedPlace.opening_hours.open_now,
+                  weekday_text: verifiedPlace.opening_hours.weekday_text ?? [],
+                  periods: verifiedPlace.opening_hours.periods ?? [],
+                }
+              : null,
+            openNow:        verifiedPlace.opening_hours?.open_now ?? false,
+          }],
+        });
+        console.log("[restaurant-claim] Cached restaurant for consumer discovery:", restaurantName);
+      } catch (cacheErr) {
+        console.warn("[restaurant-claim] Failed to seed cache (non-fatal):", cacheErr);
+      }
     }
 
     return new Response(

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { updateCoupon, deleteCoupon, getRestaurantCoupons } from '../../../../src/api/restaurantAuth';
+import { updateCoupon, deleteCoupon, getRestaurantCoupons, getRestaurantMenuItems } from '../../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../../src/store/restaurantOwnerStore';
 
 // Type for HTML input element
@@ -40,6 +40,8 @@ export default function EditCouponScreen() {
   const [discount, setDiscount] = useState('');
   const [code, setCode] = useState('');
   const [menuItemId, setMenuItemId] = useState('');
+  const [currentItems, setCurrentItems] = useState<{ item_id: string; name: string }[]>([]);
+  const [showItemPicker, setShowItemPicker] = useState(false);
   const [usageLimit, setUsageLimit] = useState('');
   const [perUserLimit, setPerUserLimit] = useState('1');
   const [expiryDate, setExpiryDate] = useState(new Date());
@@ -63,8 +65,12 @@ export default function EditCouponScreen() {
 
     try {
       console.log('[edit] Loading coupon:', id, 'for restaurant:', restaurant.id);
-      const coupons = await getRestaurantCoupons(restaurant.id);
+      const [coupons, menuItems] = await Promise.all([
+        getRestaurantCoupons(restaurant.id),
+        getRestaurantMenuItems(restaurant.name),
+      ]);
       console.log('[edit] Loaded coupons:', coupons);
+      setCurrentItems(menuItems);
       const found = coupons.find((c: Coupon) => c.id === id);
       if (found) {
         console.log('[edit] Found coupon:', found);
@@ -253,17 +259,39 @@ export default function EditCouponScreen() {
             </Text>
           </View>
 
-          {/* Menu Item ID */}
+          {/* Menu Item */}
           {coupon.coupon_type.includes('item') && (
             <>
-              <Text style={styles.label}>Menu Item ID</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., nix_12345"
-                placeholderTextColor="#999"
-                value={menuItemId}
-                onChangeText={setMenuItemId}
-              />
+              <Text style={styles.label}>Menu Item</Text>
+              <TouchableOpacity
+                style={styles.itemPickerToggle}
+                onPress={() => setShowItemPicker((prev) => !prev)}
+              >
+                <Text style={styles.itemPickerToggleText} numberOfLines={1}>
+                  {currentItems.find((i) => i.item_id === menuItemId)?.name
+                    ?? (menuItemId ? '⚠️ Menu item no longer exists' : 'Select a menu item')}
+                </Text>
+                <Text style={styles.itemPickerToggleArrow}>{showItemPicker ? '▾' : '▸'}</Text>
+              </TouchableOpacity>
+              {showItemPicker && (
+                currentItems.length === 0 ? (
+                  <View style={styles.itemPicker}>
+                    <Text style={styles.noItemsText}>No current menu items to pick from yet.</Text>
+                  </View>
+                ) : (
+                  <ScrollView style={styles.itemPicker} nestedScrollEnabled>
+                    {currentItems.map((item) => (
+                      <TouchableOpacity
+                        key={item.item_id}
+                        style={styles.itemOption}
+                        onPress={() => { setMenuItemId(item.item_id); setShowItemPicker(false); }}
+                      >
+                        <Text style={styles.itemOptionText}>{item.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )
+              )}
             </>
           )}
 
@@ -438,6 +466,21 @@ const styles = StyleSheet.create({
   discountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   discountInput: { flex: 1, marginBottom: 0 },
   discountUnit: { fontSize: 18, fontWeight: '800', color: '#4CAF50', minWidth: 30, textAlign: 'center' },
+
+  itemPickerToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
+  },
+  itemPickerToggleText: { flex: 1, fontSize: 14, color: '#222' },
+  itemPickerToggleArrow: { fontSize: 13, color: '#999', marginLeft: 8 },
+  itemPicker: {
+    backgroundColor: '#fafafa', borderRadius: 10, borderWidth: 1, borderColor: '#eee',
+    marginBottom: 12, maxHeight: 220, overflow: 'hidden',
+  },
+  noItemsText: { fontSize: 13, color: '#999', padding: 12, fontStyle: 'italic' },
+  itemOption: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  itemOptionText: { fontSize: 13, color: '#333', fontWeight: '600' },
   datePicker: {
     backgroundColor: '#fff',
     borderWidth: 1,

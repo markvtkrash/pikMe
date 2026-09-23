@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type RestaurantStatus = 'pending' | 'approved' | 'rejected';
+export type RestaurantStatus = 'pending' | 'approved' | 'rejected' | 'closed';
 
 export interface AdminRestaurant {
   id: string;

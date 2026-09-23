@@ -17,6 +17,7 @@ interface Stats {
   totalCoupons: number;
   activeCoupons: number;
   pendingClaims: number;
+  pendingRelocations: number;
   openTickets: number;
   openOwnerTickets: number;
   openConsumerTickets: number;
@@ -32,6 +33,7 @@ export default function AdminDashboard() {
     totalCoupons: 0,
     activeCoupons: 0,
     pendingClaims: 0,
+    pendingRelocations: 0,
     openTickets: 0,
     openOwnerTickets: 0,
     openConsumerTickets: 0,
@@ -152,7 +154,13 @@ export default function AdminDashboard() {
       const { count: pendingClaims } = await supabase
         .from('restaurants')
         .select('*', { count: 'exact', head: true })
-        .is('claimed_at', null);
+        .eq('status', 'pending');
+
+      // Get pending relocation requests
+      const { count: pendingRelocations } = await supabase
+        .from('restaurant_relocation_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
 
       // Get open support tickets, split by who filed them
       const ticketCounts = await getOpenTicketCounts();
@@ -165,6 +173,7 @@ export default function AdminDashboard() {
         totalCoupons: totalCoupons || 0,
         activeCoupons: activeCoupons || 0,
         pendingClaims: pendingClaims || 0,
+        pendingRelocations: pendingRelocations || 0,
         openTickets: ticketCounts.total,
         openOwnerTickets: ticketCounts.owner,
         openConsumerTickets: ticketCounts.consumer,
@@ -212,70 +221,34 @@ export default function AdminDashboard() {
       </View>
 
       <View style={styles.pageWrapper}>
-      {/* Stats Overview */}
-      <View style={styles.statsGrid}>
-        <TouchableOpacity
-          style={[styles.statBox, styles.statBoxUsers]}
-          onPress={() => router.push('/admin/users')}
-        >
-          <Text style={styles.statIcon}>👥</Text>
-          <Text style={styles.statNumber}>{stats.totalUsers}</Text>
-          <Text style={styles.statLabel}>Users</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.statBox, styles.statBoxRestaurants]}
-          onPress={() => router.push('/admin/restaurants')}
-        >
-          <Text style={styles.statIcon}>🍽️</Text>
-          <Text style={styles.statNumber}>{stats.totalRestaurants}</Text>
-          <Text style={styles.statLabel}>Restaurants</Text>
-          <Text style={styles.statBreakdownCompact}>
-            <Text style={styles.statBreakdownApproved}>{stats.approvedRestaurants} ✓</Text>
-            <Text style={styles.statBreakdownGap}>  </Text>
-            <Text style={styles.statBreakdownPending}>{stats.pendingRestaurants} ⏳</Text>
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.statBox, styles.statBoxCoupons]}
-          onPress={() => router.push('/admin/coupons?tab=all')}
-        >
-          <Text style={styles.statIcon}>🎫</Text>
-          <Text style={styles.statNumber}>{stats.totalCoupons}</Text>
-          <Text style={styles.statLabel}>Coupons</Text>
-          <Text style={[styles.statBreakdownCompact, styles.statBreakdownApproved]}>
-            {stats.activeCoupons} active
-          </Text>
-        </TouchableOpacity>
-
-        <Animated.View style={[styles.statBoxWrapper, { opacity: stats.openTickets > 0 ? blinkAnim : 1 }]}>
-          <TouchableOpacity
-            style={[
-              styles.statBox, styles.statBoxTickets,
-              stats.openTickets > 0 && styles.statBoxTicketsActive,
-              { width: '100%' },
-            ]}
-            onPress={() => router.push('/admin/tickets?status=open')}
-          >
-            <Text style={styles.statIcon}>🎧</Text>
-            <Text style={[styles.statNumber, stats.openTickets > 0 && styles.statNumberAlert]}>
-              {stats.openTickets}
-            </Text>
-            <Text style={styles.statLabel}>Support</Text>
-            <Text style={styles.statBreakdownCompact}>
-              <Text style={styles.statBreakdownOwner}>{stats.openOwnerTickets} owner</Text>
-              <Text style={styles.statBreakdownGap}>  </Text>
-              <Text style={styles.statBreakdownConsumer}>{stats.openConsumerTickets} consumer</Text>
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-
       {/* Admin Sections */}
       <Text style={styles.sectionTitle}>Administration</Text>
 
       <View style={styles.adminTilesGrid}>
+        <Animated.View style={[styles.adminTileWrapper, { opacity: stats.openTickets > 0 ? blinkAnim : 1 }]}>
+          <TouchableOpacity
+            style={[
+              styles.adminTile, styles.adminTileTicketsNeutral,
+              stats.openTickets > 0 && styles.adminTileTicketsAlert,
+              { width: '100%' },
+            ]}
+            onPress={() => router.push('/admin/tickets?status=open')}
+          >
+            {stats.openTickets > 0 && (
+              <View style={styles.adminTileBadge}>
+                <Text style={styles.adminTileBadgeText}>{stats.openTickets}</Text>
+              </View>
+            )}
+            <Text style={styles.adminTileIcon}>🎧</Text>
+            <Text style={[styles.adminTileTitle, stats.openTickets > 0 && styles.adminTileTitleAlert]}>Support</Text>
+            {stats.openTickets > 0 && (
+              <Text style={styles.adminTileDetailAlert}>
+                {stats.openOwnerTickets} owner · {stats.openConsumerTickets} consumer
+              </Text>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
         <TouchableOpacity
           style={[styles.adminTile, styles.adminTileClaims]}
           onPress={() => router.push('/admin/claims')}
@@ -290,26 +263,81 @@ export default function AdminDashboard() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileRelocations]}
+          onPress={() => router.push('/admin/relocations')}
+        >
+          {stats.pendingRelocations > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.pendingRelocations}</Text>
+            </View>
+          )}
+          <Text style={styles.adminTileIcon}>📍</Text>
+          <Text style={styles.adminTileTitle}>Relocation Requests</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileRestaurants]}
+          onPress={() => router.push('/admin/restaurants')}
+        >
+          {stats.totalRestaurants > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.totalRestaurants}</Text>
+            </View>
+          )}
+          <Text style={styles.adminTileIcon}>🍽️</Text>
+          <Text style={styles.adminTileTitle}>Manage Restaurants</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.adminTile, styles.adminTileCoupons]}
           onPress={() => router.push('/admin/coupons')}
         >
+          {stats.totalCoupons > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.totalCoupons}</Text>
+            </View>
+          )}
           <Text style={styles.adminTileIcon}>🎟️</Text>
           <Text style={styles.adminTileTitle}>Coupon Management</Text>
+          <Text style={styles.adminTileDetail}>{stats.activeCoupons} active</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.adminTile, styles.adminTileOwner]}
+          onPress={() => router.push('/admin/owners')}
+        >
+          <Text style={styles.adminTileIcon}>👤</Text>
+          <Text style={styles.adminTileTitle}>Manage Owners</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileUsers]}
+          onPress={() => router.push('/admin/users')}
+        >
+          {stats.totalUsers > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.totalUsers}</Text>
+            </View>
+          )}
+          <Text style={styles.adminTileIcon}>👥</Text>
+          <Text style={styles.adminTileTitle}>Manage Users</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileCreateOwner]}
           onPress={() => router.push('/admin/create-owner')}
         >
           <Text style={styles.adminTileIcon}>➕</Text>
           <Text style={styles.adminTileTitle}>Create Restaurant Owner</Text>
         </TouchableOpacity>
 
-        <View style={[styles.adminTile, styles.adminTileSettings, styles.adminTileDisabled]}>
-          <Text style={styles.adminTileIcon}>⚙️</Text>
-          <Text style={styles.adminTileTitle}>Settings</Text>
-          <Text style={styles.adminTileComingSoon}>Coming soon</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileReports]}
+          onPress={() => router.push('/admin/reports')}
+        >
+          <Text style={styles.adminTileIcon}>📊</Text>
+          <Text style={styles.adminTileTitle}>Reports</Text>
+        </TouchableOpacity>
       </View>
       </View>
     </ScrollView>
@@ -381,39 +409,6 @@ const styles = StyleSheet.create({
   settingsOptionTextLogout: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   settingsDivider: { height: 0, display: 'none' },
 
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  statBoxWrapper: { width: '48%' },
-  statBox: {
-    width: '48%',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  statBoxUsers: { backgroundColor: '#E3F2FD' },
-  statBoxRestaurants: { backgroundColor: '#F3E5F5' },
-  statBoxCoupons: { backgroundColor: '#FFF3E0' },
-  statBoxTickets: { backgroundColor: '#F5F5F5' },
-  statBoxTicketsActive: { backgroundColor: '#FFEBEE', borderWidth: 2, borderColor: '#e53e3e' },
-  statIcon: { fontSize: 20 },
-  statNumber: { fontSize: 18, fontWeight: '800', color: '#222' },
-  statNumberAlert: { color: '#e53e3e' },
-  statLabel: { fontSize: 9, fontWeight: '600', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3 },
-  statBreakdownCompact: { fontSize: 11, fontWeight: '800', marginTop: 2 },
-  statBreakdownApproved: { color: '#2e7d32' },
-  statBreakdownPending: { color: '#E65100' },
-  statBreakdownOwner: { color: '#1565C0' },
-  statBreakdownConsumer: { color: '#8E24AA' },
-  statBreakdownGap: { color: 'transparent' },
-
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#222', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
 
   adminTilesGrid: {
@@ -435,13 +430,21 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   adminTileClaims: { backgroundColor: '#E3F2FD' },
+  adminTileRelocations: { backgroundColor: '#B2DFDB' },
+  adminTileRestaurants: { backgroundColor: '#F3E5F5' },
   adminTileCoupons: { backgroundColor: '#FFF3E0' },
-  adminTileOwner: { backgroundColor: '#F3E5F5' },
-  adminTileSettings: { backgroundColor: '#E8F5E9' },
+  adminTileOwner: { backgroundColor: '#FCE4EC' },
+  adminTileUsers: { backgroundColor: '#E0F7FA' },
+  adminTileCreateOwner: { backgroundColor: '#E8EAF6' },
+  adminTileReports: { backgroundColor: '#FFF9C4' },
+  adminTileWrapper: { width: '48%' },
+  adminTileTicketsNeutral: { backgroundColor: '#F5F5F5' },
+  adminTileTicketsAlert: { backgroundColor: '#e53e3e' },
+  adminTileTitleAlert: { color: '#fff' },
+  adminTileDetailAlert: { fontSize: 11, fontWeight: '700', color: '#fff', marginTop: 2, opacity: 0.9 },
   adminTileIcon: { fontSize: 26 },
   adminTileTitle: { fontSize: 13, fontWeight: '700', color: '#222', textAlign: 'center' },
-  adminTileComingSoon: { fontSize: 10, color: '#999', fontWeight: '600' },
-  adminTileDisabled: { opacity: 0.6 },
+  adminTileDetail: { fontSize: 11, fontWeight: '700', color: '#2e7d32', marginTop: 2 },
   adminTileBadge: {
     position: 'absolute', top: 8, right: 8, backgroundColor: '#e53e3e', borderRadius: 10,
     minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
