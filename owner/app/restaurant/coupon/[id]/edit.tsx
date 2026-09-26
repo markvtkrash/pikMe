@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Platform,
 } from 'react-native';
+import { Alert } from '../../../../src/utils/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { updateCoupon, deleteCoupon, getRestaurantCoupons, getRestaurantMenuItems } from '../../../../src/api/restaurantAuth';

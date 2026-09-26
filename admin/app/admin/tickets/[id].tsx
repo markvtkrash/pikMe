@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { Alert } from '../../../src/utils/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { getTicketById, adminUpdateTicket, AdminSupportTicket, TicketStatus } from '../../../src/api/supportTickets';
 

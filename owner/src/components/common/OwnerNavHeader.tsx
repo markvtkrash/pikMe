@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
+import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
 
 function pathIs(pathname: string, target: string) {
   return pathname === target || pathname.startsWith(target + '/');
@@ -127,8 +128,18 @@ export function OwnerNavHeader() {
   const activeItem = NAV_ITEMS.find((item) => item.isActive(pathname));
 
   function handleLogout() {
+    if (!confirmNavigationAllowed()) return;
     logout();
     router.replace('/restaurant/auth/login');
+  }
+
+  // router.push() adds a screen on top of the stack rather than removing the
+  // current one, so a screen's own "leaving with unsaved changes" listener
+  // (React Navigation's beforeRemove) never fires for these — this shared
+  // check is what actually catches it.
+  function handleNavigate(href: string) {
+    if (!confirmNavigationAllowed()) return;
+    router.push(href as any);
   }
 
   return (
@@ -150,7 +161,7 @@ export function OwnerNavHeader() {
               <TouchableOpacity
                 key={item.key}
                 style={[styles.navBtn, active && styles.navBtnActive]}
-                onPress={() => router.push(item.href as any)}
+                onPress={() => handleNavigate(item.href)}
                 onLayout={(e) => {
                   if (active && item.children) {
                     const { x, y, width, height } = e.nativeEvent.layout;
@@ -181,7 +192,7 @@ export function OwnerNavHeader() {
               <TouchableOpacity
                 key={child.href}
                 style={[styles.subBtn, active && styles.subBtnActive]}
-                onPress={() => router.push(child.href as any)}
+                onPress={() => handleNavigate(child.href)}
               >
                 <Text style={[styles.subBtnText, active && styles.subBtnTextActive]}>{child.label}</Text>
               </TouchableOpacity>

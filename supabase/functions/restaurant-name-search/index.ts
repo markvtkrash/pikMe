@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
 const GOOGLE_PLACES_KEY = Deno.env.get("GOOGLE_PLACES_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -47,6 +50,18 @@ serve(async (req) => {
 
   try {
     if (!GOOGLE_PLACES_KEY) return err("GOOGLE_PLACES_KEY secret not configured", 500);
+
+    // Calls Google's billable Text Search API — require a real logged-in
+    // caller (any authenticated user), same reasoning as restaurant-search.ts.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return err("Unauthorized", 401);
+    const authedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userError } = await authedSupabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (userError || !userData.user) return err("Unauthorized", 401);
 
     const { businessName, latitude, longitude, radiusMeters } = await req.json();
     if (!businessName || typeof businessName !== "string" || !businessName.trim()) {

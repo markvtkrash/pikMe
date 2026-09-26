@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput, Modal,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
-} from 'react-native';
+  KeyboardAvoidingView, Platform, ActivityIndicator, } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { supabase } from '../../src/api/supabase';
 
 interface Props {

@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Modal,
-  ActivityIndicator, Alert,
-} from 'react-native';
+  ActivityIndicator, } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { getOpenTicketCounts } from '../../src/api/supportTickets';
@@ -289,6 +289,14 @@ export default function AdminDashboard() {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileMenuManagement]}
+          onPress={() => router.push('/admin/menu-management')}
+        >
+          <Text style={styles.adminTileIcon}>📋</Text>
+          <Text style={styles.adminTileTitle}>Menu Management</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.adminTile, styles.adminTileCoupons]}
           onPress={() => router.push('/admin/coupons')}
         >
@@ -433,6 +441,7 @@ const styles = StyleSheet.create({
   adminTileRelocations: { backgroundColor: '#B2DFDB' },
   adminTileRestaurants: { backgroundColor: '#F3E5F5' },
   adminTileCoupons: { backgroundColor: '#FFF3E0' },
+  adminTileMenuManagement: { backgroundColor: '#E0F2F1' },
   adminTileOwner: { backgroundColor: '#FCE4EC' },
   adminTileUsers: { backgroundColor: '#E0F7FA' },
   adminTileCreateOwner: { backgroundColor: '#E8EAF6' },

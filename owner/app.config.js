@@ -53,6 +53,8 @@ export default {
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       ownerSearchRadiusMeters: process.env.EXPO_PUBLIC_OWNER_SEARCH_RADIUS_METERS,
+      maxManualMenuItems: process.env.EXPO_PUBLIC_MAX_MANUAL_MENU_ITEMS,
+      sessionTimeoutMinutes: process.env.EXPO_PUBLIC_SESSION_TIMEOUT_MINUTES,
       eas: {
         // TODO: this projectId is inherited from the original combined app.
         // Point this at a dedicated EAS project before the first real build

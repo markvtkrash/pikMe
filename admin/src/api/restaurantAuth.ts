@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Restaurant } from '../types';
 
 // Owner/admin-only functions, split out of the original restaurantAuth.ts
 // (which mixed these in with customer-facing coupon functions — those now
@@ -18,16 +19,57 @@ export interface GeocodedLocation {
 // fetchNearbyRestaurants() customers use — guaranteeing an owner can only
 // claim a restaurant that a customer searching from that same location would
 // actually be able to discover, instead of an unconstrained global search.
+// Requires a logged-in session — this hits a billable Google API, so the
+// edge function rejects anonymous callers.
 export async function geocodeLocation(query: string): Promise<GeocodedLocation> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Admin session expired. Please log in again.');
+
   const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ query }),
   });
 
   const data = await response.json();
   if (!response.ok) throw new Error(data.error);
   return data;
+}
+
+// Finds a restaurant by NAME (via Google Places Text Search) within a given
+// radius of a geocoded location — for the case where Nearby Search's
+// prominence-ranked browse doesn't surface it (a real but less-reviewed
+// local restaurant can miss that top-~20 cutoff entirely). Mirrors the owner
+// claim flow's search of the same name — used here so Admin's Create
+// Restaurant Owner can find anything an owner could find via Claim.
+// Requires a logged-in session — this hits a billable Google API, so the
+// edge function rejects anonymous callers.
+export async function searchRestaurantByName(
+  businessName: string,
+  latitude: number,
+  longitude: number,
+  radiusMeters: number
+): Promise<Restaurant[]> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Admin session expired. Please log in again.');
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-name-search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ businessName, latitude, longitude, radiusMeters }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to search by business name');
+  return data.results || [];
 }
 
 export async function signUpRestaurantOwner(email: string, password: string, businessName: string) {
@@ -353,5 +395,71 @@ export async function adminApproveRelocationRequest(params: {
 
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Failed to approve relocation request');
+  return data;
+}
+
+// ─── Menu Management (admin, on behalf of any claimed restaurant) ──────────
+// Both extract-menu-from-* edge functions accept an admin caller (checked via
+// user_roles) as an alternative to the restaurant's own owner — added
+// specifically so Admin's Menu Management page can seed/update a menu for
+// any restaurant without needing to sign in as that owner.
+
+// Mirrors owner app's restaurantAuth.ts exactly — see there for the shape
+// rationale (requiresConfirmation / affectedCoupons / overwritesVerifiedCount
+// / items-for-retry).
+export interface AffectedCoupon {
+  id: string;
+  couponCode: string;
+}
+export interface MenuReplaceResult {
+  success?: boolean;
+  itemCount?: number;
+  requiresConfirmation?: boolean;
+  affectedCoupons?: AffectedCoupon[];
+  overwritesVerifiedCount?: number;
+  items?: unknown[];
+}
+
+export async function extractMenuFromImage(
+  restaurantId: string,
+  restaurantName: string,
+  imageBase64: string,
+  authToken: string,
+  force = false,
+  extractedItems?: unknown[]
+): Promise<MenuReplaceResult> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-menu-from-image`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({ restaurantId, restaurantName, imageBase64, force, items: extractedItems }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to extract menu from that photo');
+  return data;
+}
+
+export async function extractMenuFromText(
+  restaurantId: string,
+  restaurantName: string,
+  menuText: string,
+  authToken: string,
+  force = false,
+  extractedItems?: unknown[]
+): Promise<MenuReplaceResult> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/extract-menu-from-text`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${authToken}`,
+    },
+    body: JSON.stringify({ restaurantId, restaurantName, menuText, force, items: extractedItems }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to extract menu from that text');
   return data;
 }

@@ -83,7 +83,7 @@ serve(async (req) => {
     const { data: cached } = await supabase
       .from('menu_items')
       .select('*')
-      .ilike('restaurant_name', `%${restaurantName.split(' ')[0]}%`)
+      .ilike('restaurant_name', restaurantName.trim())
       .eq('is_verified', false)
       .gt('cached_at', cacheFrom)
       .limit(50);

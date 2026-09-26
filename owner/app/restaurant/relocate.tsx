@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Alert,
-} from 'react-native';
+  ActivityIndicator, } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import {

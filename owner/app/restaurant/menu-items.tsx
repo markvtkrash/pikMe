@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput,
-  ActivityIndicator, Alert, Modal,
+  ActivityIndicator, Modal,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantMenuItems, refreshRestaurantMenu, verifyMenuItem, unverifyMenuItem, deleteMenuItem } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';

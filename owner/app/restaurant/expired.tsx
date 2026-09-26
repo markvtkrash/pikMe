@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Alert, useFocusEffect,
+  ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Alert } from '../../src/utils/alert';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 

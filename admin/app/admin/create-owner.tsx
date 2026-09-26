@@ -1,17 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Alert, ScrollView, Platform,
+  ActivityIndicator, ScrollView, Platform,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
-import { adminCreateRestaurantOwner } from '../../src/api/restaurantAuth';
+import {
+  adminCreateRestaurantOwner, geocodeLocation, searchRestaurantByName,
+} from '../../src/api/restaurantAuth';
+import { fetchNearbyRestaurants } from '../../src/api/functions';
+import { formatDistance } from '../../src/utils/geo';
+import { normalizeForSearch } from '../../src/utils/textMatch';
+import { OWNER_SEARCH_RADIUS_METERS } from '../../src/constants/searchRadius';
+import type { Restaurant } from '../../src/types';
 
-interface PlaceResult {
-  place_id: string;
-  name: string;
-  formatted_address: string;
-}
+const OWNER_SEARCH_RADIUS_KM = OWNER_SEARCH_RADIUS_METERS / 1000;
+const MILES_TO_METERS = 1609.34;
 
 interface Credentials {
   email: string;
@@ -51,11 +56,17 @@ async function copyToClipboard(text: string) {
 export default function AdminCreateOwnerScreen() {
   const router = useRouter();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [locationQuery, setLocationQuery] = useState('');
+  const [businessNameQuery, setBusinessNameQuery] = useState('');
+  const [radiusMiles, setRadiusMiles] = useState('10');
+  const [nameFilter, setNameFilter] = useState('');
+  const [geocodedAddress, setGeocodedAddress] = useState<string | null>(null);
+  const [results, setResults] = useState<Restaurant[]>([]);
   const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [claimedPlaceIds, setClaimedPlaceIds] = useState<Set<string>>(new Set());
 
-  const [selected, setSelected] = useState<PlaceResult | null>(null);
+  const [selected, setSelected] = useState<Restaurant | null>(null);
   const [email, setEmail] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [password, setPassword] = useState(generatePassword());
@@ -65,32 +76,82 @@ export default function AdminCreateOwnerScreen() {
 
   const [credentials, setCredentials] = useState<Credentials | null>(null);
 
+  // react-native-web's Alert.alert() is a no-op (empty function body) — it
+  // never renders anything on web, which is this app's primary platform, so
+  // Alert.alert('Error', ...) silently swallowed every error here (search
+  // failures and, notably, the backend's duplicate-email 409). Shown inline
+  // instead so it's actually visible.
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Filtering happens client-side over whatever's already been fetched for
+  // the searched location — same pattern as claim.tsx and the customer
+  // Explore screen, no extra network call per keystroke.
+  const filteredResults = useMemo(() => {
+    if (!nameFilter.trim()) return results;
+    const target = normalizeForSearch(nameFilter);
+    return results.filter((r) => normalizeForSearch(r.name).includes(target));
+  }, [results, nameFilter]);
+
+  // Shared by both search entry points below — if a business name was
+  // typed, uses location-biased Text Search (name-matching, finds real but
+  // less-reviewed local places Nearby Search's prominence ranking can miss);
+  // otherwise falls back to the existing prominence-ranked nearby browse.
+  // Mirrors owner claim.tsx's searchNear() exactly, so Admin can find
+  // anything an owner could find when claiming.
+  async function searchNear(latitude: number, longitude: number) {
+    const name = businessNameQuery.trim();
+    if (name) {
+      const radiusMeters = (Number(radiusMiles) || 10) * MILES_TO_METERS;
+      const found = await searchRestaurantByName(name, latitude, longitude, radiusMeters);
+      setResults(found);
+    } else {
+      const nearby = await fetchNearbyRestaurants(latitude, longitude, OWNER_SEARCH_RADIUS_METERS);
+      setResults(nearby);
+    }
+  }
+
   async function handleSearch() {
-    if (!searchQuery.trim()) return;
+    if (!locationQuery.trim()) return;
     setSearching(true);
+    setHasSearched(true);
+    setResults([]);
+    setGeocodedAddress(null);
+    setSearchError(null);
     try {
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-      const response = await fetch(`${supabaseUrl}/functions/v1/restaurant-search`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: searchQuery.trim() }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-      setResults(data.results || []);
+      const [geo] = await Promise.all([
+        geocodeLocation(locationQuery.trim()),
+        loadClaimedPlaceIds(),
+      ]);
+      setGeocodedAddress(geo.formattedAddress);
+      await searchNear(geo.latitude, geo.longitude);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to search restaurants');
+      setSearchError(error.message || 'Failed to find restaurants near that location');
     } finally {
       setSearching(false);
     }
   }
 
-  function handleSelect(result: PlaceResult) {
+  // So an existing owner isn't accidentally duplicated — same badge claim.tsx
+  // shows, just surfaced here before creating a second owner account.
+  async function loadClaimedPlaceIds() {
+    try {
+      const { data, error } = await supabase.from('restaurants').select('google_place_id');
+      if (!error && data) {
+        setClaimedPlaceIds(new Set(data.map((r) => r.google_place_id)));
+      }
+    } catch (err) {
+      console.error('[create-owner] Failed to load claimed restaurants:', err);
+    }
+  }
+
+  function handleSelect(result: Restaurant) {
     setSelected(result);
     setBusinessName(result.name);
     setEmail('');
     setPassword(generatePassword());
     setErrors({});
+    setSubmitError(null);
   }
 
   function validate() {
@@ -121,6 +182,7 @@ export default function AdminCreateOwnerScreen() {
       return;
     }
     setErrors({});
+    setSubmitError(null);
 
     setSubmitting(true);
     try {
@@ -134,9 +196,9 @@ export default function AdminCreateOwnerScreen() {
         email: email.trim(),
         password,
         businessName: businessName.trim(),
-        googlePlaceId: selected.place_id,
+        googlePlaceId: selected.placeId,
         restaurantName: selected.name,
-        address: selected.formatted_address,
+        address: selected.location.address,
         accessToken,
       });
 
@@ -146,7 +208,7 @@ export default function AdminCreateOwnerScreen() {
         restaurantName: selected.name,
       });
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to create owner account');
+      setSubmitError(error.message || 'Failed to create owner account');
     } finally {
       setSubmitting(false);
     }
@@ -159,7 +221,11 @@ export default function AdminCreateOwnerScreen() {
     setBusinessName('');
     setPassword(generatePassword());
     setResults([]);
-    setSearchQuery('');
+    setLocationQuery('');
+    setBusinessNameQuery('');
+    setNameFilter('');
+    setGeocodedAddress(null);
+    setHasSearched(false);
   }
 
   // ── Success: show shareable credentials ──────────────────────────────
@@ -209,7 +275,7 @@ export default function AdminCreateOwnerScreen() {
 
         <View style={styles.selectedCard}>
           <Text style={styles.selectedName}>{selected.name}</Text>
-          <Text style={styles.selectedAddress}>{selected.formatted_address}</Text>
+          <Text style={styles.selectedAddress}>{selected.location.address}</Text>
         </View>
 
         <Text style={styles.label}>Owner Email <Text style={styles.required}>*</Text></Text>
@@ -258,6 +324,12 @@ export default function AdminCreateOwnerScreen() {
           ? <Text style={styles.errorText}>{errors.password}</Text>
           : <Text style={styles.hint}>The owner must change this on first login.</Text>}
 
+        {submitError && (
+          <View style={[styles.errorBanner, styles.errorBannerNoIndent]}>
+            <Text style={styles.errorBannerText}>{submitError}</Text>
+          </View>
+        )}
+
         <TouchableOpacity
           style={[styles.primaryBtn, submitting && styles.btnDisabled]}
           onPress={handleCreate}
@@ -279,23 +351,53 @@ export default function AdminCreateOwnerScreen() {
   }
 
   // ── Search ───────────────────────────────────────────────────────────
+  // Mirrors owner claim.tsx's search UI exactly (location + optional
+  // business-name/radius refinement over the same fetchNearbyRestaurants /
+  // searchRestaurantByName calls) so Admin can find anything an owner could
+  // find when claiming — the previous single free-text box called an edge
+  // function that had since been repurposed into a geocoder and never
+  // actually returned restaurant results.
   return (
     <View style={styles.container}>
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.sectionTitle}>Create Restaurant Owner</Text>
         <Text style={styles.headerSubtitle}>
-          Search for a restaurant, then provision an owner account for it.
+          Enter a zip code or city to find the restaurant, then provision an owner account for it.
         </Text>
+      </View>
+
+      <Text style={styles.businessNameLabel}>Know the exact name? Search for it directly:</Text>
+      <Text style={styles.businessNameHint}>
+        Finds the restaurant by name instead of just browsing what's nearby — helpful if it doesn't
+        show up in the browse list below (a real place can still be missed by that if it has fewer reviews).
+      </Text>
+      <View style={styles.businessNameRow}>
+        <TextInput
+          style={[styles.searchInput, styles.businessNameInput]}
+          placeholder="Business name (optional), e.g. Mocha Point Coffee"
+          placeholderTextColor="#999"
+          value={businessNameQuery}
+          onChangeText={setBusinessNameQuery}
+          onSubmitEditing={handleSearch}
+        />
+        <TextInput
+          style={[styles.searchInput, styles.radiusInput]}
+          placeholder="Miles"
+          placeholderTextColor="#999"
+          keyboardType="number-pad"
+          value={radiusMiles}
+          onChangeText={setRadiusMiles}
+        />
       </View>
 
       <View style={styles.searchBox}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Restaurant name or address..."
+          placeholder="Zip code or city..."
           placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
+          value={locationQuery}
+          onChangeText={setLocationQuery}
           onSubmitEditing={handleSearch}
         />
         <TouchableOpacity
@@ -309,23 +411,69 @@ export default function AdminCreateOwnerScreen() {
         </TouchableOpacity>
       </View>
 
+      {searchError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{searchError}</Text>
+        </View>
+      )}
+
+      {geocodedAddress && (
+        <View style={styles.radiusBanner}>
+          <Text style={styles.radiusBannerText}>
+            {businessNameQuery.trim()
+              ? `📍 Showing matches for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of ${geocodedAddress}.`
+              : `📍 Showing restaurants within ${OWNER_SEARCH_RADIUS_KM}km of ${geocodedAddress}.`}
+          </Text>
+        </View>
+      )}
+
+      {results.length > 0 && (
+        <View style={styles.filterBox}>
+          <TextInput
+            style={styles.filterInput}
+            placeholder="Filter by restaurant name..."
+            placeholderTextColor="#999"
+            value={nameFilter}
+            onChangeText={setNameFilter}
+          />
+        </View>
+      )}
+
       <FlatList
-        data={results}
-        keyExtractor={(item) => item.place_id}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.resultCard} onPress={() => handleSelect(item)}>
-            <View style={styles.resultInfo}>
-              <Text style={styles.resultName}>{item.name}</Text>
-              <Text style={styles.resultAddress}>{item.formatted_address}</Text>
-            </View>
-            <Text style={styles.resultArrow}>›</Text>
-          </TouchableOpacity>
-        )}
+        data={filteredResults}
+        keyExtractor={(item) => item.placeId}
+        renderItem={({ item }) => {
+          const isClaimed = claimedPlaceIds.has(item.placeId);
+          return (
+            <TouchableOpacity
+              style={[styles.resultCard, isClaimed && styles.resultCardClaimed]}
+              onPress={() => handleSelect(item)}
+            >
+              <View style={styles.resultInfo}>
+                <View style={styles.resultHeader}>
+                  <Text style={styles.resultName}>{item.name}</Text>
+                  {isClaimed && <Text style={styles.claimedBadge}>Already has an owner</Text>}
+                </View>
+                <Text style={styles.resultAddress}>{item.location.address}</Text>
+                <Text style={styles.resultDistance}>{formatDistance(item.distanceMeters)} away</Text>
+              </View>
+              <Text style={styles.resultArrow}>›</Text>
+            </TouchableOpacity>
+          );
+        }}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchQuery ? 'No restaurants found' : 'Search for a restaurant to begin'}
-          </Text>
+          !hasSearched ? (
+            <Text style={styles.emptyText}>Enter a zip code or city to see nearby restaurants</Text>
+          ) : searching ? null : results.length === 0 ? (
+            <Text style={styles.emptyText}>
+              {businessNameQuery.trim()
+                ? `No match for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of that location`
+                : `No restaurants found within ${OWNER_SEARCH_RADIUS_KM}km of that location`}
+            </Text>
+          ) : (
+            <Text style={styles.emptyText}>No matches for "{nameFilter}"</Text>
+          )
         }
       />
     </View>
@@ -340,6 +488,12 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 4 },
   headerSubtitle: { fontSize: 13, color: '#666' },
 
+  businessNameLabel: { fontSize: 13, fontWeight: '700', color: '#222', marginHorizontal: 16, marginBottom: 2 },
+  businessNameHint: { fontSize: 11.5, color: '#888', lineHeight: 16, marginHorizontal: 16, marginBottom: 8 },
+  businessNameRow: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  businessNameInput: { flex: 3 },
+  radiusInput: { flex: 1, textAlign: 'center' },
+
   searchBox: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   searchInput: {
     flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
@@ -351,14 +505,26 @@ const styles = StyleSheet.create({
   },
   searchBtnText: { fontSize: 20 },
 
+  radiusBanner: { backgroundColor: '#E3F2FD', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
+  radiusBannerText: { fontSize: 12, color: '#0D47A1', fontWeight: '600', lineHeight: 17 },
+  filterBox: { paddingHorizontal: 16, paddingBottom: 12 },
+  filterInput: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12,
+    paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff',
+  },
+
   list: { paddingHorizontal: 16, paddingBottom: 20 },
   resultCard: {
     flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, padding: 14,
     marginBottom: 10, alignItems: 'center', gap: 12, elevation: 1,
   },
+  resultCardClaimed: { backgroundColor: '#f0f0f0' },
+  resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   resultInfo: { flex: 1 },
-  resultName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
+  resultName: { fontSize: 15, fontWeight: '700', color: '#222' },
   resultAddress: { fontSize: 12, color: '#666' },
+  resultDistance: { fontSize: 11, color: '#999', marginTop: 2 },
+  claimedBadge: { fontSize: 11, fontWeight: '700', color: '#c62828', backgroundColor: '#FFEBEE', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   resultArrow: { fontSize: 24, color: '#1565C0', fontWeight: '800' },
   emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 40 },
 
@@ -378,6 +544,14 @@ const styles = StyleSheet.create({
   },
   inputError: { borderColor: '#e53e3e', borderWidth: 1.5 },
   errorText: { fontSize: 12, fontWeight: '600', color: '#e53e3e', marginTop: -6, marginBottom: 12 },
+  errorBanner: {
+    backgroundColor: '#FFEBEE', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#e53e3e',
+    paddingHorizontal: 14, paddingVertical: 12, marginHorizontal: 16, marginBottom: 12,
+  },
+  // formContent (the Owner Details form) already has its own paddingHorizontal
+  // — the plain errorBanner's marginHorizontal would double-indent it there.
+  errorBannerNoIndent: { marginHorizontal: 0 },
+  errorBannerText: { fontSize: 13, fontWeight: '600', color: '#c62828', lineHeight: 18 },
   passwordRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   passwordInput: { flex: 1 },
   regenBtn: {

@@ -250,8 +250,10 @@ serve(async (req) => {
       return err('That image is too large — please use a smaller photo (under ~8MB).', 400);
     }
 
-    // Verify the caller actually owns this restaurant before touching its
-    // menu — restaurantId comes straight from the client request body.
+    // Verify the caller actually owns this restaurant — OR is an admin,
+    // provisioning/updating a menu on an owner's behalf from the Admin
+    // Menu Management page — before touching its menu. restaurantId comes
+    // straight from the client request body.
     const token = authHeader.replace('Bearer ', '');
     const authedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -265,8 +267,16 @@ serve(async (req) => {
       .select('owner_id')
       .eq('id', restaurantId)
       .single();
-    if (restaurantError || !restaurant || restaurant.owner_id !== userData.user.id) {
-      return err('Forbidden', 403);
+    if (restaurantError || !restaurant) return err('Restaurant not found', 404);
+
+    if (restaurant.owner_id !== userData.user.id) {
+      const { data: adminRole } = await serviceSupabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+      if (!adminRole) return err('Forbidden', 403);
     }
 
     // Reuse items from a prior call on this same photo instead of re-running

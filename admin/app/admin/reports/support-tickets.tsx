@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { Alert } from '../../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import {
   getSupportSnapshot, getSupportResolutionTime,

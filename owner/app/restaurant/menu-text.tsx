@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, Alert, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, TextInput, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { extractMenuFromText } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';

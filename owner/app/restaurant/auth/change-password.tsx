@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert,
-} from 'react-native';
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, } from 'react-native';
+import { Alert } from '../../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/api/supabase';
 import { getRestaurantForOwner } from '../../../src/api/restaurantAuth';

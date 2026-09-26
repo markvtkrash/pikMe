@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
 
 const GOOGLE_PLACES_KEY = Deno.env.get("GOOGLE_PLACES_KEY")!;
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 // Geocodes a free-text location (zip code, city, address) into coordinates.
 // The restaurant-owner claim flow uses the result of this + the exact same
@@ -18,6 +21,31 @@ serve(async (req) => {
   }
 
   try {
+    // Calls Google's billable Geocoding API — require a real logged-in
+    // caller (any authenticated user: consumer, owner, or admin) so this
+    // can't be hit anonymously by anyone who just has the public anon key
+    // and this URL, which would otherwise let a script run up the Google
+    // bill with no rate limit at all.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    const authedSupabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userError } = await authedSupabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (userError || !userData.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const { query } = await req.json();
 
     if (!query || typeof query !== "string") {

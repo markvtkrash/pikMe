@@ -1,15 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
-  ActivityIndicator, Alert, ScrollView, Modal,
+  ActivityIndicator, ScrollView, Modal, Platform,
 } from 'react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { Alert } from '../../src/utils/alert';
+import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
 import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, unverifyMenuItem } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useUnsavedChangesStore } from '../../src/store/unsavedChangesStore';
 import { supabase } from '../../src/api/supabase';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
+import { MAX_MANUAL_MENU_ITEMS } from '../../src/constants/menuLimits';
 
-const MAX_ITEMS = 30;
+const MAX_ITEMS = MAX_MANUAL_MENU_ITEMS;
 
 interface ManualItem {
   name: string;
@@ -22,7 +25,12 @@ interface ManualItem {
 
 export default function ManualMenuScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  // Snapshot of what's actually persisted — set right after load and right
+  // after a successful save — compared against the live list to know
+  // whether there's anything a leaving-the-page warning should protect.
+  const savedNamesRef = useRef<string[]>([]);
   const [items, setItems] = useState<ManualItem[]>([
     { name: '', isVerified: null, itemId: null },
     { name: '', isVerified: null, itemId: null },
@@ -38,6 +46,10 @@ export default function ManualMenuScreen() {
   const [verifyModalIndex, setVerifyModalIndex] = useState<number | null>(null);
   const [verifyModalName, setVerifyModalName] = useState('');
   const [verifyingIndex, setVerifyingIndex] = useState<number | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [bulkRemoveConfirm, setBulkRemoveConfirm] = useState(false);
+  const [sortMode, setSortMode] = useState<'none' | 'name' | 'status'>('none');
 
   // Pre-fill with whatever is currently cached for this restaurant (from any
   // source — manual, link, or AI) so this screen doubles as a view/update
@@ -48,6 +60,84 @@ export default function ManualMenuScreen() {
     }, [restaurant])
   );
 
+  // Kept unconditional (before the owner/restaurant/loading early returns
+  // below) so these hooks run in the same order on every render — Rules of
+  // Hooks. hasUnsavedChanges is just false during the loading/no-restaurant
+  // states, since items hasn't diverged from an empty snapshot yet.
+  const currentCleanNames = items.map((it) => it.name.trim()).filter(Boolean);
+  const hasUnsavedChanges = JSON.stringify(currentCleanNames) !== JSON.stringify(savedNamesRef.current);
+
+  // Guards actual removal of this screen — the native/back-gesture path
+  // (browser back, hardware back). This does NOT fire for OwnerNavHeader's
+  // top-nav links, which router.push() onto the stack rather than remove
+  // this screen — that path is covered separately below via the shared
+  // unsavedChangesStore, which OwnerNavHeader checks before every nav push.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!hasUnsavedChanges) return;
+      e.preventDefault();
+      const proceed = confirm('You have unsaved menu changes. Leave without saving?');
+      if (proceed) navigation.dispatch(e.data.action);
+    });
+    return unsubscribe;
+  }, [navigation, hasUnsavedChanges]);
+
+  // Guards a full page reload / tab close on web, which neither of the
+  // mechanisms above can catch.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (!hasUnsavedChanges) return;
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Publishes this screen's dirty state to the shared store so OwnerNavHeader
+  // (and anything else navigating via router.push) can prompt before
+  // actually leaving. Cleared on unmount so a later, genuinely-clean screen
+  // doesn't inherit a stale "unsaved" flag.
+  const setUnsavedChanges = useUnsavedChangesStore((s) => s.setUnsavedChanges);
+  useEffect(() => {
+    setUnsavedChanges(hasUnsavedChanges, 'You have unsaved menu changes. Leave without saving?');
+    return () => setUnsavedChanges(false);
+  }, [hasUnsavedChanges, setUnsavedChanges]);
+
+  // Display-only ordering — every handler below (updateName, remove, verify,
+  // select) is still keyed by the item's ORIGINAL index in `items`, so
+  // sorting for display never disturbs save order or in-flight edits.
+  // Unconfirmed ranks before new/blank rows before verified, since that's
+  // roughly "what needs my attention first."
+  function statusRank(item: ManualItem): number {
+    if (item.isVerified === false) return 0;
+    if (item.isVerified === null) return 1;
+    return 2;
+  }
+  const displayItems = useMemo(() => {
+    const indexed = items.map((item, index) => ({ item, index }));
+    if (sortMode === 'name') {
+      return indexed.sort((a, b) =>
+        a.item.name.trim().toLowerCase().localeCompare(b.item.name.trim().toLowerCase())
+      );
+    }
+    if (sortMode === 'status') {
+      return indexed.sort((a, b) => statusRank(a.item) - statusRank(b.item));
+    }
+    return indexed;
+  }, [items, sortMode]);
+
+  // Direct, synchronous check on this page's own Back button — belt-and-
+  // suspenders alongside the beforeRemove listener above, since we'd rather
+  // double-guard than risk router.back() slipping past it on web.
+  function handleBack() {
+    if (hasUnsavedChanges && !confirm('You have unsaved menu changes. Leave without saving?')) {
+      return;
+    }
+    router.back();
+  }
+
   async function loadCurrentItems() {
     if (!restaurant) {
       setLoading(false);
@@ -57,6 +147,9 @@ export default function ManualMenuScreen() {
       const loaded = await getRestaurantMenuItems(restaurant.name);
       if (loaded.length > 0) {
         setItems(loaded.map((i) => ({ name: i.name, isVerified: i.is_verified, itemId: i.item_id })));
+        savedNamesRef.current = loaded.map((i) => i.name.trim()).filter(Boolean);
+      } else {
+        savedNamesRef.current = [];
       }
     } catch (error) {
       console.error('[manual-menu] Failed to load current items:', error);
@@ -101,6 +194,27 @@ export default function ManualMenuScreen() {
     if (removeConfirmIndex === null) return;
     removeRow(removeConfirmIndex);
     setRemoveConfirmIndex(null);
+  }
+
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => !prev);
+    setSelectedIndices(new Set());
+  }
+
+  function toggleSelectRow(index: number) {
+    setSelectedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
+
+  function confirmBulkRemove() {
+    setItems((prev) => prev.filter((_, i) => !selectedIndices.has(i)));
+    setSelectedIndices(new Set());
+    setSelectionMode(false);
+    setBulkRemoveConfirm(false);
   }
 
   async function handleUnverify(index: number) {
@@ -178,6 +292,7 @@ export default function ManualMenuScreen() {
       }
 
       setLastSavedCount(result.itemCount ?? 0);
+      savedNamesRef.current = cleanNames;
       Alert.alert(
         'Success',
         `Saved ${result.itemCount} real menu items — customers will now see these instead of AI-guessed ones.`
@@ -194,7 +309,7 @@ export default function ManualMenuScreen() {
     <View style={styles.container}>
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
@@ -214,6 +329,44 @@ export default function ManualMenuScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Sticky toolbar — outside the ScrollView so Add/Select-to-Delete/
+          Cancel stay reachable regardless of scroll position, same as
+          Save Menu above. Cancel in particular needs to stay reachable —
+          scrolling deep into a long list to start selecting shouldn't strand
+          the only way to back out. */}
+      <View style={styles.toolbarBar}>
+        <View style={styles.selectionToolbar}>
+          {items.length < MAX_ITEMS ? (
+            <TouchableOpacity style={[styles.addBtn, styles.addBtnTop]} onPress={openAddModal} disabled={saving}>
+              <Text style={styles.addBtnText}>+ Add another item</Text>
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.limitReachedText}>Maximum {MAX_ITEMS} items reached</Text>
+          )}
+          <TouchableOpacity
+            style={[styles.selectToggleBtn, selectionMode && styles.selectToggleBtnCancel]}
+            onPress={toggleSelectionMode}
+            disabled={saving}
+          >
+            <Text style={[styles.selectToggleText, selectionMode && styles.selectToggleTextCancel]}>
+              {selectionMode ? 'Cancel' : '− Select to Delete'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {selectionMode && (
+          <TouchableOpacity
+            style={[styles.bulkDeleteBtn, selectedIndices.size === 0 && styles.saveBtnDisabled]}
+            onPress={() => setBulkRemoveConfirm(true)}
+            disabled={selectedIndices.size === 0}
+          >
+            <Text style={styles.bulkDeleteBtnText}>
+              🗑 Delete Selected ({selectedIndices.size})
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <ScrollView style={styles.content}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>✏️ Real Menu Items</Text>
@@ -223,62 +376,88 @@ export default function ManualMenuScreen() {
             cached with these items.
           </Text>
 
-          {items.length < MAX_ITEMS && (
-            <TouchableOpacity style={[styles.addBtn, styles.addBtnTop]} onPress={openAddModal} disabled={saving}>
-              <Text style={styles.addBtnText}>+ Add another item</Text>
+          <View style={styles.sortRow}>
+            <Text style={styles.sortLabel}>Sort:</Text>
+            <TouchableOpacity
+              style={[styles.sortChip, sortMode === 'name' && styles.sortChipActive]}
+              onPress={() => setSortMode((prev) => (prev === 'name' ? 'none' : 'name'))}
+            >
+              <Text style={[styles.sortChipText, sortMode === 'name' && styles.sortChipTextActive]}>Name</Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity
+              style={[styles.sortChip, sortMode === 'status' && styles.sortChipActive]}
+              onPress={() => setSortMode((prev) => (prev === 'status' ? 'none' : 'status'))}
+            >
+              <Text style={[styles.sortChipText, sortMode === 'status' && styles.sortChipTextActive]}>
+                Verified/Unverified
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          {items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <TextInput
-                style={styles.itemInput}
-                placeholder={`Item ${index + 1} (e.g. Chicken Tikka Masala)`}
-                placeholderTextColor="#999"
-                value={item.name}
-                onChangeText={(text) => updateName(index, text)}
-                editable={!saving}
-              />
+          {displayItems.map(({ item, index }) => (
+            <View key={index} style={styles.itemCard}>
+              <View style={styles.itemPrimaryRow}>
+                {selectionMode && (
+                  <TouchableOpacity
+                    style={[styles.checkbox, selectedIndices.has(index) && styles.checkboxChecked]}
+                    onPress={() => toggleSelectRow(index)}
+                  >
+                    {selectedIndices.has(index) && <Text style={styles.checkboxMark}>✓</Text>}
+                  </TouchableOpacity>
+                )}
+                <TextInput
+                  style={styles.itemInput}
+                  placeholder={`Item ${index + 1} (e.g. Chicken Tikka Masala)`}
+                  placeholderTextColor="#999"
+                  value={item.name}
+                  onChangeText={(text) => updateName(index, text)}
+                  editable={!saving}
+                />
+                <TouchableOpacity
+                  style={styles.removeBtn}
+                  onPress={() => setRemoveConfirmIndex(index)}
+                  disabled={saving}
+                >
+                  <Text style={styles.removeBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
               {item.isVerified !== null && (
-                <View style={[styles.verifiedBadge, item.isVerified ? styles.verifiedBadgeYes : styles.verifiedBadgeNo]}>
-                  <Text style={[styles.verifiedBadgeText, item.isVerified ? styles.verifiedBadgeTextYes : styles.verifiedBadgeTextNo]}>
-                    {item.isVerified ? '✓ Verified' : 'Unconfirmed'}
-                  </Text>
+                <View style={styles.itemMetaRow}>
+                  <View style={[styles.verifiedBadge, item.isVerified ? styles.verifiedBadgeYes : styles.verifiedBadgeNo]}>
+                    <Text style={[styles.verifiedBadgeText, item.isVerified ? styles.verifiedBadgeTextYes : styles.verifiedBadgeTextNo]}>
+                      {item.isVerified ? '✓ Verified' : 'Unconfirmed'}
+                    </Text>
+                  </View>
+
+                  {item.isVerified === true && item.itemId && (
+                    <TouchableOpacity
+                      style={styles.unconfirmBtn}
+                      onPress={() => handleUnverify(index)}
+                      disabled={saving || unverifyingIndex === index}
+                    >
+                      {unverifyingIndex === index ? (
+                        <ActivityIndicator size="small" color="#E65100" />
+                      ) : (
+                        <Text style={styles.unconfirmBtnText}>↩ Unconfirm</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  {item.isVerified === false && item.itemId && (
+                    <TouchableOpacity
+                      style={styles.verifyBtn}
+                      onPress={() => openVerifyModal(index)}
+                      disabled={saving || verifyingIndex === index}
+                    >
+                      {verifyingIndex === index ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <Text style={styles.verifyBtnText}>Verify</Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
-              {item.isVerified === true && item.itemId && (
-                <TouchableOpacity
-                  style={styles.unconfirmBtn}
-                  onPress={() => handleUnverify(index)}
-                  disabled={saving || unverifyingIndex === index}
-                >
-                  {unverifyingIndex === index ? (
-                    <ActivityIndicator size="small" color="#E65100" />
-                  ) : (
-                    <Text style={styles.unconfirmBtnText}>↩ Unconfirm</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              {item.isVerified === false && item.itemId && (
-                <TouchableOpacity
-                  style={styles.verifyBtn}
-                  onPress={() => openVerifyModal(index)}
-                  disabled={saving || verifyingIndex === index}
-                >
-                  {verifyingIndex === index ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.verifyBtnText}>Verify</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity
-                style={styles.removeBtn}
-                onPress={() => setRemoveConfirmIndex(index)}
-                disabled={saving}
-              >
-                <Text style={styles.removeBtnText}>✕</Text>
-              </TouchableOpacity>
             </View>
           ))}
 
@@ -378,6 +557,37 @@ export default function ManualMenuScreen() {
       </Modal>
 
       <Modal
+        visible={bulkRemoveConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBulkRemoveConfirm(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Remove {selectedIndices.size} Menu Items</Text>
+            <Text style={styles.modalHint}>
+              Remove {selectedIndices.size} selected item{selectedIndices.size === 1 ? '' : 's'}?
+              This only takes effect once you Save Menu.
+            </Text>
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnCancel]}
+                onPress={() => setBulkRemoveConfirm(false)}
+              >
+                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnDanger]}
+                onPress={confirmBulkRemove}
+              >
+                <Text style={styles.modalBtnDangerText}>Remove</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={verifyModalIndex !== null}
         transparent
         animationType="fade"
@@ -431,6 +641,7 @@ const styles = StyleSheet.create({
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  toolbarBar: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
@@ -443,12 +654,22 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
   cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
 
-  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  // Two stacked rows per item instead of one long flex row — cramming the
+  // input, verified badge, and verify/unconfirm button all on one line left
+  // no room to breathe (and on narrower screens pushed things off entirely).
+  // The primary row (input + remove) is the always-present action; the meta
+  // row (verification status) is secondary and drops below it.
+  itemCard: {
+    backgroundColor: '#FAFAFA', borderRadius: 10, borderWidth: 1, borderColor: '#eee',
+    padding: 10, marginBottom: 10,
+  },
+  itemPrimaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  itemMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
   // minWidth:0 lets this shrink below its own content width when the row is
   // tight (a flex item's default min-width is "big enough to fit its
   // content," not 0) — without it, this refuses to shrink and pushes the
-  // badge/verify/remove buttons off the visible row entirely instead of
-  // just making the input narrower. Same underlying issue as the nav bug.
+  // remove button off the visible row entirely instead of just making the
+  // input narrower. Same underlying issue as the nav bug.
   itemInput: {
     flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222',
@@ -478,9 +699,44 @@ const styles = StyleSheet.create({
   },
   verifyBtnText: { fontSize: 12, color: '#fff', fontWeight: '800' },
 
-  addBtn: { alignSelf: 'flex-start', paddingVertical: 8, marginBottom: 14 },
+  addBtn: {
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#4CAF50',
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14,
+  },
   addBtnTop: { marginBottom: 10 },
-  addBtnText: { fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  addBtnText: { fontSize: 14, fontWeight: '700', color: '#2e7d32' },
+
+  sortRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  sortLabel: { fontSize: 13, fontWeight: '700', color: '#666' },
+  sortChip: {
+    borderWidth: 1.5, borderColor: '#ddd', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#fff',
+  },
+  sortChipActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
+  sortChipText: { fontSize: 12.5, fontWeight: '700', color: '#555' },
+  sortChipTextActive: { color: '#fff' },
+
+  selectionToolbar: { flexDirection: 'column', alignItems: 'flex-start' },
+  selectToggleBtn: {
+    alignSelf: 'flex-start', backgroundColor: '#FFEBEE', borderWidth: 1.5, borderColor: '#e53e3e',
+    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10,
+  },
+  selectToggleBtnCancel: { backgroundColor: '#f0f0f0', borderColor: '#ccc' },
+  selectToggleText: { fontSize: 14, fontWeight: '700', color: '#e53e3e' },
+  selectToggleTextCancel: { color: '#555' },
+  limitReachedText: { fontSize: 13, fontWeight: '600', color: '#E65100' },
+  bulkDeleteBtn: {
+    alignSelf: 'flex-start', backgroundColor: '#FFEBEE', borderWidth: 1.5, borderColor: '#e53e3e',
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+  },
+  bulkDeleteBtnText: { fontSize: 13, fontWeight: '800', color: '#e53e3e' },
+  checkbox: {
+    width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ccc',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  checkboxChecked: { backgroundColor: '#e53e3e', borderColor: '#e53e3e' },
+  checkboxMark: { fontSize: 14, fontWeight: '800', color: '#fff' },
 
   saveBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },

@@ -69,7 +69,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
-    const namePattern = `%${restaurantName.split(' ')[0]}%`;
+    // Exact (case-insensitive) match on the FULL name — matching only the
+    // first word wrapped in wildcards (the previous approach) matched any
+    // restaurant sharing that word (e.g. "Bombay Grill" also matched "New
+    // Bombay Kitchen"), silently mixing menu items across restaurants.
+    // menu_items has no restaurant_id FK, so this string match is the only
+    // thing scoping a query to the right restaurant.
+    const namePattern = restaurantName.trim();
 
     // 'add' scope's incoming items get their own item_id per source
     // (text_/image_/link_/manual_ prefix on a hash of the item name), so the

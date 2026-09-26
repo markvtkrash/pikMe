@@ -44,6 +44,7 @@ export default {
       // intentionally dropped here — this app has no owner surface anymore.
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      sessionTimeoutMinutes: process.env.EXPO_PUBLIC_SESSION_TIMEOUT_MINUTES,
       eas: {
         // TODO: this projectId is inherited from the original combined app.
         // Point this at a dedicated EAS project before the first real build

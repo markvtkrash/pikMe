@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, Alert, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';

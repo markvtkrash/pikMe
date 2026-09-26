@@ -1,0 +1,40 @@
+import type { MenuReplaceResult } from '../api/restaurantAuth';
+
+// Mirrors owner app's src/utils/menuReplaceConfirm.ts. Shared by every action
+// that can replace a restaurant's cached menu items (here: photo/text
+// extraction from Admin's Menu Management page). If the backend reports that
+// proceeding would orphan existing item-specific coupons, this surfaces that
+// to the admin and only retries with force=true if they choose to proceed —
+// never silently.
+export async function confirmAndRetryIfNeeded(
+  result: MenuReplaceResult,
+  retryWithForce: () => Promise<MenuReplaceResult>
+): Promise<MenuReplaceResult> {
+  if (!result.requiresConfirmation) return result;
+
+  const couponCount = result.affectedCoupons?.length || 0;
+  const verifiedCount = result.overwritesVerifiedCount || 0;
+  const parts: string[] = [];
+
+  if (verifiedCount > 0) {
+    parts.push(
+      `${verifiedCount} verified menu item${verifiedCount === 1 ? '' : 's'} (from a real menu link or ` +
+      `manual entry) will be replaced with AI-guessed items, which may not be accurate.`
+    );
+  }
+  if (couponCount > 0) {
+    parts.push(
+      `${couponCount} coupon${couponCount === 1 ? '' : 's'} tied to specific menu items will stop matching ` +
+      `any item until the owner reactivates or deletes ${couponCount === 1 ? 'it' : 'them'} from Manage Coupons.`
+    );
+  }
+
+  const message = `${parts.join(' ')} Continue anyway?`;
+
+  // Matches the existing confirm() convention already used in this
+  // web-focused app (e.g. coupon-status.tsx's delete confirmation).
+  const confirmed = confirm(message);
+  if (!confirmed) return result;
+
+  return retryWithForce();
+}

@@ -26,6 +26,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Can trigger a real, billable Google Nearby Search call on a cache miss
+    // — require a real logged-in caller (any authenticated user: consumer,
+    // owner, or admin) so this can't be hit anonymously by a script that
+    // varies lat/lng to force cache misses on purpose and run up the bill.
+    // supabase.functions.invoke() already forwards the caller's own session
+    // token here, so legitimate app traffic needs no client-side change.
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
+      });
+    }
+    const authedSupabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: userData, error: userError } = await authedSupabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (userError || !userData.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...CORS, 'Content-Type': 'application/json' },
+      });
+    }
+
     // TEMP DEBUG — remove once MAX_RESULT_PAGES is confirmed reaching the
     // container. Shows the raw env values Deno actually sees vs. Deno.env.get()
     // silently returning undefined and falling back to defaults.

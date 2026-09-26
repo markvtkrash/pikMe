@@ -73,9 +73,13 @@ serve(async (req) => {
     }
 
     // 2. Validate input
-    const { email, password, businessName, googlePlaceId, restaurantName, address } =
-      await req.json();
-
+    const body = await req.json();
+    const { password, businessName, googlePlaceId, restaurantName, address } = body;
+    // Normalized once here so every lookup/insert below (the duplicate check,
+    // createUser, and the restaurant_owners row) agrees on the same casing —
+    // Supabase Auth itself treats email uniqueness as case-insensitive, so an
+    // exact-case comparison here could miss a real duplicate.
+    const email: string | undefined = body.email?.trim().toLowerCase();
     if (!email || !password || !businessName || !googlePlaceId || !restaurantName || !address) {
       return new Response(
         JSON.stringify({
@@ -103,6 +107,42 @@ serve(async (req) => {
     if (existingRestaurant) {
       return new Response(
         JSON.stringify({ error: "This restaurant has already been claimed" }),
+        { status: 409, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3b. Guard against a duplicate email — createUser's own duplicate-email
+    // error isn't reliably surfaced by self-hosted GoTrue, so check explicitly
+    // and give a specific, actionable message rather than a silent/generic
+    // failure. Distinguish "signed up but never claimed" (safe to reuse that
+    // account, or the admin picked the wrong email) from "already has a
+    // claim" (this really is a duplicate).
+    const { data: existingOwner } = await adminClient
+      .from("restaurant_owners")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existingOwner) {
+      const { data: existingClaim } = await adminClient
+        .from("restaurants")
+        .select("name, status")
+        .eq("owner_id", existingOwner.id)
+        .maybeSingle();
+
+      if (existingClaim) {
+        return new Response(
+          JSON.stringify({
+            error: `An account with this email already exists and already has a claim on "${existingClaim.name}" (status: ${existingClaim.status}).`,
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: "An account with this email already exists, but hasn't claimed a restaurant yet. Use a different email, or have that owner claim the restaurant themselves.",
+        }),
         { status: 409, headers: { "Content-Type": "application/json" } }
       );
     }

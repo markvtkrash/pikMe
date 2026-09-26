@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, LogBox } from 'react-native';
+import { ActivityIndicator, View, LogBox, Platform } from 'react-native';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../src/api/supabase';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
+import { SESSION_TIMEOUT_MINUTES } from '../src/constants/sessionTimeout';
+import { AlertModalHost } from '../src/components/common/AlertModalHost';
+
+const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
 // Suppress harmless deprecation warnings
 LogBox.ignoreLogs([
@@ -49,6 +53,33 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Idle logout — resets on any mouse/keyboard/touch/scroll activity;
+  // auto-signs-out after SESSION_TIMEOUT_MINUTES of none. Web only: a native
+  // app isn't left open in a shared browser tab the same way, and there's no
+  // single reliable cross-platform "user is idle" signal on native anyway.
+  // Admin especially warrants this — higher-privilege session left open on
+  // a shared/unattended machine is a bigger blast radius than a customer one.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !session) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    function resetTimer() {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        console.log('[AuthGate] Idle timeout reached, signing out');
+        supabase.auth.signOut();
+        router.replace('/admin/login');
+      }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+    }
+
+    resetTimer();
+    IDLE_ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, resetTimer));
+    return () => {
+      clearTimeout(timer);
+      IDLE_ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, [session]);
 
   // Check if the signed-in user is an admin
   useEffect(() => {
@@ -142,6 +173,7 @@ export default function RootLayout() {
         <AuthGate>
           <Slot />
         </AuthGate>
+        <AlertModalHost />
       </ErrorBoundary>
     </QueryClientProvider>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { setRestaurantPaused } from '../../src/api/restaurantAuth';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';

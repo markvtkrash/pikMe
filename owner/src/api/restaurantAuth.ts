@@ -49,10 +49,19 @@ export async function requestRestaurantRelocation(params: {
 // fetchNearbyRestaurants() customers use — guaranteeing an owner can only
 // claim a restaurant that a customer searching from that same location would
 // actually be able to discover, instead of an unconstrained global search.
+// Requires a logged-in session — this hits a billable Google API, so the
+// edge function rejects anonymous callers.
 export async function geocodeLocation(query: string): Promise<GeocodedLocation> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Session expired. Please log in again.');
+
   const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ query }),
   });
 
@@ -67,16 +76,24 @@ export async function geocodeLocation(query: string): Promise<GeocodedLocation> 
 // local restaurant can miss that top-~20 cutoff entirely). Still bounded to
 // radiusMeters of a real location, same trust guarantee as the plain nearby
 // browse — this only changes how the match happens, not whether it's
-// location-constrained.
+// location-constrained. Requires a logged-in session — this hits a billable
+// Google API, so the edge function rejects anonymous callers.
 export async function searchRestaurantByName(
   businessName: string,
   latitude: number,
   longitude: number,
   radiusMeters: number
 ): Promise<Restaurant[]> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Session expired. Please log in again.');
+
   const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-name-search`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
     body: JSON.stringify({ businessName, latitude, longitude, radiusMeters }),
   });
 
@@ -319,7 +336,7 @@ export async function getRestaurantMenuItems(restaurantName: string) {
   const { data, error } = await supabase
     .from('menu_items')
     .select('*')
-    .ilike('restaurant_name', `%${restaurantName.split(' ')[0]}%`)
+    .ilike('restaurant_name', restaurantName.trim())
     .order('cached_at', { ascending: false });
 
   if (error) throw error;
