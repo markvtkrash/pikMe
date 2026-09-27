@@ -19,6 +19,25 @@ function err(message: string, status = 500) {
   });
 }
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[fetch-menu-items-ai] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 async function deterministicId(restaurantName: string, itemName: string): Promise<string> {
   const text = `${restaurantName}::${itemName}`.toLowerCase();
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -56,10 +75,11 @@ serve(async (req) => {
     const { restaurantName } = await req.json();
     if (!restaurantName?.trim()) return err('restaurantName is required', 400);
 
-    const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
-    const QUICKSILVER_MODEL = Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
-    const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
-    const MENU_ITEMS_COUNT = parseInt(Deno.env.get('MENU_ITEMS_COUNT') ?? '15', 10);
+    const dbConfig = await loadDbConfig(['aiProvider', 'quicksilverModel', 'claudeModel', 'menuItemsCount']);
+    const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
+    const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+    const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+    const MENU_ITEMS_COUNT = parseInt(dbConfig.menuItemsCount ?? Deno.env.get('MENU_ITEMS_COUNT') ?? '15', 10);
 
     // Note: Menu items are AI-generated (not from Google)
     // Caching is compliant with Google Maps Platform ToS

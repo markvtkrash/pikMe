@@ -20,6 +20,25 @@ const GENERIC_TYPES = new Set([
   'store', 'health', 'premise',
 ]);
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[fetch-nearby-restaurants] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS });
@@ -50,10 +69,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // TEMP DEBUG — remove once MAX_RESULT_PAGES is confirmed reaching the
-    // container. Shows the raw env values Deno actually sees vs. Deno.env.get()
-    // silently returning undefined and falling back to defaults.
-    console.log('[debug] raw env — MAX_RADIUS_METERS:', JSON.stringify(Deno.env.get('MAX_RADIUS_METERS')), 'MAX_RESULT_PAGES:', JSON.stringify(Deno.env.get('MAX_RESULT_PAGES')));
+    const dbConfig = await loadDbConfig(['maxRadiusMeters', 'maxResultPages']);
 
     const GOOGLE_KEY = Deno.env.get('GOOGLE_PLACES_KEY');
     if (!GOOGLE_KEY) {
@@ -73,8 +89,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Cap radius (configurable via MAX_RADIUS_METERS secret/env var; defaults to 3km)
-    const MAX_RADIUS_METERS = Number(Deno.env.get('MAX_RADIUS_METERS')) || 3000;
+    // Cap radius (configurable via MAX_RADIUS_METERS secret/env var, or the
+    // app_config DB row when APP_CONFIG_SOURCE=db; defaults to 3km)
+    const MAX_RADIUS_METERS = Number(dbConfig.maxRadiusMeters ?? Deno.env.get('MAX_RADIUS_METERS')) || 3000;
     if (radiusMeters > MAX_RADIUS_METERS) {
       console.log('[fetch-nearby-restaurants] Radius capped: requested', radiusMeters, '→ capped to', MAX_RADIUS_METERS);
       radiusMeters = MAX_RADIUS_METERS;
@@ -165,7 +182,7 @@ Deno.serve(async (req) => {
       // separate billable call plus a mandatory ~2s wait before its
       // next_page_token becomes valid, so this is configurable rather than
       // hardcoded — trade coverage for cost/latency via MAX_RESULT_PAGES.
-      const MAX_RESULT_PAGES = Math.min(Math.max(Number(Deno.env.get('MAX_RESULT_PAGES')) || 1, 1), 3);
+      const MAX_RESULT_PAGES = Math.min(Math.max(Number(dbConfig.maxResultPages ?? Deno.env.get('MAX_RESULT_PAGES')) || 1, 1), 3);
 
       function buildPlacesUrl(pageToken?: string): URL {
         const u = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json');

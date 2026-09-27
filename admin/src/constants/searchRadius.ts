@@ -1,13 +1,13 @@
-import Constants from 'expo-constants';
+import { getConfigNumber } from './appConfig';
 
-// Fetch/cache is always done at the max radius once; the options below are a
-// pure client-side filter on that already-fetched data, not separate fetches.
-export const RADIUS_OPTIONS_KM = [2, 3, 4, 5];
-export const MAX_FETCH_RADIUS_METERS = Math.max(...RADIUS_OPTIONS_KM) * 1000;
-
-// Distance used by the restaurant-owner claim screen when searching by zip
-// code or current location — independent of the customer-facing picker
-// above. Configurable via EXPO_PUBLIC_OWNER_SEARCH_RADIUS_METERS; defaults
-// to 5km if that env var is unset or invalid.
-export const OWNER_SEARCH_RADIUS_METERS =
-  Number(Constants.expoConfig?.extra?.ownerSearchRadiusMeters) || 5000;
+// Distance used by the Create Restaurant Owner screen when searching by zip
+// code or current location. Same real-world setting as the owner app's claim/
+// relocate flows, so it shares the 'ownerSearchRadiusMeters' DB key/env extra
+// key with owner/src/constants/searchRadius.ts — one DB row controls both
+// apps consistently. A function (not a plain constant) because its value can
+// come from an async DB fetch (see appConfig.ts) — call it after
+// loadAppConfig() has resolved (app/_layout.tsx guarantees that for anything
+// it renders). Defaults to 5000m if neither the DB row nor the .env var is set.
+export function getOwnerSearchRadiusMeters(): number {
+  return getConfigNumber('ownerSearchRadiusMeters', 'ownerSearchRadiusMeters', 5000);
+}

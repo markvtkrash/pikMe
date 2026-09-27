@@ -23,6 +23,25 @@ function err(message: string, status = 500) {
   });
 }
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[extract-menu-from-image] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 // Owner uploads a photo of their actual physical/printed menu — this reads
 // it with a vision-capable model in a single call that does OCR and
 // structured extraction together (rather than one call to transcribe the
@@ -78,12 +97,13 @@ async function extractItemsFromImage(
   base64: string,
   restaurantName: string
 ): Promise<ExtractResult> {
-  const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
-  const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverVisionModel']);
+  const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
+  const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
   // Separate from QUICKSILVER_MODEL (used elsewhere for text-only calls,
   // defaults to a non-vision DeepSeek model) so switching this doesn't
   // affect the other AI functions.
-  const QUICKSILVER_VISION_MODEL = Deno.env.get('QUICKSILVER_VISION_MODEL') ?? 'qwen3.6-35b';
+  const QUICKSILVER_VISION_MODEL = dbConfig.quicksilverVisionModel ?? Deno.env.get('QUICKSILVER_VISION_MODEL') ?? 'qwen3.6-35b';
 
   const promptText = `This is a photo of a restaurant menu for "${restaurantName}". Read the text visible in the image and extract the ACTUAL menu items you can actually read. Do NOT invent, guess, or add items that aren't legibly present. If you can't read any real menu items in this image, return an empty JSON array: [].
 

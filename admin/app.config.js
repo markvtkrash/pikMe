@@ -40,10 +40,13 @@ export default {
     },
     plugins: ['expo-router'],
     extra: {
-      // Owner-only settings (e.g. ownerSearchRadiusMeters, googleMapsApiKey)
-      // intentionally dropped here — this app has no owner surface anymore.
+      // googleMapsApiKey intentionally dropped here — this app has no map
+      // surface. ownerSearchRadiusMeters IS wired below: the Create Owner
+      // screen searches nearby restaurants the same way the owner app's
+      // claim/relocate flows do, and shares that DB key/env var with them.
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      ownerSearchRadiusMeters: process.env.EXPO_PUBLIC_OWNER_SEARCH_RADIUS_METERS,
       sessionTimeoutMinutes: process.env.EXPO_PUBLIC_SESSION_TIMEOUT_MINUTES,
       eas: {
         // TODO: this projectId is inherited from the original combined app.

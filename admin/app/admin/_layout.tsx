@@ -133,6 +133,21 @@ export default function AdminLayout() {
           headerLeft: () => <BackButton />,
         }}
       />
+      <Stack.Screen
+        name="config"
+        options={{
+          title: '⚙️ App Config',
+          headerLeft: () => <BackButton />,
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => supabase.auth.signOut().then(() => router.replace('/admin/login'))}
+              style={styles.logoutBtn}
+            >
+              <Text style={styles.logoutText}>Logout</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </Stack>
   );
 }

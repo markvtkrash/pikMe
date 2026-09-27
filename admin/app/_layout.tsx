@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../src/api/supabase';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
-import { SESSION_TIMEOUT_MINUTES } from '../src/constants/sessionTimeout';
+import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
+import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
 
 const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
@@ -35,8 +36,19 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
   const [roleCheckComplete, setRoleCheckComplete] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(isAppConfigLoaded());
   const router = useRouter();
   const segments = useSegments();
+
+  // Load app config (DB or .env, per EXPO_PUBLIC_CONFIG_SOURCE) once at startup,
+  // before anything else renders — every other tunable getter assumes this has
+  // already resolved.
+  useEffect(() => {
+    if (isAppConfigLoaded()) return;
+    loadAppConfig()
+      .catch((err) => console.error('[AuthGate] loadAppConfig failed, falling back to .env defaults:', err))
+      .finally(() => setConfigLoaded(true));
+  }, []);
 
   // Auth subscription
   useEffect(() => {
@@ -61,7 +73,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Admin especially warrants this — higher-privilege session left open on
   // a shared/unattended machine is a bigger blast radius than a customer one.
   useEffect(() => {
-    if (Platform.OS !== 'web' || !session) return;
+    if (Platform.OS !== 'web' || !session || !configLoaded) return;
 
     let timer: ReturnType<typeof setTimeout>;
     function resetTimer() {
@@ -70,7 +82,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         console.log('[AuthGate] Idle timeout reached, signing out');
         supabase.auth.signOut();
         router.replace('/admin/login');
-      }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+      }, getSessionTimeoutMinutes() * 60 * 1000);
     }
 
     resetTimer();
@@ -79,7 +91,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       clearTimeout(timer);
       IDLE_ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
     };
-  }, [session]);
+  }, [session, configLoaded]);
 
   // Check if the signed-in user is an admin
   useEffect(() => {
@@ -155,7 +167,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [session, isAdmin, roleCheckComplete, segments]);
 
-  if (session === undefined) {
+  if (!configLoaded || session === undefined) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#4CAF50" />
