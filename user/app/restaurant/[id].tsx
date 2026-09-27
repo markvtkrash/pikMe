@@ -1,6 +1,6 @@
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView, Linking,
+  FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView, Linking, Modal,
 } from 'react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { Image } from 'expo-image';
@@ -83,6 +83,7 @@ export default function RestaurantDetailScreen() {
   const [couponsOnly, setCouponsOnly] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
+  const [couponsModalVisible, setCouponsModalVisible] = useState(false);
 
   const hasSeenNutritionDisclaimer = useUIStore((s) => s.hasSeenNutritionDisclaimer);
   const setHasSeenNutritionDisclaimer = useUIStore((s) => s.setHasSeenNutritionDisclaimer);
@@ -186,6 +187,19 @@ export default function RestaurantDetailScreen() {
 
   const genericCoupons = coupons.filter((c) => !c.menu_item_id);
   const itemCouponCount = coupons.filter((c) => c.menu_item_id).length;
+  const totalCouponCount = genericCoupons.length + itemCouponCount;
+
+  // Any-item coupons have no menu item to attach to, so they're only ever
+  // viewable/activatable through this button's modal — tapping it filters
+  // the menu list directly (old "Coupons only" behavior) only when there's
+  // nothing else that needs a modal to be seen.
+  function handleCouponsButtonPress() {
+    if (genericCoupons.length > 0) {
+      setCouponsModalVisible(true);
+    } else {
+      setCouponsOnly((prev) => !prev);
+    }
+  }
 
   const renderItem: ListRenderItem<Recommendation | { _skeleton: true }> = ({ item }) => {
     if ('_skeleton' in item) {
@@ -231,10 +245,17 @@ export default function RestaurantDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Info card with disclaimer */}
+          {/* Info card */}
           <View style={styles.infoCardContainer}>
             <View style={styles.infoCard}>
-              <Text style={styles.restaurantName}>{restaurant.name}</Text>
+              <View style={styles.nameAddressRow}>
+                <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
+                {restaurant.location.address ? (
+                  <View style={styles.addressBox}>
+                    <Text style={styles.addressBoxText} numberOfLines={1} ellipsizeMode="tail">{restaurant.location.address}</Text>
+                  </View>
+                ) : null}
+              </View>
 
               <View style={styles.metaRow}>
                 {!restaurant.openNow
@@ -251,14 +272,9 @@ export default function RestaurantDetailScreen() {
                     <Text style={styles.metaPillTxt}>📍 {formatDistance(restaurant.distanceMeters)}</Text>
                   </View>
                 )}
-              </View>
-
-              {cuisineDisplay ? <Text style={styles.cuisine}>{cuisineDisplay}</Text> : null}
-              {restaurant.location.address ? (
-                <>
-                  <Text style={styles.address}>{restaurant.location.address}</Text>
+                {restaurant.location.address ? (
                   <TouchableOpacity
-                    style={styles.directionsLink}
+                    style={styles.directionsPill}
                     hitSlop={6}
                     onPress={() => {
                       const { latitude, longitude } = restaurant.location;
@@ -267,70 +283,22 @@ export default function RestaurantDetailScreen() {
                       );
                     }}
                   >
-                    <Text style={styles.directionsLinkText}>🧭 Get Directions</Text>
+                    <Text style={styles.directionsPillTxt}>🧭 Directions</Text>
                   </TouchableOpacity>
-                </>
-              ) : null}
-            </View>
+                ) : null}
+              </View>
 
-            {/* Disclaimer box */}
-            <View style={styles.disclaimerBox}>
-              <Text style={styles.disclaimerIcon}>⚠️</Text>
-              <Text style={styles.disclaimerText}>Nutrition are approximations. Allergens & dietary practices may have changed. Always verify what matters to you.</Text>
+              {cuisineDisplay ? <Text style={styles.cuisine}>{cuisineDisplay}</Text> : null}
+
+              {/* Disclaimer — a single left-to-right line (icon then text)
+                  instead of a separate padded box beside the card, to save
+                  vertical space. */}
+              <View style={styles.disclaimerRow}>
+                <Text style={styles.disclaimerIcon}>⚠️</Text>
+                <Text style={styles.disclaimerText}>Nutrition are approximations. Allergens & dietary practices may have changed. Always verify what matters to you.</Text>
+              </View>
             </View>
           </View>
-
-          {/* Coupons Section */}
-          {!couponsLoading && (genericCoupons.length > 0 || itemCouponCount > 0) && (
-            <View style={styles.couponsSection}>
-              <Text style={styles.couponsSectionTitle}>
-                {genericCoupons.length > 0 ? '🎉 Deals on Any Item' : '🎉 Menu Item Deals'}
-              </Text>
-              {genericCoupons.map((coupon) => (
-                <TouchableOpacity
-                  key={coupon.id}
-                  style={styles.couponCard}
-                  onPress={() => genericCouponActivation.handlePress(coupon)}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.couponInfo}>
-                    <Text style={styles.couponCode}>🎉 Use: {coupon.coupon_code}</Text>
-                    <Text style={styles.couponDiscount}>
-                      {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'} off • Any Item
-                    </Text>
-                    <View style={styles.couponBottomRow}>
-                      <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
-                        <Text style={styles.couponTapHintText}>
-                          {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
-                        </Text>
-                      </View>
-                      <View style={styles.usesLeftPill}>
-                        <Text style={styles.usesLeftText}>
-                          🔁 {remainingPersonalUses(coupon)} more {remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'}
-                        </Text>
-                      </View>
-                      {isLowStock(coupon) && (
-                        <View style={styles.lowStockPill}>
-                          <Text style={styles.lowStockText}>🔥 Only {remainingTotalUses(coupon)} left</Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.couponBadgeRight}>
-                    <Text style={styles.couponValue}>
-                      {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-              {itemCouponCount > 0 && (
-                <Text style={styles.couponItemNote}>
-                  👇 {genericCoupons.length > 0 ? 'Plus ' : ''}{itemCouponCount} item-specific{' '}
-                  {itemCouponCount === 1 ? 'deal' : 'deals'} on dishes below
-                </Text>
-              )}
-            </View>
-          )}
 
           {/* Menu header */}
           <View style={styles.menuHeader}>
@@ -359,6 +327,25 @@ export default function RestaurantDetailScreen() {
                 ) : null}
               </View>
 
+              {/* Coupons button — moved out of the category row and given
+                  its own line, with a count badge, instead of the inline
+                  chips-heavy section this used to be. */}
+              {!couponsLoading && totalCouponCount > 0 && (
+                <TouchableOpacity
+                  style={[styles.couponsButton, couponsOnly && styles.couponsButtonActive]}
+                  onPress={handleCouponsButtonPress}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.couponsButtonIcon}>🎟️</Text>
+                  <Text style={[styles.couponsButtonText, couponsOnly && styles.couponsButtonTextActive]}>
+                    {couponsOnly ? '✓ ' : ''}Coupons only
+                  </Text>
+                  <View style={styles.couponsCountBadge}>
+                    <Text style={styles.couponsCountBadgeText}>{totalCouponCount}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
               {/* Keyword filters */}
               <ScrollView
                 horizontal
@@ -366,21 +353,19 @@ export default function RestaurantDetailScreen() {
                 style={styles.keywordScroll}
                 contentContainerStyle={styles.keywordContainer}
               >
-                {itemCouponCount > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setCouponsOnly((prev) => !prev)}
-                    style={[
-                      styles.keywordButton,
-                      couponsOnly
-                        ? { backgroundColor: '#E65100', borderColor: '#E65100', borderWidth: 2 }
-                        : { backgroundColor: '#fff', borderColor: '#E65100', borderWidth: 1.5 },
-                    ]}
-                  >
-                    <Text style={[styles.keywordText, { color: couponsOnly ? '#fff' : '#E65100' }]}>
-                      {couponsOnly ? '✓ ' : ''}🎟️ Coupons only
-                    </Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  onPress={() => setSelectedKeywords([])}
+                  style={[
+                    styles.keywordButton,
+                    selectedKeywords.length === 0
+                      ? { backgroundColor: '#141414', borderColor: '#141414', borderWidth: 2 }
+                      : { backgroundColor: '#fff', borderColor: '#141414', borderWidth: 1.5 },
+                  ]}
+                >
+                  <Text style={[styles.keywordText, { color: selectedKeywords.length === 0 ? '#fff' : '#141414' }]}>
+                    {selectedKeywords.length === 0 ? '✓ ' : ''}All
+                  </Text>
+                </TouchableOpacity>
                 {KEYWORD_FILTERS.map((filter) => {
                   const isSelected = selectedKeywords.includes(filter.label);
                   return (
@@ -500,6 +485,74 @@ export default function RestaurantDetailScreen() {
       onCancel={genericCouponActivation.cancelActivate}
       onConfirm={genericCouponActivation.confirmActivate}
     />
+
+    {/* Any-item coupons have no menu item to render a banner in, so this is
+        their only view/activate surface — opened from the Coupons button
+        above the category filters whenever there's at least one. */}
+    <Modal
+      visible={couponsModalVisible}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setCouponsModalVisible(false)}
+    >
+      <View style={styles.couponsModalOverlay}>
+        <View style={styles.couponsModalCard}>
+          <View style={styles.couponsModalHeader}>
+            <Text style={styles.couponsModalTitle}>🎉 Available Deals</Text>
+            <TouchableOpacity onPress={() => setCouponsModalVisible(false)} hitSlop={10}>
+              <Text style={styles.couponsModalClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+
+          {genericCoupons.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.couponChipRow}
+            >
+              {genericCoupons.map((coupon) => (
+                <TouchableOpacity
+                  key={coupon.id}
+                  style={styles.couponChip}
+                  onPress={() => {
+                    setCouponsModalVisible(false);
+                    genericCouponActivation.handlePress(coupon);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.couponChipValue}>
+                    {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'} OFF
+                  </Text>
+                  <Text style={styles.couponChipCode} numberOfLines={1}>{coupon.coupon_code}</Text>
+                  <Text style={styles.couponChipHint} numberOfLines={1}>
+                    {coupon.activated_at
+                      ? '⏱ Active — tap to view'
+                      : isLowStock(coupon)
+                      ? `🔥 ${remainingTotalUses(coupon)} left`
+                      : `👉 ${remainingPersonalUses(coupon)} ${remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'} left`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {itemCouponCount > 0 && (
+            <TouchableOpacity
+              style={styles.couponsModalItemBtn}
+              onPress={() => {
+                setCouponsOnly(true);
+                setCouponsModalVisible(false);
+              }}
+            >
+              <Text style={styles.couponsModalItemBtnText}>
+                👇 {itemCouponCount} item-specific {itemCouponCount === 1 ? 'deal' : 'deals'} — Show them in the menu
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </Modal>
+
     <NutritionDisclaimerModal
       visible={showNutritionDisclaimer}
       onDismiss={() => {
@@ -530,8 +583,11 @@ const styles = StyleSheet.create({
   backLinkBtn: { marginTop: 8 },
   backLink: { fontSize: 15, color: '#4CAF50', fontWeight: '600' },
 
-  hero: { height: 260, position: 'relative' },
-  heroImg: { width: '100%', height: 260 },
+  // Shrunk from 260 — this is always a generic placeholder photo (never the
+  // real restaurant), so it's pure decoration competing for scroll distance
+  // against the "Top N Menu Items For You" section below, not information.
+  hero: { height: 150, position: 'relative' },
+  heroImg: { width: '100%', height: 150 },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.18)',
@@ -568,22 +624,28 @@ const styles = StyleSheet.create({
   },
 
   infoCardContainer: {
-    flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: -20,
-    marginBottom: 16,
-    gap: 12,
-    alignItems: 'flex-start',
+    marginBottom: 10,
   },
   infoCard: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 18,
+    padding: 14,
     elevation: 5,
   },
-  restaurantName: { fontSize: 22, fontWeight: '800', color: '#141414', marginBottom: 10, letterSpacing: -0.3 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  // flexWrap so a long name + address never squeeze each other down to
+  // illegible widths on a narrow phone — the address box drops to its own
+  // line below the name instead of getting clipped mid-word.
+  nameAddressRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 6 },
+  restaurantName: { fontSize: 20, fontWeight: '800', color: '#141414', letterSpacing: -0.3 },
+  addressBox: {
+    maxWidth: '100%', backgroundColor: '#F6F6F6', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 4,
+  },
+  addressBoxText: { fontSize: 11, color: '#666', fontWeight: '600' },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
   statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   openDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4CAF50' },
   statusOpenTxt: { fontSize: 12, color: '#2e7d32', fontWeight: '700' },
@@ -592,11 +654,14 @@ const styles = StyleSheet.create({
   metaPill: { backgroundColor: '#F6F6F6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   metaPillTxt: { fontSize: 12, color: '#444', fontWeight: '600' },
   cuisine: { fontSize: 13, color: '#6B6B6B', marginBottom: 5 },
-  address: { fontSize: 13, color: '#888' },
-  directionsLink: { alignSelf: 'flex-start', marginTop: 4 },
-  directionsLinkText: { fontSize: 13, fontWeight: '700', color: BRAND_COLORS.primary },
+  directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  directionsPillTxt: { fontSize: 12, fontWeight: '700', color: BRAND_COLORS.primary },
+  disclaimerRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F0F0F0',
+  },
 
-  menuHeader: { paddingHorizontal: 16, paddingBottom: 8 },
+  menuHeader: { paddingHorizontal: 16, paddingBottom: 4 },
   menuTitle: { fontSize: 18, fontWeight: '800', color: '#141414' },
   menuSub: { fontSize: 12, color: '#888', marginTop: 2 },
 
@@ -627,6 +692,28 @@ const styles = StyleSheet.create({
     color: '#ccc',
     padding: 4,
   },
+
+  couponsButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: '#FFF9C4', borderRadius: 20, borderWidth: 1.5, borderColor: '#FFB74D',
+    paddingHorizontal: 14, paddingVertical: 8, marginHorizontal: 16, marginBottom: 10,
+    position: 'relative',
+  },
+  couponsButtonActive: { backgroundColor: '#E65100', borderColor: '#E65100' },
+  couponsButtonIcon: { fontSize: 16 },
+  couponsButtonText: { fontSize: 13, fontWeight: '800', color: '#D84315' },
+  couponsButtonTextActive: { color: '#fff' },
+  // Overlaps the button's top-right corner like a notification badge,
+  // instead of sitting inline with the label — separates "how many" from
+  // the button's own text at a glance.
+  couponsCountBadge: {
+    position: 'absolute', top: -8, right: -8,
+    backgroundColor: '#FF6F00', borderRadius: 10, minWidth: 20, height: 20,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
+    borderWidth: 2, borderColor: '#fff', elevation: 3,
+  },
+  couponsCountBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },
+
   keywordScroll: {
     marginBottom: 8,
   },
@@ -736,47 +823,29 @@ const styles = StyleSheet.create({
   footer: { paddingVertical: 20, alignItems: 'center' },
   footerTxt: { fontSize: 12, color: '#AEAEB2' },
 
-  couponsSection: { paddingHorizontal: 16, paddingVertical: 16, backgroundColor: '#FFECB3', marginHorizontal: 16, borderRadius: 14, marginBottom: 16, borderWidth: 2, borderColor: '#FF9800' },
-  couponsSectionTitle: { fontSize: 16, fontWeight: '800', color: '#D84315', marginBottom: 12 },
-  couponItemNote: { fontSize: 13, fontWeight: '700', color: '#E65100', marginTop: 2 },
-  couponCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF9C4', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, marginBottom: 10, borderWidth: 2, borderColor: '#FFB74D', elevation: 2 },
-  couponInfo: { flex: 1 },
-  couponCode: { fontSize: 15, fontWeight: '900', color: '#D84315', marginBottom: 3 },
-  couponDiscount: { fontSize: 13, color: '#E65100', fontWeight: '700' },
-  couponTapHintPill: {
-    alignSelf: 'flex-start', backgroundColor: '#4CAF50', borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 4,
+  couponsModalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20,
   },
-  couponTapHintPillActive: { backgroundColor: '#1565C0' },
-  couponTapHintText: { fontSize: 11.5, color: '#fff', fontWeight: '800' },
-  couponBottomRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6, marginTop: 6 },
-  usesLeftPill: {
-    alignSelf: 'flex-start', backgroundColor: '#E8F5E9', borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#4CAF50',
+  couponsModalCard: {
+    backgroundColor: '#fff', borderRadius: 18, padding: 18, width: '100%', maxWidth: 420, elevation: 6,
   },
-  usesLeftText: { fontSize: 11.5, color: '#2e7d32', fontWeight: '800' },
-  lowStockPill: {
-    alignSelf: 'flex-start', backgroundColor: '#FFEBEE', borderRadius: 12,
-    paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: '#e53e3e',
+  couponsModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  couponsModalTitle: { fontSize: 17, fontWeight: '800', color: '#D84315' },
+  couponsModalClose: { fontSize: 18, color: '#999', fontWeight: '700', padding: 4 },
+  couponsModalItemBtn: {
+    backgroundColor: '#FFF3E0', borderRadius: 12, borderWidth: 1.5, borderColor: '#E65100',
+    paddingHorizontal: 14, paddingVertical: 12, marginTop: 14,
   },
-  lowStockText: { fontSize: 11.5, color: '#c62828', fontWeight: '800' },
-  couponBadgeRight: { backgroundColor: '#FF6F00', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, alignItems: 'center', elevation: 2 },
-  couponValue: { fontSize: 18, fontWeight: '900', color: '#fff' },
+  couponsModalItemBtnText: { fontSize: 13, fontWeight: '800', color: '#E65100', textAlign: 'center' },
+  couponChipRow: { gap: 10, paddingRight: 4 },
+  couponChip: {
+    backgroundColor: '#FFF9C4', borderRadius: 12, borderWidth: 2, borderColor: '#FFB74D',
+    paddingHorizontal: 14, paddingVertical: 10, minWidth: 128, alignItems: 'center', elevation: 2,
+  },
+  couponChipValue: { fontSize: 16, fontWeight: '900', color: '#D84315' },
+  couponChipCode: { fontSize: 12, fontWeight: '800', color: '#E65100', marginTop: 2 },
+  couponChipHint: { fontSize: 10.5, fontWeight: '700', color: '#4CAF50', marginTop: 4 },
 
-  disclaimerBox: {
-    backgroundColor: '#FFF9E6',
-    borderWidth: 2,
-    borderColor: '#FF6B35',
-    borderRadius: 12,
-    padding: 14,
-    width: 130,
-    minHeight: 100,
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    elevation: 3,
-  },
-  disclaimerIcon: { fontSize: 22 },
-  disclaimerText: { fontSize: 10, color: '#D84315', lineHeight: 13, fontWeight: '600', textAlign: 'center' },
+  disclaimerIcon: { fontSize: 13, lineHeight: 16 },
+  disclaimerText: { flex: 1, fontSize: 10.5, color: '#8A5A00', lineHeight: 14, fontWeight: '600' },
 });

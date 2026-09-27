@@ -169,6 +169,19 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
         </View>
       </View>
 
+      {/* Nutrition-accuracy note — isVerified only confirms the DISH NAME is
+          real, not that these macro values are accurate; nutrition is always
+          AI-estimated unless an owner has explicitly entered real values
+          (nutritionSource === 'owner_provided'). The unverified banner above
+          already covers the AI-estimate case for unverified items, so this
+          only needs to show for verified-but-still-AI-estimated ones —
+          otherwise the two would say the same thing twice. */}
+      {item.isVerified && item.nutritionSource !== 'owner_provided' && (
+        <Text style={styles.nutritionEstimateNote}>
+          🤖 Nutrition values are an AI estimate, not confirmed by the restaurant.
+        </Text>
+      )}
+
       {/* Chips */}
       {(goodChips.length > 0 || warnChips.length > 0) && (
         <View style={styles.chipRow}>
@@ -410,6 +423,8 @@ const styles = StyleSheet.create({
   macroVal: { fontSize: 14, fontWeight: '700' },
   macroUnit: { fontSize: 10, fontWeight: '500' },
   macroLabel: { fontSize: 10, color: '#AEAEB2', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.3 },
+
+  nutritionEstimateNote: { fontSize: 10.5, color: '#999', fontStyle: 'italic', marginBottom: 12, lineHeight: 14 },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chipGood: { backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },

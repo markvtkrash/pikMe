@@ -71,6 +71,11 @@ export interface MenuItem {
   name: string;
   imageUrl?: string;
   isVerified: boolean;
+  // isVerified only confirms the DISH exists — nutrition values are always
+  // AI-estimated regardless, unless an owner has explicitly entered real
+  // ones (see menu-nutrition.tsx in the owner app). Defaults to
+  // 'ai_estimate' for any row from before this field existed.
+  nutritionSource?: 'ai_estimate' | 'owner_provided';
   nutrition: {
     calories: number;
     totalFat_g: number;

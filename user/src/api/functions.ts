@@ -160,6 +160,7 @@ function mapDbMenuItem(m: any): MenuItem {
     name: m.name,
     imageUrl: m.image_url ?? undefined,
     isVerified: m.is_verified ?? false,
+    nutritionSource: m.nutrition_source,
     nutrition: {
       calories: m.calories ?? 0,
       totalFat_g: m.total_fat_g ?? 0,
