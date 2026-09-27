@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, Modal,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal,
   ActivityIndicator, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
@@ -43,7 +43,6 @@ export default function AdminDashboard() {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showEasterEgg, setShowEasterEgg] = useState(false);
-  const blinkAnim = useRef(new Animated.Value(1)).current;
   const titleTapCount = useRef(0);
   const titleTapResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -67,21 +66,6 @@ export default function AdminDashboard() {
     loadUserInfo();
     loadStats();
   }, []);
-
-  // Blink the support-ticket count while there's at least one open ticket.
-  useEffect(() => {
-    if (stats.openTickets > 0) {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(blinkAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
-          Animated.timing(blinkAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-        ])
-      );
-      loop.start();
-      return () => loop.stop();
-    }
-    blinkAnim.setValue(1);
-  }, [stats.openTickets]);
 
   async function loadUserInfo() {
     try {
@@ -225,30 +209,6 @@ export default function AdminDashboard() {
       <Text style={styles.sectionTitle}>Administration</Text>
 
       <View style={styles.adminTilesGrid}>
-        <Animated.View style={[styles.adminTileWrapper, { opacity: stats.openTickets > 0 ? blinkAnim : 1 }]}>
-          <TouchableOpacity
-            style={[
-              styles.adminTile, styles.adminTileTicketsNeutral,
-              stats.openTickets > 0 && styles.adminTileTicketsAlert,
-              { width: '100%' },
-            ]}
-            onPress={() => router.push('/admin/tickets?status=open')}
-          >
-            {stats.openTickets > 0 && (
-              <View style={styles.adminTileBadge}>
-                <Text style={styles.adminTileBadgeText}>{stats.openTickets}</Text>
-              </View>
-            )}
-            <Text style={styles.adminTileIcon}>🎧</Text>
-            <Text style={[styles.adminTileTitle, stats.openTickets > 0 && styles.adminTileTitleAlert]}>Support</Text>
-            {stats.openTickets > 0 && (
-              <Text style={styles.adminTileDetailAlert}>
-                {stats.openOwnerTickets} owner · {stats.openConsumerTickets} consumer
-              </Text>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-
         <TouchableOpacity
           style={[styles.adminTile, styles.adminTileClaims]}
           onPress={() => router.push('/admin/claims')}
@@ -346,6 +306,32 @@ export default function AdminDashboard() {
           <Text style={styles.adminTileIcon}>📊</Text>
           <Text style={styles.adminTileTitle}>Reports</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileConfig]}
+          onPress={() => router.push('/admin/config')}
+        >
+          <Text style={styles.adminTileIcon}>⚙️</Text>
+          <Text style={styles.adminTileTitle}>App Config</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileSupport]}
+          onPress={() => router.push('/admin/tickets?status=open')}
+        >
+          {stats.openTickets > 0 && (
+            <View style={styles.adminTileBadge}>
+              <Text style={styles.adminTileBadgeText}>{stats.openTickets}</Text>
+            </View>
+          )}
+          <Text style={styles.adminTileIcon}>🎧</Text>
+          <Text style={styles.adminTileTitle}>Support</Text>
+          {stats.openTickets > 0 && (
+            <Text style={styles.adminTileDetail}>
+              {stats.openOwnerTickets} owner · {stats.openConsumerTickets} consumer
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
       </View>
     </ScrollView>
@@ -427,7 +413,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   adminTile: {
-    width: '48%',
+    width: '31%',
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingVertical: 18,
@@ -446,11 +432,8 @@ const styles = StyleSheet.create({
   adminTileUsers: { backgroundColor: '#E0F7FA' },
   adminTileCreateOwner: { backgroundColor: '#E8EAF6' },
   adminTileReports: { backgroundColor: '#FFF9C4' },
-  adminTileWrapper: { width: '48%' },
-  adminTileTicketsNeutral: { backgroundColor: '#F5F5F5' },
-  adminTileTicketsAlert: { backgroundColor: '#e53e3e' },
-  adminTileTitleAlert: { color: '#fff' },
-  adminTileDetailAlert: { fontSize: 11, fontWeight: '700', color: '#fff', marginTop: 2, opacity: 0.9 },
+  adminTileConfig: { backgroundColor: '#ECEFF1' },
+  adminTileSupport: { backgroundColor: '#CFD8DC' },
   adminTileIcon: { fontSize: 26 },
   adminTileTitle: { fontSize: 13, fontWeight: '700', color: '#222', textAlign: 'center' },
   adminTileDetail: { fontSize: 11, fontWeight: '700', color: '#2e7d32', marginTop: 2 },

@@ -23,6 +23,25 @@ function err(message: string, status = 500) {
   });
 }
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[extract-menu-from-link] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 // ── SSRF guard ──────────────────────────────────────────────────────────────
 // This function does a server-side fetch() of a URL an owner supplies, so
 // without this check they could point it at an internal/cloud-metadata
@@ -258,9 +277,10 @@ interface ExtractResult {
 
 // Sends real page text to the LLM and asks it to EXTRACT, not invent.
 async function extractItemsFromText(pageText: string, restaurantName: string): Promise<ExtractResult> {
-  const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
-  const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
-  const QUICKSILVER_MODEL = Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+  const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
+  const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+  const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
 
   const prompt = `Below is the real, scraped text content of a restaurant's menu webpage for "${restaurantName}". Extract the ACTUAL menu items explicitly present in this text. Do NOT invent, guess, or add items that aren't there. If this text does not appear to contain a real menu, return an empty JSON array: [].
 

@@ -16,14 +16,18 @@ import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { formatDistance } from '../../src/utils/geo';
 import { normalizeForSearch } from '../../src/utils/textMatch';
-import { OWNER_SEARCH_RADIUS_METERS } from '../../src/constants/searchRadius';
+import { getOwnerSearchRadiusMeters } from '../../src/constants/searchRadius';
 import type { Restaurant } from '../../src/types';
 
-const OWNER_SEARCH_RADIUS_KM = OWNER_SEARCH_RADIUS_METERS / 1000;
 const MILES_TO_METERS = 1609.34;
 
 export default function RelocateRestaurantScreen() {
   const router = useRouter();
+  // Read once per render rather than as a module-level constant — its
+  // value can come from an async DB fetch resolved before this screen ever
+  // mounts (see appConfig.ts), so it can't be computed at module-load time.
+  const ownerSearchRadiusMeters = getOwnerSearchRadiusMeters();
+  const ownerSearchRadiusKm = ownerSearchRadiusMeters / 1000;
   const { restaurant } = useRestaurantOwnerStore();
   const { favorites, toggleFavorite } = useFavoritePages();
   const [checkingEligibility, setCheckingEligibility] = useState(true);
@@ -88,7 +92,7 @@ export default function RelocateRestaurantScreen() {
       const found = await searchRestaurantByName(name, latitude, longitude, radiusMeters);
       setResults(found);
     } else {
-      const nearby = await fetchNearbyRestaurants(latitude, longitude, OWNER_SEARCH_RADIUS_METERS);
+      const nearby = await fetchNearbyRestaurants(latitude, longitude, ownerSearchRadiusMeters);
       setResults(nearby);
     }
   }
@@ -279,7 +283,7 @@ export default function RelocateRestaurantScreen() {
           <Text style={styles.radiusBannerText}>
             {businessNameQuery.trim()
               ? `📍 Showing matches for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of ${geocodedAddress}.`
-              : `📍 Showing restaurants within ${OWNER_SEARCH_RADIUS_KM}km of ${geocodedAddress}.`}
+              : `📍 Showing restaurants within ${ownerSearchRadiusKm}km of ${geocodedAddress}.`}
           </Text>
         </View>
       )}
@@ -339,7 +343,7 @@ export default function RelocateRestaurantScreen() {
             <Text style={styles.emptyText}>
               {businessNameQuery.trim()
                 ? `No match for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of that location`
-                : `No restaurants found within ${OWNER_SEARCH_RADIUS_KM}km of that location`}
+                : `No restaurants found within ${ownerSearchRadiusKm}km of that location`}
             </Text>
           ) : (
             <Text style={styles.emptyText}>No matches for "{nameFilter}"</Text>

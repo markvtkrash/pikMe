@@ -23,6 +23,25 @@ function err(message: string, status = 500) {
   });
 }
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[estimate-menu-nutrition] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 async function deterministicId(restaurantName: string, itemName: string): Promise<string> {
   const text = `${restaurantName}::${itemName}::manual`.toLowerCase();
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -82,9 +101,10 @@ serve(async (req) => {
       return err('At least one menu item name is required', 400);
     }
 
-    const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
-    const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
-    const QUICKSILVER_MODEL = Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+    const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+    const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
+    const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+    const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
 
     let apiKey: string;
     if (AI_PROVIDER === 'quicksilver') {

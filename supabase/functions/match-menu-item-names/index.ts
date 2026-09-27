@@ -23,6 +23,25 @@ function err(message: string, status = 500) {
   });
 }
 
+// Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
+// on doesn't add a DB round-trip to every single invocation — refreshed only
+// on the next cold start, same "load once" model used by the client apps.
+let cachedDbConfig: Record<string, string> | null = null;
+async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
+  if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
+  if (cachedDbConfig) return cachedDbConfig;
+  try {
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
+    if (error) throw error;
+    cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    return cachedDbConfig;
+  } catch (loadErr) {
+    console.error('[match-menu-item-names] Failed to load DB config, falling back to env/defaults:', loadErr);
+    return {};
+  }
+}
+
 // Second-tier matcher for the "Add Nutrition Info" bulk paste flow — only
 // called for names that DIDN'T resolve via exact or algorithmic-fuzzy
 // matching client-side (see stringSimilarity.ts). An AI suggestion here is
@@ -39,9 +58,10 @@ async function getSuggestions(
   unmatchedNames: string[],
   candidateNames: string[]
 ): Promise<MatchResult[]> {
-  const AI_PROVIDER = Deno.env.get('AI_PROVIDER') ?? 'claude';
-  const CLAUDE_MODEL = Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
-  const QUICKSILVER_MODEL = Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+  const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
+  const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+  const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
 
   const prompt = `A restaurant owner pasted dish names to attach real nutrition data to, but these names didn't exactly match any existing menu item. Your job is ONLY to match each typed name to the closest ACTUAL menu item name below, if one plausibly refers to the same dish (e.g. abbreviation, typo, reordered words, minor rewording). Do NOT invent a match if none plausibly refers to the same dish — return null for that one instead. Never match two typed names to different actual items just to fill in an answer.
 

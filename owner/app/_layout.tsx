@@ -7,7 +7,8 @@ import { supabase } from '../src/api/supabase';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { useRestaurantOwnerStore } from '../src/store/restaurantOwnerStore';
 import { getRestaurantForOwner } from '../src/api/restaurantAuth';
-import { SESSION_TIMEOUT_MINUTES } from '../src/constants/sessionTimeout';
+import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
+import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
 
 const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
@@ -37,6 +38,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [isRestaurantOwner, setIsRestaurantOwner] = useState(false);
   const [roleCheckComplete, setRoleCheckComplete] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(isAppConfigLoaded());
   const router = useRouter();
   const segments = useSegments();
   const storeOwner = useRestaurantOwnerStore((s) => s.owner);
@@ -47,6 +49,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // distinct from storeOwner being set, so a failed fetch doesn't leave the
   // gate below stuck showing a spinner forever.
   const [hydrationAttempted, setHydrationAttempted] = useState(false);
+
+  // Load app config (DB or .env, per EXPO_PUBLIC_CONFIG_SOURCE) once at startup,
+  // before anything else renders — every other tunable getter assumes this has
+  // already resolved.
+  useEffect(() => {
+    if (isAppConfigLoaded()) return;
+    loadAppConfig()
+      .catch((err) => console.error('[AuthGate] loadAppConfig failed, falling back to .env defaults:', err))
+      .finally(() => setConfigLoaded(true));
+  }, []);
 
   // Auth subscription
   useEffect(() => {
@@ -69,7 +81,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // app isn't left open in a shared browser tab the same way, and there's no
   // single reliable cross-platform "user is idle" signal on native anyway.
   useEffect(() => {
-    if (Platform.OS !== 'web' || !session) return;
+    if (Platform.OS !== 'web' || !session || !configLoaded) return;
 
     let timer: ReturnType<typeof setTimeout>;
     function resetTimer() {
@@ -78,7 +90,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         console.log('[AuthGate] Idle timeout reached, signing out');
         useRestaurantOwnerStore.getState().logout();
         router.replace('/restaurant/auth/login');
-      }, SESSION_TIMEOUT_MINUTES * 60 * 1000);
+      }, getSessionTimeoutMinutes() * 60 * 1000);
     }
 
     resetTimer();
@@ -87,7 +99,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       clearTimeout(timer);
       IDLE_ACTIVITY_EVENTS.forEach((event) => window.removeEventListener(event, resetTimer));
     };
-  }, [session]);
+  }, [session, configLoaded]);
 
   // Check if the signed-in user is a restaurant owner
   useEffect(() => {
@@ -219,7 +231,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // rehydration attempt above, so pages never render with a signed-in
   // session but an empty store (which would trip their own "no owner,
   // redirect to login" guards on a plain page reload).
-  if (session === undefined || (session && !hydrationAttempted)) {
+  if (!configLoaded || session === undefined || (session && !hydrationAttempted)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#4CAF50" />

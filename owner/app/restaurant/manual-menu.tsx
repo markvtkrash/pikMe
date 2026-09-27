@@ -10,9 +10,7 @@ import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { useUnsavedChangesStore } from '../../src/store/unsavedChangesStore';
 import { supabase } from '../../src/api/supabase';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
-import { MAX_MANUAL_MENU_ITEMS } from '../../src/constants/menuLimits';
-
-const MAX_ITEMS = MAX_MANUAL_MENU_ITEMS;
+import { getMaxManualMenuItems } from '../../src/constants/menuLimits';
 
 interface ManualItem {
   name: string;
@@ -28,6 +26,10 @@ export default function ManualMenuScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  // Read once per render rather than as a module-level constant — its
+  // value can come from an async DB fetch resolved before this screen ever
+  // mounts (see appConfig.ts), so it can't be computed at module-load time.
+  const MAX_ITEMS = getMaxManualMenuItems();
   // Snapshot of what's actually persisted — set right after load and right
   // after a successful save — compared against the live list to know
   // whether there's anything a leaving-the-page warning should protect.
