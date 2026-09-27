@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
-import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, unverifyMenuItem } from '../../src/api/restaurantAuth';
+import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, unverifyMenuItem, setMenuItemOutOfStock } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { useUnsavedChangesStore } from '../../src/store/unsavedChangesStore';
 import { supabase } from '../../src/api/supabase';
@@ -21,6 +21,7 @@ interface ManualItem {
   isVerified: boolean | null;
   // null for a brand-new, not-yet-saved row — nothing to call unverify on yet.
   itemId: string | null;
+  isOutOfStock: boolean;
 }
 
 export default function ManualMenuScreen() {
@@ -32,9 +33,9 @@ export default function ManualMenuScreen() {
   // whether there's anything a leaving-the-page warning should protect.
   const savedNamesRef = useRef<string[]>([]);
   const [items, setItems] = useState<ManualItem[]>([
-    { name: '', isVerified: null, itemId: null },
-    { name: '', isVerified: null, itemId: null },
-    { name: '', isVerified: null, itemId: null },
+    { name: '', isVerified: null, itemId: null, isOutOfStock: false },
+    { name: '', isVerified: null, itemId: null, isOutOfStock: false },
+    { name: '', isVerified: null, itemId: null, isOutOfStock: false },
   ]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,6 +43,7 @@ export default function ManualMenuScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [newItemName, setNewItemName] = useState('');
   const [unverifyingIndex, setUnverifyingIndex] = useState<number | null>(null);
+  const [togglingStockIndex, setTogglingStockIndex] = useState<number | null>(null);
   const [removeConfirmIndex, setRemoveConfirmIndex] = useState<number | null>(null);
   const [verifyModalIndex, setVerifyModalIndex] = useState<number | null>(null);
   const [verifyModalName, setVerifyModalName] = useState('');
@@ -146,7 +148,9 @@ export default function ManualMenuScreen() {
     try {
       const loaded = await getRestaurantMenuItems(restaurant.name);
       if (loaded.length > 0) {
-        setItems(loaded.map((i) => ({ name: i.name, isVerified: i.is_verified, itemId: i.item_id })));
+        setItems(loaded.map((i: any) => ({
+          name: i.name, isVerified: i.is_verified, itemId: i.item_id, isOutOfStock: !!i.is_out_of_stock,
+        })));
         savedNamesRef.current = loaded.map((i) => i.name.trim()).filter(Boolean);
       } else {
         savedNamesRef.current = [];
@@ -181,7 +185,7 @@ export default function ManualMenuScreen() {
   function confirmAddItem() {
     const trimmed = newItemName.trim();
     if (trimmed) {
-      setItems((prev) => [...prev, { name: trimmed, isVerified: null, itemId: null }]);
+      setItems((prev) => [...prev, { name: trimmed, isVerified: null, itemId: null, isOutOfStock: false }]);
     }
     setAddModalVisible(false);
   }
@@ -229,6 +233,25 @@ export default function ManualMenuScreen() {
       Alert.alert('Error', error.message || 'Failed to unconfirm item');
     } finally {
       setUnverifyingIndex(null);
+    }
+  }
+
+  // Hides the item from customers without deleting it — nutrition data,
+  // verification, and coupon associations all stay intact for when it's
+  // back in stock.
+  async function handleToggleOutOfStock(index: number) {
+    const item = items[index];
+    if (!item.itemId) return;
+    const nextValue = !item.isOutOfStock;
+    setTogglingStockIndex(index);
+    try {
+      await setMenuItemOutOfStock(item.itemId, nextValue);
+      setItems((prev) => prev.map((it, i) => (i === index ? { ...it, isOutOfStock: nextValue } : it)));
+    } catch (error: any) {
+      console.error('[manual-menu] Out-of-stock toggle error:', error);
+      Alert.alert('Error', error.message || 'Failed to update stock status');
+    } finally {
+      setTogglingStockIndex(null);
     }
   }
 
@@ -407,12 +430,69 @@ export default function ManualMenuScreen() {
                 )}
                 <TextInput
                   style={styles.itemInput}
-                  placeholder={`Item ${index + 1} (e.g. Chicken Tikka Masala)`}
+                  placeholder={`Item ${index + 1}`}
                   placeholderTextColor="#999"
                   value={item.name}
                   onChangeText={(text) => updateName(index, text)}
                   editable={!saving}
                 />
+
+                {item.isVerified !== null && (
+                  <View style={[styles.verifiedBadge, item.isVerified ? styles.verifiedBadgeYes : styles.verifiedBadgeNo]}>
+                    <Text style={[styles.verifiedBadgeText, item.isVerified ? styles.verifiedBadgeTextYes : styles.verifiedBadgeTextNo]} numberOfLines={1}>
+                      {item.isVerified ? '✓ Verified' : 'Unconfirmed'}
+                    </Text>
+                  </View>
+                )}
+
+                {item.isOutOfStock && (
+                  <View style={styles.outOfStockBadge}>
+                    <Text style={styles.outOfStockBadgeText} numberOfLines={1}>🚫 Out of Stock</Text>
+                  </View>
+                )}
+
+                {item.isVerified === true && item.itemId && (
+                  <TouchableOpacity
+                    style={styles.unconfirmBtn}
+                    onPress={() => handleUnverify(index)}
+                    disabled={saving || unverifyingIndex === index}
+                  >
+                    {unverifyingIndex === index ? (
+                      <ActivityIndicator size="small" color="#E65100" />
+                    ) : (
+                      <Text style={styles.unconfirmBtnText} numberOfLines={1}>↩ Unconfirm</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {item.isVerified === false && item.itemId && (
+                  <TouchableOpacity
+                    style={styles.verifyBtn}
+                    onPress={() => openVerifyModal(index)}
+                    disabled={saving || verifyingIndex === index}
+                  >
+                    {verifyingIndex === index ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.verifyBtnText} numberOfLines={1}>Verify</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {item.itemId && (
+                  <TouchableOpacity
+                    style={[styles.stockToggleBtn, item.isOutOfStock && styles.stockToggleBtnBack]}
+                    onPress={() => handleToggleOutOfStock(index)}
+                    disabled={saving || togglingStockIndex === index}
+                  >
+                    {togglingStockIndex === index ? (
+                      <ActivityIndicator size="small" color={item.isOutOfStock ? '#2e7d32' : '#c62828'} />
+                    ) : (
+                      <Text style={[styles.stockToggleBtnText, item.isOutOfStock && styles.stockToggleBtnBackText]} numberOfLines={1}>
+                        {item.isOutOfStock ? '✓ In Stock' : '🚫 Out of Stock'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+
                 <TouchableOpacity
                   style={styles.removeBtn}
                   onPress={() => setRemoveConfirmIndex(index)}
@@ -421,43 +501,6 @@ export default function ManualMenuScreen() {
                   <Text style={styles.removeBtnText}>✕</Text>
                 </TouchableOpacity>
               </View>
-
-              {item.isVerified !== null && (
-                <View style={styles.itemMetaRow}>
-                  <View style={[styles.verifiedBadge, item.isVerified ? styles.verifiedBadgeYes : styles.verifiedBadgeNo]}>
-                    <Text style={[styles.verifiedBadgeText, item.isVerified ? styles.verifiedBadgeTextYes : styles.verifiedBadgeTextNo]}>
-                      {item.isVerified ? '✓ Verified' : 'Unconfirmed'}
-                    </Text>
-                  </View>
-
-                  {item.isVerified === true && item.itemId && (
-                    <TouchableOpacity
-                      style={styles.unconfirmBtn}
-                      onPress={() => handleUnverify(index)}
-                      disabled={saving || unverifyingIndex === index}
-                    >
-                      {unverifyingIndex === index ? (
-                        <ActivityIndicator size="small" color="#E65100" />
-                      ) : (
-                        <Text style={styles.unconfirmBtnText}>↩ Unconfirm</Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  {item.isVerified === false && item.itemId && (
-                    <TouchableOpacity
-                      style={styles.verifyBtn}
-                      onPress={() => openVerifyModal(index)}
-                      disabled={saving || verifyingIndex === index}
-                    >
-                      {verifyingIndex === index ? (
-                        <ActivityIndicator size="small" color="#fff" />
-                      ) : (
-                        <Text style={styles.verifyBtnText}>Verify</Text>
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
             </View>
           ))}
 
@@ -663,41 +706,54 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA', borderRadius: 10, borderWidth: 1, borderColor: '#eee',
     padding: 10, marginBottom: 10,
   },
-  itemPrimaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  itemMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  // Everything for a row lives in one line — name input, verified/out-of-
+  // stock badges, verify/unconfirm, stock toggle, remove. The badges/
+  // buttons keep their full original labels, so the input is what gives up
+  // width first (flex:1 + minWidth:0 lets it shrink below its own content
+  // size instead of pushing anything else off the row).
+  itemPrimaryRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  outOfStockBadge: { backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 3, flexShrink: 0 },
+  outOfStockBadgeText: { fontSize: 9.5, fontWeight: '700', color: '#c62828' },
+  stockToggleBtn: {
+    backgroundColor: '#FFEBEE', borderWidth: 1.5, borderColor: '#e53e3e',
+    borderRadius: 7, paddingHorizontal: 6, paddingVertical: 4, flexShrink: 0,
+  },
+  stockToggleBtnText: { fontSize: 9.5, fontWeight: '800', color: '#c62828' },
+  stockToggleBtnBack: { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
+  stockToggleBtnBackText: { color: '#2e7d32' },
   // minWidth:0 lets this shrink below its own content width when the row is
   // tight (a flex item's default min-width is "big enough to fit its
-  // content," not 0) — without it, this refuses to shrink and pushes the
-  // remove button off the visible row entirely instead of just making the
-  // input narrower. Same underlying issue as the nav bug.
+  // content," not 0) — without it, this refuses to shrink and pushes
+  // everything else off the visible row instead of just making the input
+  // narrower. Same underlying issue as the nav bug.
   itemInput: {
-    flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222',
+    flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: '#222',
   },
   removeBtn: {
-    width: 36, height: 36, borderRadius: 8, backgroundColor: '#FFEBEE',
+    width: 26, height: 26, borderRadius: 6, backgroundColor: '#FFEBEE',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  removeBtnText: { fontSize: 15, fontWeight: '700', color: '#e53e3e' },
+  removeBtnText: { fontSize: 12, fontWeight: '700', color: '#e53e3e' },
 
-  verifiedBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, flexShrink: 0 },
+  verifiedBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, flexShrink: 0 },
   verifiedBadgeYes: { backgroundColor: '#E8F5E9' },
   verifiedBadgeNo: { backgroundColor: '#FFF3E0' },
-  verifiedBadgeText: { fontSize: 10.5, fontWeight: '700' },
+  verifiedBadgeText: { fontSize: 9.5, fontWeight: '700' },
   verifiedBadgeTextYes: { color: '#2e7d32' },
   verifiedBadgeTextNo: { color: '#E65100' },
 
   unconfirmBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',
-    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, flexShrink: 0,
+    borderRadius: 7, paddingHorizontal: 6, paddingVertical: 4, flexShrink: 0,
   },
-  unconfirmBtnText: { fontSize: 11, color: '#E65100', fontWeight: '800' },
+  unconfirmBtnText: { fontSize: 9.5, color: '#E65100', fontWeight: '800' },
 
   verifyBtn: {
-    backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: '#4CAF50', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4,
     elevation: 1, flexShrink: 0,
   },
-  verifyBtnText: { fontSize: 12, color: '#fff', fontWeight: '800' },
+  verifyBtnText: { fontSize: 10.5, color: '#fff', fontWeight: '800' },
 
   addBtn: {
     alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center',

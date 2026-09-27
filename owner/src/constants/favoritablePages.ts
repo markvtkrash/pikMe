@@ -17,6 +17,7 @@ export const FAVORITABLE_PAGES: FavoritablePage[] = [
   { key: 'menu-manual-entry', icon: '✍️', label: 'Edit Menu', href: '/restaurant/manual-menu' },
   { key: 'menu-photo', icon: '📷', label: 'Update Menu Items Using a Photo', href: '/restaurant/menu-photo' },
   { key: 'menu-text', icon: '📋', label: 'Update Menu Items From Text', href: '/restaurant/menu-text' },
+  { key: 'menu-nutrition', icon: '🥗', label: 'Add Nutrition Info', href: '/restaurant/menu-nutrition' },
   { key: 'report-coupon-performance', icon: '📊', label: 'Coupon Performance', href: '/restaurant/reports/coupon-performance' },
   { key: 'report-redemptions-over-time', icon: '📈', label: 'Redemptions Over Time', href: '/restaurant/reports/redemptions-over-time' },
   { key: 'report-coupon-status-overview', icon: '🎟️', label: 'Coupon Status Overview', href: '/restaurant/reports/coupon-status-overview' },

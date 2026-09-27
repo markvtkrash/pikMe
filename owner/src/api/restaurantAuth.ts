@@ -348,6 +348,7 @@ export async function getRestaurantMenuItems(restaurantName: string) {
       calories: row.calories,
       protein_g: row.protein_g,
       is_verified: row.is_verified,
+      is_out_of_stock: row.is_out_of_stock,
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -369,6 +370,17 @@ export async function verifyMenuItem(itemId: string, newName?: string) {
 // update, opposite direction.
 export async function unverifyMenuItem(itemId: string) {
   const { error } = await supabase.rpc('unverify_menu_item', { p_item_id: itemId });
+  if (error) throw error;
+}
+
+// Hides an item from customers without deleting it (keeps nutrition data,
+// verification status, and coupon associations intact) — for a dish that's
+// temporarily unavailable rather than permanently off the menu.
+export async function setMenuItemOutOfStock(itemId: string, outOfStock: boolean) {
+  const { error } = await supabase.rpc('set_menu_item_out_of_stock', {
+    p_item_id: itemId,
+    p_out_of_stock: outOfStock,
+  });
   if (error) throw error;
 }
 
@@ -541,4 +553,67 @@ export async function setRestaurantPaused(restaurantId: string, paused: boolean)
     p_paused: paused,
   });
   if (error) throw error;
+}
+
+export interface NutritionUpdate {
+  name: string;
+  calories?: number;
+  protein_g?: number;
+  totalCarbs_g?: number;
+  totalFat_g?: number;
+  sodium_mg?: number;
+}
+
+export interface NutritionUpdateResult {
+  name: string;
+  matched: boolean;
+}
+
+// Bulk-enrich existing menu items with real, owner-provided nutrition —
+// only the fields present on each update are touched (anything omitted
+// keeps its current AI-estimated value), and only items matching an
+// EXISTING menu item name for this restaurant are updated at all. See
+// menu-nutrition.tsx for the paste-and-parse UI this backs.
+export async function updateMenuItemNutrition(
+  restaurantId: string,
+  updates: NutritionUpdate[]
+): Promise<NutritionUpdateResult[]> {
+  const { data, error } = await supabase.rpc('update_menu_item_nutrition', {
+    p_restaurant_id: restaurantId,
+    p_updates: updates,
+  });
+  if (error) throw error;
+  return (data ?? []) as NutritionUpdateResult[];
+}
+
+export interface NameMatch {
+  input: string;
+  suggestion: string | null;
+}
+
+// Second-tier matcher for names that didn't resolve via exact or
+// algorithmic-fuzzy matching client-side (see stringSimilarity.ts). Returns
+// suggestions only — the caller must still get an explicit owner
+// confirm/reject before treating a suggestion as a real match.
+export async function matchMenuItemNames(
+  restaurantId: string,
+  unmatchedNames: string[],
+  candidateNames: string[]
+): Promise<NameMatch[]> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) throw new Error('Session expired. Please log in again.');
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/match-menu-item-names`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ restaurantId, unmatchedNames, candidateNames }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to match menu item names');
+  return (data.matches ?? []) as NameMatch[];
 }

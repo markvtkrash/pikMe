@@ -132,6 +132,16 @@ export default function MenuManagementScreen() {
             <Text style={styles.compactBtnIcon}>📋</Text>
             <Text style={[styles.compactBtnText, { color: '#00695C' }]}>Update Menu Items From Text</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.compactBtn, styles.compactBtnOrange]}
+            onPress={() => router.push('/restaurant/menu-nutrition')}
+          >
+            <View style={styles.favoriteCorner}>
+              <FavoriteHeart active={favorites.has('menu-nutrition')} onPress={() => toggleFavorite('menu-nutrition')} />
+            </View>
+            <Text style={styles.compactBtnIcon}>🥗</Text>
+            <Text style={[styles.compactBtnText, { color: '#E65100' }]}>Add Nutrition Info</Text>
+          </TouchableOpacity>
           {/* Upload Menu (menu-link.tsx) temporarily hidden from the UI —
               needs more fixes before exposing it again. Route and backend
               are untouched, just not linked to from anywhere right now. */}
@@ -178,6 +188,7 @@ const styles = StyleSheet.create({
   compactBtnGreen: { borderColor: '#4CAF50', backgroundColor: '#E8F5E9' },
   compactBtnPurple: { borderColor: '#8E24AA', backgroundColor: '#F3E5F5' },
   compactBtnTeal: { borderColor: '#00695C', backgroundColor: '#E0F2F1' },
+  compactBtnOrange: { borderColor: '#E65100', backgroundColor: '#FFF3E0' },
   compactBtnIcon: { fontSize: 18 },
   compactBtnText: { fontSize: 12, fontWeight: '800', textAlign: 'center' },
 });

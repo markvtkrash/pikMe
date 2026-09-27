@@ -22,7 +22,8 @@ export function useMenuRecommendations(restaurant: Restaurant | null, couponItem
       const { data: cachedItems, error: dbError } = await supabase
         .from('menu_items')
         .select('*')
-        .eq('restaurant_name', restaurant.name);
+        .eq('restaurant_name', restaurant.name)
+        .eq('is_out_of_stock', false);
 
       let items = [];
 
@@ -44,6 +45,7 @@ export function useMenuRecommendations(restaurant: Restaurant | null, couponItem
           },
           imageUrl: item.image_url,
           isVerified: item.is_verified,
+          nutritionSource: item.nutrition_source,
         }));
       } else {
         // Fallback: fetch from API if no cached items

@@ -38,15 +38,17 @@ const NAV_ITEMS: NavItem[] = [
       pathIs(p, '/restaurant/menu-items') ||
       pathIs(p, '/restaurant/manual-menu') ||
       pathIs(p, '/restaurant/menu-photo') ||
-      pathIs(p, '/restaurant/menu-text'),
-    // AI Pull, Edit Menu, Add Photo, and Add Text are all entry points
-    // reached FROM the Menu Management page (buttons on that page) — its
-    // children, not sibling top-level sections of their own.
+      pathIs(p, '/restaurant/menu-text') ||
+      pathIs(p, '/restaurant/menu-nutrition'),
+    // AI Pull, Edit Menu, Add Photo, Add Text, and Add Nutrition Info are
+    // all entry points reached FROM the Menu Management page (buttons on
+    // that page) — its children, not sibling top-level sections of their own.
     children: [
       { label: 'AI Assisted Menu Pull', href: '/restaurant/menu-items' },
       { label: 'Edit Menu', href: '/restaurant/manual-menu' },
       { label: 'Update Menu Items Using a Photo', href: '/restaurant/menu-photo' },
       { label: 'Update Menu Items From Text', href: '/restaurant/menu-text' },
+      { label: 'Add Nutrition Info', href: '/restaurant/menu-nutrition' },
       // Upload Menu (menu-link.tsx) temporarily hidden — needs more fixes
       // before exposing it again. Route and backend are untouched.
     ],
