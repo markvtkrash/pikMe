@@ -1,1 +1,1 @@
-export const BRAND_NAME = 'CraveID';
+export const BRAND_NAME = 'Vectr Vibe';

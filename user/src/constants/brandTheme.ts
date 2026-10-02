@@ -1,9 +1,9 @@
 /**
- * CraveID Brand Theme
+ * Vectr Vibe Brand Theme
  * Based on BRAND-GUIDELINES.md
  */
 
-export const BRAND_NAME = 'CraveID';
+export const BRAND_NAME = 'Vectr Vibe';
 
 export const BRAND_COLORS = {
   // Primary

@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import { loginRestaurantOwner, getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { supabase } from '../../../src/api/supabase';
+import { BRAND_NAME } from '../../../src/constants/brand';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
@@ -69,6 +70,7 @@ export default function RestaurantLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner}>
+        <Text style={styles.brand}>{BRAND_NAME}</Text>
         <Text style={styles.title}>🍽️ Restaurant Owner</Text>
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
@@ -125,6 +127,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     alignSelf: 'center',
   },
+  brand: { fontSize: 15, fontWeight: '700', color: '#2e7d32', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
   input: {

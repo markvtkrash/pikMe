@@ -1,7 +1,7 @@
 // Expo's config loader can't resolve TS imports, so this is duplicated from
 // (and must stay in sync with) BRAND_NAME in src/constants/brandTheme.ts —
 // that file is the source of truth for every other UI string in this app.
-const BRAND_NAME = 'CraveID';
+const BRAND_NAME = 'Vectr Vibe';
 
 export default {
   expo: {

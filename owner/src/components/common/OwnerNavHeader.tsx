@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
 import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
+import { BRAND_NAME } from '../../constants/brand';
 
 function pathIs(pathname: string, target: string) {
   return pathname === target || pathname.startsWith(target + '/');
@@ -147,9 +148,12 @@ export function OwnerNavHeader() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.brandRow}>
-        <Text style={styles.brand} numberOfLines={1}>
-          {restaurant ? restaurant.name : 'CraveID Owner'}
-        </Text>
+        <View style={styles.brandTextGroup}>
+          <Text style={styles.brandSmall}>{BRAND_NAME}</Text>
+          <Text style={styles.brand} numberOfLines={1}>
+            {restaurant ? restaurant.name : 'Owner Portal'}
+          </Text>
+        </View>
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutBtnText}>Logout</Text>
         </TouchableOpacity>
@@ -218,6 +222,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6,
   },
+  brandTextGroup: { flexShrink: 1 },
+  brandSmall: { fontSize: 11, fontWeight: '700', color: '#2e7d32', letterSpacing: 0.3 },
   brand: { fontSize: 15, fontWeight: '800', color: '#222', flexShrink: 1 },
   navWrapOuter: { position: 'relative' },
   // Bridges the gap between the pill's own bottom edge and the triangle

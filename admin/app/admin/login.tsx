@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { BRAND_NAME } from '../../src/constants/brand';
 
 export default function AdminLoginScreen() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export default function AdminLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner}>
+        <Text style={styles.brand}>{BRAND_NAME}</Text>
         <Text style={styles.title}>🔐 Admin Portal</Text>
 
         <TextInput
@@ -116,6 +118,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     alignSelf: 'center',
   },
+  brand: { fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 32 },
   input: {
     borderWidth: 1,
