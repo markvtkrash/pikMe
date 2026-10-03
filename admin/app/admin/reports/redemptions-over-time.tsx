@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
-  title: { fontSize: 20, fontWeight: '800', color: '#2e7d32', marginBottom: 4 },
+  title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
@@ -79,6 +79,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   weekLabel: { width: 60, fontSize: 12, fontWeight: '700', color: '#666' },
   barTrack: { flex: 1, height: 10, backgroundColor: '#eee', borderRadius: 5, overflow: 'hidden' },
-  barFill: { height: 10, backgroundColor: '#2e7d32', borderRadius: 5 },
+  barFill: { height: 10, backgroundColor: '#1565C0', borderRadius: 5 },
   countLabel: { width: 28, fontSize: 13, fontWeight: '800', color: '#222', textAlign: 'right' },
 });

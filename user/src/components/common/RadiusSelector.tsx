@@ -1,27 +1,29 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRestaurantStore } from '../../store/restaurantStore';
 import { BRAND_COLORS } from '../../constants/brandTheme';
-import { RADIUS_OPTIONS_KM } from '../../constants/searchRadius';
+import { RADIUS_OPTIONS_MILES } from '../../constants/searchRadius';
+
+const METERS_PER_MILE = 1609.34;
 
 export function RadiusSelector() {
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const setSearchRadiusMeters = useRestaurantStore((s) => s.setSearchRadiusMeters);
-  const selectedKm = searchRadiusMeters / 1000;
+  const selectedMiles = Math.round(searchRadiusMeters / METERS_PER_MILE);
 
   return (
     <View style={styles.row}>
       <Text style={styles.label}>Distance</Text>
       <View style={styles.pills}>
-        {RADIUS_OPTIONS_KM.map((km) => {
-          const active = km === selectedKm;
+        {RADIUS_OPTIONS_MILES.map((mi) => {
+          const active = mi === selectedMiles;
           return (
             <TouchableOpacity
-              key={km}
+              key={mi}
               style={[styles.pill, active && styles.pillActive]}
-              onPress={() => setSearchRadiusMeters(km * 1000)}
+              onPress={() => setSearchRadiusMeters(mi * METERS_PER_MILE)}
               activeOpacity={0.85}
             >
-              <Text style={[styles.pillText, active && styles.pillTextActive]}>{km} km</Text>
+              <Text style={[styles.pillText, active && styles.pillTextActive]}>{mi} mi</Text>
             </TouchableOpacity>
           );
         })}

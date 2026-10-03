@@ -207,7 +207,7 @@ export default function EditCouponScreen() {
   if (loading || !coupon) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -466,7 +466,7 @@ const styles = StyleSheet.create({
   },
   discountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   discountInput: { flex: 1, marginBottom: 0 },
-  discountUnit: { fontSize: 18, fontWeight: '800', color: '#4CAF50', minWidth: 30, textAlign: 'center' },
+  discountUnit: { fontSize: 18, fontWeight: '800', color: '#1565C0', minWidth: 30, textAlign: 'center' },
 
   itemPickerToggle: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -499,12 +499,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
   },
-  statusToggleBgActive: { backgroundColor: '#E8F5E9' },
+  statusToggleBgActive: { backgroundColor: '#E3F2FD' },
   statusToggleText: { fontSize: 14, fontWeight: '600', color: '#222' },
   buttonGroup: { flexDirection: 'row', gap: 10, marginTop: 20 },
   updateBtn: {
     flex: 1.5,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 10,
     alignItems: 'center',

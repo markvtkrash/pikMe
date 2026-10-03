@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   addressRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   addressCol: { flex: 1, minWidth: 0 },
   addressLabel: { fontSize: 10, fontWeight: '800', color: '#999', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 2 },
-  addressLabelNew: { color: '#2e7d32' },
+  addressLabelNew: { color: '#1565C0' },
   addressName: { fontSize: 13, fontWeight: '700', color: '#222' },
   addressText: { fontSize: 12, color: '#666', marginTop: 1 },
   arrow: { fontSize: 18, color: '#999', fontWeight: '800' },
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
 
   buttonGroup: { flexDirection: 'row', gap: 8, marginTop: 12 },
   rejectBtn: { flex: 1, backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#c62828', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  approveBtn: { flex: 1, backgroundColor: '#4CAF50', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  approveBtn: { flex: 1, backgroundColor: '#1565C0', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   rejectBtnText: { color: '#c62828', fontWeight: '700', fontSize: 13 },
   approveBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   buttonDisabled: { opacity: 0.6 },

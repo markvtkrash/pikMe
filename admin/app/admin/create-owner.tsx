@@ -55,7 +55,7 @@ async function copyToClipboard(text: string) {
 export default function AdminCreateOwnerScreen() {
   const router = useRouter();
   const ownerSearchRadiusMeters = getOwnerSearchRadiusMeters();
-  const ownerSearchRadiusKm = ownerSearchRadiusMeters / 1000;
+  const ownerSearchRadiusMiles = (ownerSearchRadiusMeters / 1609.34).toFixed(1);
 
   const [locationQuery, setLocationQuery] = useState('');
   const [businessNameQuery, setBusinessNameQuery] = useState('');
@@ -423,7 +423,7 @@ export default function AdminCreateOwnerScreen() {
           <Text style={styles.radiusBannerText}>
             {businessNameQuery.trim()
               ? `📍 Showing matches for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of ${geocodedAddress}.`
-              : `📍 Showing restaurants within ${ownerSearchRadiusKm}km of ${geocodedAddress}.`}
+              : `📍 Showing restaurants within ${ownerSearchRadiusMiles}mi of ${geocodedAddress}.`}
           </Text>
         </View>
       )}
@@ -470,7 +470,7 @@ export default function AdminCreateOwnerScreen() {
             <Text style={styles.emptyText}>
               {businessNameQuery.trim()
                 ? `No match for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of that location`
-                : `No restaurants found within ${ownerSearchRadiusKm}km of that location`}
+                : `No restaurants found within ${ownerSearchRadiusMiles}mi of that location`}
             </Text>
           ) : (
             <Text style={styles.emptyText}>No matches for "{nameFilter}"</Text>

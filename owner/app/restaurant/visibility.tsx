@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
 
   pauseBtn: { marginTop: 4, backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   pauseBtnText: { color: '#E65100', fontSize: 14, fontWeight: '700' },
-  resumeBtn: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  resumeBtn: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   resumeBtnText: { color: '#fff' },
 });

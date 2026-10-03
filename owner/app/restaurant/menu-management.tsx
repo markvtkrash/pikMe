@@ -48,7 +48,7 @@ export default function MenuManagementScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -103,14 +103,14 @@ export default function MenuManagementScreen() {
         {/* View items / add a source */}
         <View style={styles.btnRow}>
           <TouchableOpacity
-            style={[styles.compactBtn, styles.compactBtnGreen]}
+            style={[styles.compactBtn, styles.compactBtnBlue]}
             onPress={() => router.push('/restaurant/menu-items')}
           >
             <View style={styles.favoriteCorner}>
               <FavoriteHeart active={favorites.has('menu-ai-pull')} onPress={() => toggleFavorite('menu-ai-pull')} />
             </View>
             <Text style={styles.compactBtnIcon}>🤖</Text>
-            <Text style={[styles.compactBtnText, { color: '#2e7d32' }]}>AI Assisted Menu Pull</Text>
+            <Text style={[styles.compactBtnText, { color: '#1565C0' }]}>AI Assisted Menu Pull</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.compactBtn, styles.compactBtnPurple]}
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1.4, backgroundColor: '#fff', borderRadius: 12, padding: 16, justifyContent: 'center', elevation: 1 },
   summaryEmptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
   summaryCount: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 4 },
-  summaryVerified: { fontSize: 13, color: '#2e7d32', fontWeight: '600' },
+  summaryVerified: { fontSize: 13, color: '#1565C0', fontWeight: '600' },
   summaryUnverified: { fontSize: 13, color: '#E65100', fontWeight: '600' },
 
   manualCurationCard: {
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   favoriteCorner: { position: 'absolute', top: 4, right: 4 },
-  compactBtnGreen: { borderColor: '#4CAF50', backgroundColor: '#E8F5E9' },
+  compactBtnBlue: { borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
   compactBtnPurple: { borderColor: '#8E24AA', backgroundColor: '#F3E5F5' },
   compactBtnTeal: { borderColor: '#00695C', backgroundColor: '#E0F2F1' },
   compactBtnOrange: { borderColor: '#E65100', backgroundColor: '#FFF3E0' },

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, RefreshControl,
+  StyleSheet, RefreshControl, Platform, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../../src/hooks/useLocation';
@@ -32,7 +32,7 @@ function greeting() {
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
+  const { location, loading: locationLoading, error: locationError, canAskAgain, refresh } = useLocation();
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const { data: restaurants = [], isLoading, error: fetchError, refetch, isRefetching } =
     useNearbyRestaurants(location);
@@ -120,9 +120,15 @@ export default function ExploreScreen() {
         <View style={styles.errorCard}>
           <Text style={styles.errorIcon}>📍</Text>
           <Text style={styles.errorBody}>{locationError}</Text>
-          <TouchableOpacity style={styles.btn} onPress={refresh}>
-            <Text style={styles.btnText}>Enable Location</Text>
-          </TouchableOpacity>
+          {!canAskAgain && Platform.OS !== 'web' ? (
+            <TouchableOpacity style={styles.btn} onPress={() => Linking.openSettings()}>
+              <Text style={styles.btnText}>Open Settings</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.btn} onPress={refresh}>
+              <Text style={styles.btnText}>Enable Location</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );
@@ -281,7 +287,7 @@ export default function ExploreScreen() {
             </View>
           }
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#4CAF50" />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor="#1565C0" />
           }
         />
       )}
@@ -314,9 +320,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
+    borderColor: '#BBDEFB',
   },
-  locationText: { fontSize: 12, color: '#2e7d32', fontWeight: '600' },
+  locationText: { fontSize: 12, color: '#1565C0', fontWeight: '600' },
 
   searchBar: {
     flexDirection: 'row',
@@ -355,16 +361,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 50,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     borderWidth: 1.5,
-    borderColor: '#4CAF50',
+    borderColor: '#1565C0',
   },
   moreFiltersPillActive: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#1565C0',
+    borderColor: '#1565C0',
   },
-  moreFiltersText: { fontSize: 13, color: '#2e7d32', fontWeight: '700' },
-  moreFiltersChevron: { fontSize: 13, color: '#2e7d32', fontWeight: '700' },
+  moreFiltersText: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
+  moreFiltersChevron: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
   moreFiltersTextActive: { color: '#fff' },
 
   chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
@@ -392,8 +398,8 @@ const styles = StyleSheet.create({
   sectionCount: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4CAF50',
-    backgroundColor: '#E8F5E9',
+    color: '#1565C0',
+    backgroundColor: '#E3F2FD',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 10,
@@ -413,7 +419,7 @@ const styles = StyleSheet.create({
   errorIcon: { fontSize: 40 },
   errorTitle: { fontSize: 16, fontWeight: '700', color: '#141414' },
   errorBody: { fontSize: 13, color: '#6B6B6B', textAlign: 'center', lineHeight: 20 },
-  btn: { marginTop: 6, backgroundColor: '#4CAF50', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
+  btn: { marginTop: 6, backgroundColor: '#1565C0', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 
   emptyBox: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40, gap: 8 },

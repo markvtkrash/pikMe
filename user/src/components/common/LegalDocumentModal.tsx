@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 16, paddingBottom: 20 },
   text: { fontSize: 13, color: '#555', lineHeight: 22 },
   closeBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     paddingVertical: 14,
     marginHorizontal: 16,
     marginBottom: 16,

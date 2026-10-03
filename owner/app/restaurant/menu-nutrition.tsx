@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   aiSuggestionText: { flex: 1, fontSize: 12.5, fontWeight: '600', color: '#E65100' },
   aiSuggestionBtnRow: { flexDirection: 'row', gap: 6 },
   aiSuggestionBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  aiSuggestionBtnConfirm: { backgroundColor: '#4CAF50' },
+  aiSuggestionBtnConfirm: { backgroundColor: '#1565C0' },
   aiSuggestionBtnConfirmText: { fontSize: 12, fontWeight: '800', color: '#fff' },
   aiSuggestionBtnReject: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#e53e3e' },
   aiSuggestionBtnRejectText: { fontSize: 12, fontWeight: '800', color: '#e53e3e' },
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   },
   aiCheckBtnText: { fontSize: 12.5, fontWeight: '800', color: '#1565C0' },
 
-  applyBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  applyBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   applyBtnDisabled: { opacity: 0.5 },
   applyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

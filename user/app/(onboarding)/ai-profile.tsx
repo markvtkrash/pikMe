@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   warnText: { fontSize: 13, color: '#e65100', marginBottom: 12 },
   loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',

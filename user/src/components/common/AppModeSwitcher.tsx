@@ -12,7 +12,7 @@ export function AppModeSwitcher() {
   const isEntertainment = (segments as string[])[1] === 'entertainment';
 
   return (
-    <View style={[styles.wrap, { paddingTop: insets.top + 8 }]}>
+    <View style={[styles.wrap, { paddingTop: insets.top + 44 }]}>
       <View style={styles.pillContainer}>
         <TouchableOpacity
           style={[styles.pill, !isEntertainment && styles.pillActive]}

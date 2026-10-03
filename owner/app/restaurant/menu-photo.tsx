@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   pickBtnText: { color: '#8E24AA', fontSize: 14, fontWeight: '700' },
 
-  extractBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  extractBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   extractBtnDisabled: { opacity: 0.5 },
   extractBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

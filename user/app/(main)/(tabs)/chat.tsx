@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   bulletIcon: {
     fontSize: 16,
-    color: '#2e7d32',
+    color: '#1565C0',
     fontWeight: '600',
     marginTop: 2,
   },
@@ -320,16 +320,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   followUpChip: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#C8E6C9',
+    borderColor: '#BBDEFB',
   },
   followUpText: {
     fontSize: 13,
-    color: '#2e7d32',
+    color: '#1565C0',
     fontWeight: '600',
     textAlign: 'center',
   },

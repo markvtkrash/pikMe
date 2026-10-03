@@ -287,7 +287,7 @@ export default function AdminOwnersScreen() {
                     disabled={isBusy}
                   >
                     {isBusy ? (
-                      <ActivityIndicator size="small" color={item.is_active ? '#c62828' : '#2e7d32'} />
+                      <ActivityIndicator size="small" color={item.is_active ? '#c62828' : '#1565C0'} />
                     ) : (
                       <Text style={[styles.actionBtnText, item.is_active ? styles.actionBtnWarnText : styles.actionBtnOkText]}>
                         {item.is_active ? '🚫 Deactivate' : '✓ Reactivate'}
@@ -498,8 +498,8 @@ const styles = StyleSheet.create({
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexShrink: 0 },
   badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'capitalize' },
-  badgeActive: { backgroundColor: '#E8F5E9' },
-  badgeTextActive: { color: '#2e7d32' },
+  badgeActive: { backgroundColor: '#E3F2FD' },
+  badgeTextActive: { color: '#1565C0' },
   badgeInactive: { backgroundColor: '#FFEBEE' },
   badgeTextInactive: { color: '#c62828' },
   badgeApproved: { backgroundColor: '#E3F2FD' },
@@ -512,8 +512,8 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 12, fontWeight: '700', color: '#333' },
   actionBtnWarn: { backgroundColor: '#FFEBEE' },
   actionBtnWarnText: { color: '#c62828' },
-  actionBtnOk: { backgroundColor: '#E8F5E9' },
-  actionBtnOkText: { color: '#2e7d32' },
+  actionBtnOk: { backgroundColor: '#E3F2FD' },
+  actionBtnOkText: { color: '#1565C0' },
 
   emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 40 },
 

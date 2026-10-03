@@ -234,7 +234,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (!configLoaded || session === undefined || (session && !hydrationAttempted)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }

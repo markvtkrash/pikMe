@@ -5,12 +5,12 @@ import { snapToGrid } from '../utils/geo';
 import { MAX_FETCH_RADIUS_METERS } from '../constants/searchRadius';
 import type { Coords } from './useLocation';
 
-// Always fetches/caches the full max radius — the 2/3/4/5km picker in the UI
+// Always fetches/caches the full max radius — the 1-6mi picker in the UI
 // filters this same result set client-side by distanceMeters instead of
 // triggering a new fetch per radius, which also keeps the server-side cache
-// check correct (it's always answering "do we have data within 5km?" instead
-// of a moving target that could false-positive a "hit" from a smaller
-// previous search).
+// check correct (it's always answering "do we have data within the max
+// radius?" instead of a moving target that could false-positive a "hit"
+// from a smaller previous search).
 export function useNearbyRestaurants(location: Coords | null) {
   const setRestaurants = useRestaurantStore((s) => s.setRestaurants);
 

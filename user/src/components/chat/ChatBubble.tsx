@@ -21,7 +21,7 @@ const styles = StyleSheet.create({
   rowAssistant: { justifyContent: 'flex-start' },
   avatar: { fontSize: 22, marginBottom: 2 },
   bubble: { maxWidth: '78%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
-  bubbleUser: { backgroundColor: '#4CAF50', borderBottomRightRadius: 4 },
+  bubbleUser: { backgroundColor: '#1565C0', borderBottomRightRadius: 4 },
   bubbleAssistant: { backgroundColor: '#f0f0f0', borderBottomLeftRadius: 4 },
   text: { fontSize: 15, lineHeight: 21 },
   textUser: { color: '#fff' },

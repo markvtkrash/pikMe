@@ -195,7 +195,7 @@ export default function AdminDashboard() {
           renderItem={({ item }) => {
             const status = getStatus(item);
             const statusColor = {
-              active: '#4CAF50',
+              active: '#1565C0',
               expired: '#FF9800',
               deleted: '#999',
               inactive: '#9C27B0',
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
 
   statsRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
   statCard: { paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, minWidth: 100, alignItems: 'center' },
-  statActive: { backgroundColor: '#E8F5E9' },
+  statActive: { backgroundColor: '#E3F2FD' },
   statExpired: { backgroundColor: '#FFF3E0' },
   statDeleted: { backgroundColor: '#F5F5F5', borderWidth: 1, borderColor: '#ddd' },
   statTotal: { backgroundColor: '#E3F2FD' },

@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Linking } from 'react-native';
+import { Alert } from '../../../src/utils/alert';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -333,7 +334,7 @@ const styles = StyleSheet.create({
   },
 
   tipsSection: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     borderRadius: 12,
     padding: 14,
     marginBottom: 24,
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
   tipText: {
     flex: 1,
     fontSize: 13,
-    color: '#2e7d32',
+    color: '#1565C0',
     lineHeight: 18,
   },
 

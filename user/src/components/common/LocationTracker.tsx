@@ -14,6 +14,7 @@ export function LocationTracker() {
   const setUserLocation = useRestaurantStore((s) => s.setUserLocation);
   const setLocationLoading = useRestaurantStore((s) => s.setLocationLoading);
   const setLocationError = useRestaurantStore((s) => s.setLocationError);
+  const setLocationCanAskAgain = useRestaurantStore((s) => s.setLocationCanAskAgain);
   const locationRefreshNonce = useRestaurantStore((s) => s.locationRefreshNonce);
   const isFirstRun = useRef(true);
 
@@ -21,12 +22,18 @@ export function LocationTracker() {
     setLocationLoading(true);
     setLocationError(null);
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status, canAskAgain } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        setLocationError('Location permission denied. Enable it in Settings.');
+        setLocationCanAskAgain(canAskAgain);
+        setLocationError(
+          canAskAgain
+            ? 'Location permission denied.'
+            : 'Location permission denied. This can no longer be requested in-app — enable it in your device/browser settings.'
+        );
         setLocationLoading(false);
         return;
       }
+      setLocationCanAskAgain(true);
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setUserLocation({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
     } catch (err: any) {

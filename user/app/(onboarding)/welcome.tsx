@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: '#555', textAlign: 'center', lineHeight: 24, marginBottom: 8 },
   steps: { fontSize: 13, color: '#999', marginBottom: 48 },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 14,
     paddingVertical: 16,
     paddingHorizontal: 48,

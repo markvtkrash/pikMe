@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { signUpRestaurantOwner } from '../../../src/api/restaurantAuth';
@@ -51,6 +51,9 @@ export default function RestaurantSignupScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.topLeftBar}>
+        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+      </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.title}>🍽️ Restaurant Owner</Text>
         <Text style={styles.subtitle}>Create your account</Text>
@@ -108,6 +111,8 @@ export default function RestaurantSignupScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  topLeftBar: { paddingTop: 16, paddingLeft: 16 },
+  topLeftLogo: { width: 32, height: 32, borderRadius: 16 },
   inner: {
     flex: 1,
     justifyContent: 'center',
@@ -136,13 +141,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successText: {
-    color: '#2e7d32',
+    color: '#1565C0',
     fontSize: 14,
     marginBottom: 10,
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -151,5 +156,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  linkText: { color: '#4CAF50', fontSize: 14, textAlign: 'center', marginTop: 20, fontWeight: '600' },
+  linkText: { color: '#1565C0', fontSize: 14, textAlign: 'center', marginTop: 20, fontWeight: '600' },
 });

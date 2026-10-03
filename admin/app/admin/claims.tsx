@@ -117,7 +117,7 @@ export default function AdminClaimsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 2 },
   title: { fontSize: 24, fontWeight: '800', color: '#222' },
-  count: { fontSize: 18, fontWeight: '800', color: '#4CAF50', backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   claimCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
 
   buttonGroup: { flexDirection: 'row', gap: 8 },
   rejectBtn: { flex: 1, backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#c62828', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  approveBtn: { flex: 1, backgroundColor: '#4CAF50', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  approveBtn: { flex: 1, backgroundColor: '#1565C0', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   rejectBtnText: { color: '#c62828', fontWeight: '700', fontSize: 13 },
   approveBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   buttonDisabled: { opacity: 0.6 },

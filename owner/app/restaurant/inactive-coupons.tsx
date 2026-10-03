@@ -69,7 +69,7 @@ export default function InactiveCouponsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -134,7 +134,7 @@ export default function InactiveCouponsScreen() {
                   disabled={reactivatingId === item.id}
                 >
                   {reactivatingId === item.id ? (
-                    <ActivityIndicator color="#2e7d32" size="small" />
+                    <ActivityIndicator color="#1565C0" size="small" />
                   ) : (
                     <Text style={styles.reactivateBtnText}>▶ Reactivate</Text>
                   )}
@@ -180,13 +180,13 @@ const styles = StyleSheet.create({
   usageText: { fontSize: 11, color: '#666', fontWeight: '600' },
 
   couponFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
-  editBtn: { backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  editBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   reactivateBtn: {
-    backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#4CAF50',
+    backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0',
     borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8,
   },
-  reactivateBtnText: { fontSize: 12, fontWeight: '700', color: '#2e7d32' },
+  reactivateBtnText: { fontSize: 12, fontWeight: '700', color: '#1565C0' },
   buttonDisabled: { opacity: 0.6 },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },

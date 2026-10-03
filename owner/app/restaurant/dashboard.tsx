@@ -76,9 +76,9 @@ export default function RestaurantDashboardScreen() {
 
   // Show status badge if pending approval
   const statusColor = restaurant.status === 'pending' ? '#FFF3E0' :
-                      restaurant.status === 'approved' ? '#E8F5E9' : '#FFEBEE';
+                      restaurant.status === 'approved' ? '#E3F2FD' : '#FFEBEE';
   const statusTextColor = restaurant.status === 'pending' ? '#E65100' :
-                          restaurant.status === 'approved' ? '#2e7d32' : '#c62828';
+                          restaurant.status === 'approved' ? '#1565C0' : '#c62828';
   const statusIcon = restaurant.status === 'pending' ? '⏳' :
                      restaurant.status === 'approved' ? '✓' : '✕';
 
@@ -164,11 +164,11 @@ export default function RestaurantDashboardScreen() {
       {/* Quick links — compact tiles, several per row */}
       <View style={styles.quickLinksGrid}>
         <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkGreen]}
+          style={[styles.quickLink, styles.quickLinkBlue]}
           onPress={() => router.push('/restaurant/menu')}
         >
           <Text style={styles.quickLinkIcon}>📋</Text>
-          <Text style={[styles.quickLinkText, { color: '#2e7d32' }]}>Coupon Management</Text>
+          <Text style={[styles.quickLinkText, { color: '#1565C0' }]}>Coupon Management</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -214,13 +214,13 @@ const styles = StyleSheet.create({
   logoutText: { fontSize: 12, color: '#e53e3e', fontWeight: '600' },
 
   resolvedBanner: {
-    backgroundColor: '#E8F5E9', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12,
-    borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#4CAF50', flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#E3F2FD', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#1565C0', flexDirection: 'row', alignItems: 'center', gap: 10,
   },
   resolvedBannerIcon: { fontSize: 20 },
-  resolvedBannerTitle: { fontSize: 13, fontWeight: '700', color: '#2e7d32' },
-  resolvedBannerText: { fontSize: 12, color: '#2e7d32', marginTop: 2 },
-  resolvedBannerDismiss: { backgroundColor: '#4CAF50', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
+  resolvedBannerTitle: { fontSize: 13, fontWeight: '700', color: '#1565C0' },
+  resolvedBannerText: { fontSize: 12, color: '#1565C0', marginTop: 2 },
+  resolvedBannerDismiss: { backgroundColor: '#1565C0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   resolvedBannerDismissText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
   favoritesSection: { paddingHorizontal: 16, paddingTop: 12 },
@@ -246,7 +246,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 8,
     borderRadius: 12, borderLeftWidth: 4,
   },
-  quickLinkGreen: { backgroundColor: '#E8F5E9', borderLeftColor: '#4CAF50' },
   quickLinkBlue: { backgroundColor: '#E3F2FD', borderLeftColor: '#1565C0' },
   quickLinkPurple: { backgroundColor: '#F3E5F5', borderLeftColor: '#8E24AA' },
   quickLinkIcon: { fontSize: 22 },
@@ -260,7 +259,7 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#222' },
   buttonGroup: { flexDirection: 'row', gap: 8 },
-  addBtn: { backgroundColor: '#4CAF50', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  addBtn: { backgroundColor: '#1565C0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
   addBtnDisabled: { opacity: 0.5 },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
 
@@ -268,7 +267,7 @@ const styles = StyleSheet.create({
   emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#222' },
   emptyBody: { fontSize: 14, color: '#666', textAlign: 'center' },
-  claimBtn: { backgroundColor: '#4CAF50', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
+  claimBtn: { backgroundColor: '#1565C0', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8, marginTop: 12 },
   claimBtnText: { color: '#fff', fontWeight: '600' },
 
 });

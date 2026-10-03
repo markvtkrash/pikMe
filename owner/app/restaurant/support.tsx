@@ -10,7 +10,7 @@ import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: string }> = {
   open: { bg: '#E3F2FD', text: '#1976D2', label: 'Open' },
   in_progress: { bg: '#FFF3E0', text: '#E65100', label: 'In Progress' },
-  resolved: { bg: '#E8F5E9', text: '#2e7d32', label: 'Resolved' },
+  resolved: { bg: '#E3F2FD', text: '#1565C0', label: 'Resolved' },
   closed: { bg: '#f0f0f0', text: '#666', label: 'Closed' },
 };
 
@@ -119,7 +119,7 @@ export default function SupportScreen() {
             </TouchableOpacity>
 
             <Text style={styles.historyTitle}>Your Tickets</Text>
-            {loading && <ActivityIndicator color="#4CAF50" style={{ marginTop: 12 }} />}
+            {loading && <ActivityIndicator color="#1565C0" style={{ marginTop: 12 }} />}
             {!loading && tickets.length === 0 && (
               <Text style={styles.emptyText}>No support tickets yet</Text>
             )}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', marginBottom: 10,
   },
   messageInput: { minHeight: 90, textAlignVertical: 'top' },
-  submitBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+  submitBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   historyTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginTop: 20, marginBottom: 4 },
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
 
   expandedContent: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   ticketMessage: { fontSize: 13, color: '#444', lineHeight: 19 },
-  resolutionBox: { backgroundColor: '#E8F5E9', borderRadius: 8, padding: 10, marginTop: 10 },
-  resolutionLabel: { fontSize: 11, fontWeight: '800', color: '#2e7d32', textTransform: 'uppercase', marginBottom: 4 },
-  resolutionText: { fontSize: 13, color: '#2e7d32', lineHeight: 18 },
+  resolutionBox: { backgroundColor: '#E3F2FD', borderRadius: 8, padding: 10, marginTop: 10 },
+  resolutionLabel: { fontSize: 11, fontWeight: '800', color: '#1565C0', textTransform: 'uppercase', marginBottom: 4 },
+  resolutionText: { fontSize: 13, color: '#1565C0', lineHeight: 18 },
 });

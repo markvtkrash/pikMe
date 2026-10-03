@@ -13,7 +13,8 @@ export function useLocation() {
   const location = useRestaurantStore((s) => s.userLocation);
   const loading = useRestaurantStore((s) => s.locationLoading);
   const error = useRestaurantStore((s) => s.locationError);
+  const canAskAgain = useRestaurantStore((s) => s.locationCanAskAgain);
   const requestLocationRefresh = useRestaurantStore((s) => s.requestLocationRefresh);
 
-  return { location, error, loading, refresh: requestLocationRefresh };
+  return { location, error, loading, canAskAgain, refresh: requestLocationRefresh };
 }

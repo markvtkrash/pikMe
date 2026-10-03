@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
-  title: { fontSize: 20, fontWeight: '800', color: '#2e7d32', marginBottom: 4 },
+  title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },

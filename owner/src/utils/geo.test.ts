@@ -28,19 +28,17 @@ describe('haversineDistance', () => {
 });
 
 describe('formatDistance', () => {
-  it('formats sub-kilometer distances rounded to the nearest meter', () => {
-    expect(formatDistance(450.4)).toBe('450m');
-    expect(formatDistance(0)).toBe('0m');
+  it('formats sub-0.1-mile distances rounded to the nearest foot', () => {
+    expect(formatDistance(0)).toBe('0ft');
+    expect(formatDistance(100)).toBe('328ft');
+    expect(formatDistance(160)).toBe('525ft');
   });
 
-  it('rounds up to the next meter at the .5 boundary', () => {
-    expect(formatDistance(999.6)).toBe('1000m');
-  });
-
-  it('formats distances at or above 1000m in kilometers with one decimal', () => {
-    expect(formatDistance(1000)).toBe('1.0km');
-    expect(formatDistance(1500)).toBe('1.5km');
-    expect(formatDistance(23456)).toBe('23.5km');
+  it('formats distances at or above 0.1 miles in miles with one decimal', () => {
+    expect(formatDistance(161)).toBe('0.1mi');
+    expect(formatDistance(1000)).toBe('0.6mi');
+    expect(formatDistance(1609.34)).toBe('1.0mi');
+    expect(formatDistance(23456)).toBe('14.6mi');
   });
 });
 

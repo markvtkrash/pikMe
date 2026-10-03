@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView, Modal,
-  ActivityIndicator, } from 'react-native';
+  ActivityIndicator, Image, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
@@ -186,8 +186,9 @@ export default function AdminDashboard() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <TouchableOpacity activeOpacity={1} onPress={handleTitleTap}>
-            <Text style={styles.title}>🏢 {BRAND_NAME} Admin</Text>
+          <TouchableOpacity activeOpacity={1} onPress={handleTitleTap} style={styles.titleRow}>
+            <Image source={require('../../assets/logo.png')} style={styles.titleLogo} />
+            <Text style={styles.title}>{BRAND_NAME} Admin</Text>
           </TouchableOpacity>
           <Text style={styles.subtitle}>Administration Dashboard</Text>
         </View>
@@ -390,7 +391,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   headerContent: { flex: 1 },
-  title: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 4 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 },
+  titleLogo: { width: 32, height: 32, borderRadius: 16 },
+  title: { fontSize: 28, fontWeight: '800', color: '#fff' },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)' },
   headerRight: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   userSection: { paddingVertical: 8 },
@@ -436,7 +439,7 @@ const styles = StyleSheet.create({
   adminTileSupport: { backgroundColor: '#CFD8DC' },
   adminTileIcon: { fontSize: 26 },
   adminTileTitle: { fontSize: 13, fontWeight: '700', color: '#222', textAlign: 'center' },
-  adminTileDetail: { fontSize: 11, fontWeight: '700', color: '#2e7d32', marginTop: 2 },
+  adminTileDetail: { fontSize: 11, fontWeight: '700', color: '#1565C0', marginTop: 2 },
   adminTileBadge: {
     position: 'absolute', top: 8, right: 8, backgroundColor: '#e53e3e', borderRadius: 10,
     minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,

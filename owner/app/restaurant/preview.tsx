@@ -180,6 +180,6 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 14, fontWeight: '700', color: '#222' },
   itemNutrition: { fontSize: 12, color: '#666', marginTop: 2 },
   unverifiedTag: { fontSize: 11, color: '#E65100', fontWeight: '700', marginTop: 3 },
-  itemCouponBadge: { backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 10 },
-  itemCouponBadgeText: { fontSize: 12, fontWeight: '800', color: '#2e7d32' },
+  itemCouponBadge: { backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginLeft: 10 },
+  itemCouponBadgeText: { fontSize: 12, fontWeight: '800', color: '#1565C0' },
 });

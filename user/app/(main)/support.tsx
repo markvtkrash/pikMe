@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, TextInput,
-  ActivityIndicator, Alert,
+  ActivityIndicator,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createSupportTicket, getMyTickets, SupportTicket, TicketStatus } from '../../src/api/supportTickets';

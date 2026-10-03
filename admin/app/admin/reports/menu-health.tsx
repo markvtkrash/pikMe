@@ -12,12 +12,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function healthColor(pct: number): string {
-  if (pct >= 80) return '#2e7d32';
+  if (pct >= 80) return '#1565C0';
   if (pct >= 40) return '#E65100';
   return '#c62828';
 }
 function healthBg(pct: number): string {
-  if (pct >= 80) return '#E8F5E9';
+  if (pct >= 80) return '#E3F2FD';
   if (pct >= 40) return '#FFF3E0';
   return '#FFEBEE';
 }
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 90, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14,
     alignItems: 'center', elevation: 1,
   },
-  snapshotBoxActive: { backgroundColor: '#E8F5E9' },
+  snapshotBoxActive: { backgroundColor: '#E3F2FD' },
   snapshotBoxOrphaned: { backgroundColor: '#FFF3E0' },
   snapshotNumber: { fontSize: 22, fontWeight: '800', color: '#222' },
   snapshotLabel: { fontSize: 11, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   tableCell: { flex: 1, fontSize: 13, color: '#333', fontWeight: '600' },
 
   healthRow: { alignItems: 'center', borderLeftWidth: 3, paddingLeft: 8 },
-  verifiedCell: { color: '#2e7d32' },
+  verifiedCell: { color: '#1565C0' },
   unverifiedCell: { color: '#c62828' },
   pctCol: { flex: 1 },
   pctBadge: { alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },

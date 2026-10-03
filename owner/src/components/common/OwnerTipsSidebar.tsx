@@ -107,5 +107,5 @@ const styles = StyleSheet.create({
   title: { fontSize: 13.5, fontWeight: '800', color: '#222', marginBottom: 6 },
   body: { fontSize: 12, color: '#777', lineHeight: 17, marginBottom: 12 },
   image: { width: '100%', height: 110, borderRadius: 10, backgroundColor: '#f0f0f0' },
-  linkHint: { fontSize: 11, fontWeight: '700', color: '#4CAF50', marginTop: 8, alignSelf: 'flex-end' },
+  linkHint: { fontSize: 11, fontWeight: '700', color: '#1565C0', marginTop: 8, alignSelf: 'flex-end' },
 });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
@@ -67,6 +67,9 @@ export default function AdminLoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.topLeftBar}>
+        <Image source={require('../../assets/logo.png')} style={styles.topLeftLogo} />
+      </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.brand}>{BRAND_NAME}</Text>
         <Text style={styles.title}>🔐 Admin Portal</Text>
@@ -118,6 +121,8 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     alignSelf: 'center',
   },
+  topLeftBar: { paddingTop: 16, paddingLeft: 16 },
+  topLeftLogo: { width: 32, height: 32, borderRadius: 16 },
   brand: { fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 32 },
   input: {

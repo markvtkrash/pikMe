@@ -36,8 +36,8 @@ const REPORTS: ReportCard[] = [
     icon: '📊',
     title: 'Redemptions Over Time',
     subtitle: 'Coupon activations across all restaurants, by week',
-    color: '#2e7d32',
-    bg: '#E8F5E9',
+    color: '#1565C0',
+    bg: '#E3F2FD',
     href: '/admin/reports/redemptions-over-time',
   },
   {
@@ -45,8 +45,8 @@ const REPORTS: ReportCard[] = [
     icon: '🏆',
     title: 'Top Coupons',
     subtitle: 'Ranked by redemption count, across all restaurants',
-    color: '#2e7d32',
-    bg: '#E8F5E9',
+    color: '#1565C0',
+    bg: '#E3F2FD',
     href: '/admin/reports/top-coupons',
   },
   {

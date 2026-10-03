@@ -102,7 +102,7 @@ export default function OrphanedCouponsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -221,12 +221,12 @@ const styles = StyleSheet.create({
   couponCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderLeftWidth: 4, borderLeftColor: '#FFA500' },
   couponHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   couponCode: { fontSize: 16, fontWeight: '800', color: '#222' },
-  discountValue: { fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  discountValue: { fontSize: 14, fontWeight: '700', color: '#1565C0' },
   expiryText: { fontSize: 11, color: '#999', marginBottom: 12 },
 
   actionsRow: { flexDirection: 'row', gap: 8 },
-  reactivateBtn: { flex: 1, backgroundColor: '#E8F5E9', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
-  reactivateBtnText: { fontSize: 13, fontWeight: '700', color: '#2e7d32' },
+  reactivateBtn: { flex: 1, backgroundColor: '#E3F2FD', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  reactivateBtnText: { fontSize: 13, fontWeight: '700', color: '#1565C0' },
   deleteBtn: { flex: 1, backgroundColor: '#FFEBEE', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
   deleteBtnText: { fontSize: 13, fontWeight: '700', color: '#e53e3e' },
 

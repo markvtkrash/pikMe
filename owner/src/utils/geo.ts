@@ -13,9 +13,13 @@ export function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const METERS_PER_MILE = 1609.34;
+const METERS_PER_FOOT = 0.3048;
+
 export function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)}m`;
-  return `${(meters / 1000).toFixed(1)}km`;
+  const miles = meters / METERS_PER_MILE;
+  if (miles < 0.1) return `${Math.round(meters / METERS_PER_FOOT)}ft`;
+  return `${miles.toFixed(1)}mi`;
 }
 
 // Snap coordinates to ~200m grid to prevent over-fetching on small movements

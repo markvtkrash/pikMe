@@ -33,7 +33,7 @@ const ITEM_SPECIFIC_TYPES = ['item_percent', 'item_fixed'];
 type StatusKey = 'active' | 'inactive' | 'expired' | 'orphaned';
 
 const STATUS_FILTERS: { key: StatusKey; label: string; color: string }[] = [
-  { key: 'active', label: '✓ Active', color: '#4CAF50' },
+  { key: 'active', label: '✓ Active', color: '#1565C0' },
   { key: 'inactive', label: '⏸ Inactive', color: '#757575' },
   { key: 'expired', label: '❌ Expired', color: '#c62828' },
   { key: 'orphaned', label: '⚠️ Orphaned', color: '#FFA500' },
@@ -176,7 +176,7 @@ export default function CouponStatusScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   statusBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
   couponHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' },
   couponCode: { fontSize: 16, fontWeight: '800', color: '#222' },
-  discountValue: { fontSize: 14, fontWeight: '700', color: '#4CAF50' },
+  discountValue: { fontSize: 14, fontWeight: '700', color: '#1565C0' },
   itemNameText: { fontSize: 12.5, color: '#555', fontWeight: '600', marginBottom: 4 },
   couponMetaRow: { flexDirection: 'row', marginTop: 4, marginBottom: 4 },
   couponMetaCol: { flex: 1, minWidth: 0, gap: 1 },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   couponMetaValue: { fontSize: 12, fontWeight: '500', color: '#444' },
 
   actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  editBtn: { backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  editBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   duplicateBtn: { backgroundColor: '#F3E5F5', borderWidth: 1.5, borderColor: '#8E24AA', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   duplicateBtnText: { fontSize: 12, fontWeight: '700', color: '#8E24AA' },
@@ -417,8 +417,8 @@ const styles = StyleSheet.create({
   deleteBtnText: { fontSize: 12, fontWeight: '700', color: '#e53e3e' },
   deactivateBtn: { backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   deactivateBtnText: { fontSize: 12, fontWeight: '700', color: '#E65100' },
-  reactivateBtn: { backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
-  reactivateBtnText: { fontSize: 12, fontWeight: '700', color: '#2e7d32' },
+  reactivateBtn: { backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
+  reactivateBtnText: { fontSize: 12, fontWeight: '700', color: '#1565C0' },
   reassignBtn: { backgroundColor: '#FFF8E1', borderWidth: 1.5, borderColor: '#FFA500', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   reassignBtnText: { fontSize: 12, fontWeight: '700', color: '#FFA500' },
 

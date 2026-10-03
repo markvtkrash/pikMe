@@ -8,7 +8,7 @@ import { getAllRestaurants, AdminRestaurant, RestaurantStatus } from '../../src/
 
 const STATUS_COLORS: Record<RestaurantStatus, { bg: string; text: string; label: string }> = {
   pending: { bg: '#FFF3E0', text: '#E65100', label: 'Pending' },
-  approved: { bg: '#E8F5E9', text: '#2e7d32', label: 'Approved' },
+  approved: { bg: '#E3F2FD', text: '#1565C0', label: 'Approved' },
   rejected: { bg: '#FFEBEE', text: '#c62828', label: 'Rejected' },
   closed: { bg: '#e53e3e', text: '#fff', label: 'Closed' },
 };

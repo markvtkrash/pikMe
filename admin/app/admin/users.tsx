@@ -31,7 +31,7 @@ interface AppUser {
 const ROLE_COLORS: Record<UserRole, string> = {
   admin: '#8E24AA',
   owner: '#1565C0',
-  customer: '#2E7D32',
+  customer: '#1565C0',
 };
 
 export default function AdminUsersScreen() {
@@ -176,9 +176,9 @@ export default function AdminUsersScreen() {
                       disabled={busy}
                     >
                       {busy ? (
-                        <ActivityIndicator size="small" color={blocked ? '#2e7d32' : '#e53e3e'} />
+                        <ActivityIndicator size="small" color={blocked ? '#1565C0' : '#e53e3e'} />
                       ) : (
-                        <Text style={[styles.blockBtnText, { color: blocked ? '#2e7d32' : '#e53e3e' }]}>
+                        <Text style={[styles.blockBtnText, { color: blocked ? '#1565C0' : '#e53e3e' }]}>
                           {blocked ? 'Unblock' : 'Block'}
                         </Text>
                       )}
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   userActions: { alignItems: 'flex-end', gap: 6 },
   blockBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   blockBtnDanger: { borderColor: '#e53e3e', backgroundColor: '#FFEBEE' },
-  unblockBtn: { borderColor: '#2e7d32', backgroundColor: '#E8F5E9' },
+  unblockBtn: { borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
   blockBtnText: { fontSize: 11, fontWeight: '700' },
   btnDisabled: { opacity: 0.5 },
 
@@ -269,6 +269,6 @@ const styles = StyleSheet.create({
   confirmCancelBtn: { paddingHorizontal: 14, paddingVertical: 10 },
   confirmCancelText: { fontSize: 13, fontWeight: '700', color: '#666' },
   confirmBlockBtn: { backgroundColor: '#e53e3e', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  confirmUnblockBtn: { backgroundColor: '#2e7d32', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  confirmUnblockBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 10 },
   confirmActionText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });

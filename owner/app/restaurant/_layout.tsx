@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Slot, useSegments, useRouter } from 'expo-router';
 import { OwnerNavHeader } from '../../src/components/common/OwnerNavHeader';
 import { OwnerTipsSidebar } from '../../src/components/common/OwnerTipsSidebar';
@@ -24,6 +24,9 @@ function PendingApprovalScreen() {
 
   return (
     <View style={styles.pendingContainer}>
+      <View style={styles.pendingTopLeftBar}>
+        <Image source={require('../../assets/logo.png')} style={styles.pendingTopLeftLogo} />
+      </View>
       <View style={styles.pendingCard}>
         <Text style={styles.pendingIcon}>{isRejected ? '✕' : '⏳'}</Text>
         <Text style={styles.pendingRestaurantName}>{restaurant.name}</Text>
@@ -83,6 +86,8 @@ const styles = StyleSheet.create({
   content: { flex: 1, position: 'relative' },
 
   pendingContainer: { flex: 1, backgroundColor: '#f6f6f6', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  pendingTopLeftBar: { position: 'absolute', top: 16, left: 16 },
+  pendingTopLeftLogo: { width: 32, height: 32, borderRadius: 16 },
   pendingCard: {
     backgroundColor: '#fff', borderRadius: 16, padding: 28, width: '100%', maxWidth: 440,
     alignItems: 'center', elevation: 2,

@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     minHeight: 220, marginBottom: 14,
   },
 
-  extractBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  extractBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   extractBtnDisabled: { opacity: 0.5 },
   extractBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

@@ -169,7 +169,7 @@ export default function ManualMenuScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -214,6 +214,15 @@ export default function ManualMenuScreen() {
       else next.add(index);
       return next;
     });
+  }
+
+  // Toggles against every row currently in the list (not just what's visible
+  // after sorting — sort only reorders, it never filters), so this always
+  // means "every item," matching what Delete Selected would then remove.
+  function toggleSelectAll() {
+    setSelectedIndices((prev) =>
+      prev.size === items.length ? new Set() : new Set(items.map((_, i) => i))
+    );
   }
 
   function confirmBulkRemove() {
@@ -380,15 +389,22 @@ export default function ManualMenuScreen() {
         </View>
 
         {selectionMode && (
-          <TouchableOpacity
-            style={[styles.bulkDeleteBtn, selectedIndices.size === 0 && styles.saveBtnDisabled]}
-            onPress={() => setBulkRemoveConfirm(true)}
-            disabled={selectedIndices.size === 0}
-          >
-            <Text style={styles.bulkDeleteBtnText}>
-              🗑 Delete Selected ({selectedIndices.size})
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.bulkActionsRow}>
+            <TouchableOpacity style={styles.selectAllBtn} onPress={toggleSelectAll}>
+              <Text style={styles.selectAllBtnText}>
+                {selectedIndices.size === items.length ? 'Deselect All' : 'Select All'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.bulkDeleteBtn, selectedIndices.size === 0 && styles.saveBtnDisabled]}
+              onPress={() => setBulkRemoveConfirm(true)}
+              disabled={selectedIndices.size === 0}
+            >
+              <Text style={styles.bulkDeleteBtnText}>
+                🗑 Delete Selected ({selectedIndices.size})
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -486,7 +502,7 @@ export default function ManualMenuScreen() {
                     disabled={saving || togglingStockIndex === index}
                   >
                     {togglingStockIndex === index ? (
-                      <ActivityIndicator size="small" color={item.isOutOfStock ? '#2e7d32' : '#c62828'} />
+                      <ActivityIndicator size="small" color={item.isOutOfStock ? '#1565C0' : '#c62828'} />
                     ) : (
                       <Text style={[styles.stockToggleBtnText, item.isOutOfStock && styles.stockToggleBtnBackText]} numberOfLines={1}>
                         {item.isOutOfStock ? '✓ In Stock' : '🚫 Out of Stock'}
@@ -691,7 +707,7 @@ const styles = StyleSheet.create({
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666' },
-  topSaveBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 14, alignSelf: 'flex-start' },
+  topSaveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingHorizontal: 20, paddingVertical: 14, alignSelf: 'flex-start' },
   topSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   content: { padding: 16 },
@@ -721,8 +737,8 @@ const styles = StyleSheet.create({
     borderRadius: 7, paddingHorizontal: 6, paddingVertical: 4, flexShrink: 0,
   },
   stockToggleBtnText: { fontSize: 9.5, fontWeight: '800', color: '#c62828' },
-  stockToggleBtnBack: { backgroundColor: '#E8F5E9', borderColor: '#4CAF50' },
-  stockToggleBtnBackText: { color: '#2e7d32' },
+  stockToggleBtnBack: { backgroundColor: '#E3F2FD', borderColor: '#1565C0' },
+  stockToggleBtnBackText: { color: '#1565C0' },
   // minWidth:0 lets this shrink below its own content width when the row is
   // tight (a flex item's default min-width is "big enough to fit its
   // content," not 0) — without it, this refuses to shrink and pushes
@@ -739,10 +755,10 @@ const styles = StyleSheet.create({
   removeBtnText: { fontSize: 12, fontWeight: '700', color: '#e53e3e' },
 
   verifiedBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 10, flexShrink: 0 },
-  verifiedBadgeYes: { backgroundColor: '#E8F5E9' },
+  verifiedBadgeYes: { backgroundColor: '#E3F2FD' },
   verifiedBadgeNo: { backgroundColor: '#FFF3E0' },
   verifiedBadgeText: { fontSize: 9.5, fontWeight: '700' },
-  verifiedBadgeTextYes: { color: '#2e7d32' },
+  verifiedBadgeTextYes: { color: '#1565C0' },
   verifiedBadgeTextNo: { color: '#E65100' },
 
   unconfirmBtn: {
@@ -752,18 +768,18 @@ const styles = StyleSheet.create({
   unconfirmBtnText: { fontSize: 9.5, color: '#E65100', fontWeight: '800' },
 
   verifyBtn: {
-    backgroundColor: '#4CAF50', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4,
+    backgroundColor: '#1565C0', borderRadius: 7, paddingHorizontal: 7, paddingVertical: 4,
     elevation: 1, flexShrink: 0,
   },
   verifyBtnText: { fontSize: 10.5, color: '#fff', fontWeight: '800' },
 
   addBtn: {
     alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#4CAF50',
+    backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0',
     borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14,
   },
   addBtnTop: { marginBottom: 10 },
-  addBtnText: { fontSize: 14, fontWeight: '700', color: '#2e7d32' },
+  addBtnText: { fontSize: 14, fontWeight: '700', color: '#1565C0' },
 
   sortRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
   sortLabel: { fontSize: 13, fontWeight: '700', color: '#666' },
@@ -784,9 +800,15 @@ const styles = StyleSheet.create({
   selectToggleText: { fontSize: 14, fontWeight: '700', color: '#e53e3e' },
   selectToggleTextCancel: { color: '#555' },
   limitReachedText: { fontSize: 13, fontWeight: '600', color: '#E65100' },
+  bulkActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  selectAllBtn: {
+    backgroundColor: '#f0f0f0', borderWidth: 1.5, borderColor: '#ccc',
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  selectAllBtnText: { fontSize: 13, fontWeight: '800', color: '#555' },
   bulkDeleteBtn: {
-    alignSelf: 'flex-start', backgroundColor: '#FFEBEE', borderWidth: 1.5, borderColor: '#e53e3e',
-    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+    backgroundColor: '#FFEBEE', borderWidth: 1.5, borderColor: '#e53e3e',
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,
   },
   bulkDeleteBtnText: { fontSize: 13, fontWeight: '800', color: '#e53e3e' },
   checkbox: {
@@ -796,10 +818,10 @@ const styles = StyleSheet.create({
   checkboxChecked: { backgroundColor: '#e53e3e', borderColor: '#e53e3e' },
   checkboxMark: { fontSize: 14, fontWeight: '800', color: '#fff' },
 
-  saveBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  lastSaved: { fontSize: 13, color: '#2e7d32', fontWeight: '600', marginTop: 12 },
+  lastSaved: { fontSize: 13, color: '#1565C0', fontWeight: '600', marginTop: 12 },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20,
@@ -817,7 +839,7 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   modalBtnCancel: { backgroundColor: '#f0f0f0' },
   modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#555' },
-  modalBtnAdd: { backgroundColor: '#4CAF50' },
+  modalBtnAdd: { backgroundColor: '#1565C0' },
   modalBtnAddText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   modalBtnDanger: { backgroundColor: '#e53e3e' },
   modalBtnDangerText: { fontSize: 14, fontWeight: '700', color: '#fff' },

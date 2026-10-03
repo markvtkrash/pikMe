@@ -29,8 +29,8 @@ const REPORTS: ReportCard[] = [
     icon: '📈',
     title: 'Redemptions Over Time',
     subtitle: 'How often customers actually use your coupons, by week',
-    color: '#2e7d32',
-    bg: '#E8F5E9',
+    color: '#1565C0',
+    bg: '#E3F2FD',
     href: '/restaurant/reports/redemptions-over-time',
   },
   {
@@ -56,8 +56,8 @@ const REPORTS: ReportCard[] = [
     icon: '🏆',
     title: 'Top Performing Coupons',
     subtitle: 'Which of your coupons customers actually redeem most',
-    color: '#2e7d32',
-    bg: '#E8F5E9',
+    color: '#1565C0',
+    bg: '#E3F2FD',
     href: '/restaurant/reports/top-coupons',
   },
 ];

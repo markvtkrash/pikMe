@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     minHeight: 220, marginBottom: 14,
   },
 
-  extractBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  extractBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   extractBtnDisabled: { opacity: 0.5 },
   extractBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
@@ -317,10 +317,10 @@ const styles = StyleSheet.create({
   },
   errorBannerText: { fontSize: 13, fontWeight: '600', color: '#c62828', lineHeight: 18 },
   successBanner: {
-    backgroundColor: '#E8F5E9', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#4CAF50',
+    backgroundColor: '#E3F2FD', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#1565C0',
     paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
   },
-  successBannerText: { fontSize: 13, fontWeight: '600', color: '#2e7d32', lineHeight: 18 },
+  successBannerText: { fontSize: 13, fontWeight: '600', color: '#1565C0', lineHeight: 18 },
 
   emptyText: { fontSize: 14, color: '#999' },
 });

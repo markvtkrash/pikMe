@@ -22,6 +22,11 @@ interface RestaurantStore {
   // to and what useLocation() now just reads back.
   locationLoading: boolean;
   locationError: string | null;
+  // Once the OS has recorded a real "denied" decision, requesting
+  // permission again just silently re-returns denied with no fresh native
+  // prompt — canAskAgain tells the UI when that's the case, so it can offer
+  // "Open Settings" instead of a retry button that can never succeed.
+  locationCanAskAgain: boolean;
   locationRefreshNonce: number;
   setRestaurants: (restaurants: Restaurant[]) => void;
   setSelectedRestaurantId: (id: string | null) => void;
@@ -29,6 +34,7 @@ interface RestaurantStore {
   setSearchRadiusMeters: (meters: number) => void;
   setLocationLoading: (loading: boolean) => void;
   setLocationError: (error: string | null) => void;
+  setLocationCanAskAgain: (canAskAgain: boolean) => void;
   requestLocationRefresh: () => void;
 }
 
@@ -39,6 +45,7 @@ export const useRestaurantStore = create<RestaurantStore>((set) => ({
   searchRadiusMeters: 2000,
   locationLoading: true,
   locationError: null,
+  locationCanAskAgain: true,
   locationRefreshNonce: 0,
   setRestaurants: (restaurants) => set({ restaurants }),
   setSelectedRestaurantId: (id) => set({ selectedRestaurantId: id }),
@@ -46,5 +53,6 @@ export const useRestaurantStore = create<RestaurantStore>((set) => ({
   setSearchRadiusMeters: (searchRadiusMeters) => set({ searchRadiusMeters }),
   setLocationLoading: (locationLoading) => set({ locationLoading }),
   setLocationError: (locationError) => set({ locationError }),
+  setLocationCanAskAgain: (locationCanAskAgain) => set({ locationCanAskAgain }),
   requestLocationRefresh: () => set((s) => ({ locationRefreshNonce: s.locationRefreshNonce + 1 })),
 }));

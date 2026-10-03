@@ -21,7 +21,7 @@ function makeRestaurant(): Restaurant {
 }
 
 describe('restaurantStore', () => {
-  it('starts empty with no selection or location, defaulting to a 2km radius', () => {
+  it('starts empty with no selection or location, defaulting to a ~1.2mi radius', () => {
     const s = useRestaurantStore.getState();
     expect(s.restaurants).toEqual([]);
     expect(s.selectedRestaurantId).toBeNull();

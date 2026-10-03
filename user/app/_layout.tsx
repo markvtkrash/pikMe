@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, LogBox } from 'react-native';
+import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, LogBox, Image, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -11,16 +12,48 @@ import { useUserProfileStore } from '../src/store/userProfileStore';
 import { useSavedStore } from '../src/store/savedStore';
 import { useFaceIdStore } from '../src/store/faceIdStore';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
+import { AlertModalHost } from '../src/components/common/AlertModalHost';
+import { Alert } from '../src/utils/alert';
 import { BRAND_NAME } from '../src/constants/brandTheme';
 
-// Suppress harmless deprecation warnings
-LogBox.ignoreLogs([
-  'shadow', // Shadow props deprecation (works fine with elevation)
-  'boxShadow', // Shadow alternative
-  'pointerEvents', // Deprecated prop (works fine)
-  'useNativeDriver', // Reanimated falls back to JS animation (works fine)
-  'RCTAnimation', // Native animation module warning
-]);
+// Fully suppressed rather than just filtering specific messages — LogBox's
+// raw red error box is a developer tool (it never ships in a production
+// build), but anyone testing this app in dev mode saw it as a jarring,
+// technical-looking error straight at the bottom of the screen. Genuine
+// errors are still logged to the console for debugging and, for anything
+// truly uncaught, surfaced gracefully via the global handler below instead.
+LogBox.ignoreAllLogs(true);
+
+// Catches whatever the React render-tree ErrorBoundary can't — async/promise
+// failures and other errors outside of a component's render — and shows the
+// same graceful modal instead of a raw red error screen or silent failure.
+// Native crash reporting (ErrorUtils) still gets the real error for
+// debugging; only what the user sees is softened.
+function setUpGlobalErrorHandling() {
+  function showGenericErrorModal() {
+    Alert.alert('Something went wrong', 'An unexpected error happened. Please try again.');
+  }
+
+  if (Platform.OS === 'web') {
+    window.addEventListener('error', (event) => {
+      console.error('[PikMe] Uncaught error:', event.error ?? event.message);
+      showGenericErrorModal();
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('[PikMe] Unhandled promise rejection:', event.reason);
+      showGenericErrorModal();
+    });
+  } else {
+    const prevHandler = ErrorUtils.getGlobalHandler();
+    ErrorUtils.setGlobalHandler((error, isFatal) => {
+      console.error('[PikMe] Uncaught error:', error);
+      showGenericErrorModal();
+      prevHandler(error, isFatal);
+    });
+  }
+}
+
+setUpGlobalErrorHandling();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,6 +136,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     console.log('[AuthGate] Loading customer profile and saved items...');
 
+    // A stored session can outlive its refresh token (e.g. left signed in
+    // and unused long enough that GoTrue won't refresh it anymore) — every
+    // authenticated request then fails with PGRST303 forever, not just
+    // once. Treating that as "onboarding not complete" would silently
+    // misroute an expired-but-real account into the onboarding flow instead
+    // of back to sign-in, so this clears the dead session instead and lets
+    // the routing guard below redirect to sign-in once session becomes null.
+    function isExpiredJwtError(err: any) {
+      return err?.code === 'PGRST303';
+    }
+
     getUserProfile()
       .then((profile) => {
         console.log('[AuthGate] Profile loaded:', !!profile, 'onboardingComplete:', profile?.onboardingComplete);
@@ -110,6 +154,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       })
       .catch((err) => {
         console.error('[AuthGate] getUserProfile error:', err);
+        if (isExpiredJwtError(err)) {
+          console.log('[AuthGate] Session expired, signing out');
+          supabase.auth.signOut();
+          return;
+        }
         console.log('[AuthGate] Setting onboarding to false due to error');
         setOnboardingComplete(false);
       });
@@ -121,6 +170,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       })
       .catch((err: any) => {
         console.error('[AuthGate] getSavedItems error:', err);
+        if (isExpiredJwtError(err)) {
+          console.log('[AuthGate] Session expired, signing out');
+          supabase.auth.signOut();
+          return;
+        }
         // fail silently — saved state stays empty
       });
   }, [session]);
@@ -172,7 +226,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   if (session === undefined || (hasSession && faceIdStatus === 'checking')) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -199,11 +253,33 @@ function FaceIdLockScreen({ onRetry }: { onRetry: () => void }) {
 
 const lockStyles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
-  icon: { fontSize: 48, marginBottom: 16 },
+  icon: { fontSize: 32, marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },
   body: { fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 28 },
-  button: { backgroundColor: '#4CAF50', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
+  button: { backgroundColor: '#1565C0', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 32 },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+});
+
+// Pinned top-left on every screen in the app (loading, lock, sign-in,
+// onboarding, main tabs, restaurant detail — everything), rendered once
+// here instead of per-screen so there's no risk of a page missing it.
+// pointerEvents="none" so it never intercepts taps on whatever's underneath.
+// A handful of screens position their own content flush against the
+// safe-area top (explore/saved/chat/help tabs, the map view) — those add
+// their own small top clearance to stay clear of this badge; see each
+// screen's own insets.top usage.
+function FloatingLogo() {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={[floatingLogoStyles.container, { top: insets.top + 8 }]} pointerEvents="none">
+      <Image source={require('../assets/logo.png')} style={floatingLogoStyles.logo} />
+    </View>
+  );
+}
+
+const floatingLogoStyles = StyleSheet.create({
+  container: { position: 'absolute', left: 16, zIndex: 999 },
+  logo: { width: 28, height: 28, borderRadius: 14 },
 });
 
 export default function RootLayout() {
@@ -214,6 +290,8 @@ export default function RootLayout() {
           <AuthGate>
             <Slot />
           </AuthGate>
+          <FloatingLogo />
+          <AlertModalHost />
         </ErrorBoundary>
       </QueryClientProvider>
     </GestureHandlerRootView>

@@ -43,6 +43,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },
   body: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 22, marginBottom: 12 },
   detail: { fontSize: 11, color: '#c62828', textAlign: 'center', lineHeight: 16, marginBottom: 16, fontFamily: 'monospace' },
-  btn: { backgroundColor: '#4CAF50', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32 },
+  btn: { backgroundColor: '#1565C0', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32 },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

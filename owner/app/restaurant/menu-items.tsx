@@ -165,7 +165,7 @@ export default function MenuItemsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -218,6 +218,13 @@ export default function MenuItemsScreen() {
             )}
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.editMenuBtn}
+          onPress={() => router.push('/restaurant/manual-menu')}
+        >
+          <Text style={styles.editMenuBtnText}>✏️ Edit Menu</Text>
+        </TouchableOpacity>
 
         {menuItems.length > 0 && (
           <View style={styles.searchContainer}>
@@ -390,7 +397,7 @@ const styles = StyleSheet.create({
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666' },
-  summaryVerified: { fontSize: 12, color: '#2e7d32', fontWeight: '600', marginTop: 4 },
+  summaryVerified: { fontSize: 12, color: '#1565C0', fontWeight: '600', marginTop: 4 },
   summaryUnverified: { fontSize: 12, color: '#E65100', fontWeight: '600', marginTop: 4 },
 
   refreshBox: {
@@ -404,6 +411,13 @@ const styles = StyleSheet.create({
   refreshBtnSolid: { backgroundColor: '#E65100' },
   refreshBtnText: { fontSize: 12, fontWeight: '800' },
   refreshBtnSubtext: { fontSize: 9.5, color: '#8D6E63', marginTop: 2, textAlign: 'center' },
+
+  editMenuBtn: {
+    marginHorizontal: 16, marginTop: 10, backgroundColor: '#fff',
+    borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 10,
+    paddingVertical: 10, alignItems: 'center',
+  },
+  editMenuBtnText: { fontSize: 13, fontWeight: '800', color: '#1565C0' },
 
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12 },
   searchInput: {
@@ -437,7 +451,7 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 4 },
   itemNutrition: { fontSize: 12, color: '#666' },
   unconfirmedHint: { fontSize: 11, color: '#E65100', fontWeight: '600', marginTop: 4 },
-  verifiedTag: { fontSize: 11, color: '#2e7d32', fontWeight: '700', marginTop: 4 },
+  verifiedTag: { fontSize: 11, color: '#1565C0', fontWeight: '700', marginTop: 4 },
 
   // Shared sizing so the verify and unconfirm buttons occupy the exact same
   // slot regardless of which state an item is in — only actionBtn's own
@@ -449,7 +463,7 @@ const styles = StyleSheet.create({
   },
   unconfirmBtn: { backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100' },
   unconfirmBtnText: { fontSize: 12, color: '#E65100', fontWeight: '800' },
-  verifyBtn: { backgroundColor: '#4CAF50', elevation: 1 },
+  verifyBtn: { backgroundColor: '#1565C0', elevation: 1 },
   verifyBtnText: { fontSize: 12, color: '#fff', fontWeight: '800', textAlign: 'center' },
   deleteBtn: {
     width: 32, height: 32, borderRadius: 8, backgroundColor: '#FFEBEE',
@@ -481,7 +495,7 @@ const styles = StyleSheet.create({
   modalBtnDisabled: { opacity: 0.6 },
   modalBtnCancel: { backgroundColor: '#f0f0f0' },
   modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#555' },
-  modalBtnConfirm: { backgroundColor: '#4CAF50' },
+  modalBtnConfirm: { backgroundColor: '#1565C0' },
   modalBtnConfirmText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   modalBtnDanger: { backgroundColor: '#e53e3e' },
   modalBtnDangerText: { fontSize: 14, fontWeight: '700', color: '#fff' },

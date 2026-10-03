@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
 
   trustNote: { fontSize: 12, color: '#8D6E63', lineHeight: 17, marginBottom: 16 },
 
-  saveBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });

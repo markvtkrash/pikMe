@@ -150,11 +150,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 12,
   },
-  saveBtn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   currentLink: { fontSize: 12, color: '#999', marginTop: 12 },
-  lastSaved: { fontSize: 13, color: '#2e7d32', fontWeight: '600', marginTop: 10 },
+  lastSaved: { fontSize: 13, color: '#1565C0', fontWeight: '600', marginTop: 10 },
   manualLink: { alignItems: 'center', paddingVertical: 16 },
   manualLinkText: { fontSize: 14, fontWeight: '600', color: '#8E24AA' },
 });

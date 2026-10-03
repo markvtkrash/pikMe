@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 90, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 14,
     alignItems: 'center', elevation: 1,
   },
-  snapshotBoxActive: { backgroundColor: '#E8F5E9' },
+  snapshotBoxActive: { backgroundColor: '#E3F2FD' },
   snapshotNumber: { fontSize: 22, fontWeight: '800', color: '#222' },
   snapshotLabel: { fontSize: 11, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, } from 'react-native';
+  ActivityIndicator, Image, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -20,7 +20,7 @@ export default function ClaimRestaurantScreen() {
   // value can come from an async DB fetch resolved before this screen ever
   // mounts (see appConfig.ts), so it can't be computed at module-load time.
   const ownerSearchRadiusMeters = getOwnerSearchRadiusMeters();
-  const ownerSearchRadiusKm = ownerSearchRadiusMeters / 1000;
+  const ownerSearchRadiusMiles = (ownerSearchRadiusMeters / 1609.34).toFixed(1);
   const { session, restaurant: claimedRestaurant, setRestaurant } = useRestaurantOwnerStore();
   const [locationQuery, setLocationQuery] = useState('');
   const [businessNameQuery, setBusinessNameQuery] = useState('');
@@ -194,6 +194,7 @@ export default function ClaimRestaurantScreen() {
     <View style={styles.container}>
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
+        <Image source={require('../../assets/logo.png')} style={styles.headerLogo} />
         <Text style={styles.title}>Claim Your Restaurant</Text>
         <Text style={styles.subtitle}>Use your current location or enter a zip code to find it nearby</Text>
       </View>
@@ -264,7 +265,7 @@ export default function ClaimRestaurantScreen() {
           <Text style={styles.radiusBannerText}>
             {businessNameQuery.trim()
               ? `📍 Showing matches for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of ${geocodedAddress}.`
-              : `📍 Showing restaurants within ${ownerSearchRadiusKm}km of ${geocodedAddress}.`}
+              : `📍 Showing restaurants within ${ownerSearchRadiusMiles}mi of ${geocodedAddress}.`}
           </Text>
         </View>
       )}
@@ -324,7 +325,7 @@ export default function ClaimRestaurantScreen() {
             <Text style={styles.emptyText}>
               {businessNameQuery.trim()
                 ? `No match for "${businessNameQuery.trim()}" within ${radiusMiles || 10} miles of that location`
-                : `No restaurants found within ${ownerSearchRadiusKm}km of that location`}
+                : `No restaurants found within ${ownerSearchRadiusMiles}mi of that location`}
             </Text>
           ) : (
             <Text style={styles.emptyText}>No matches for "{nameFilter}"</Text>
@@ -340,13 +341,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 },
+  headerLogo: { width: 32, height: 32, borderRadius: 16, marginBottom: 8 },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#666' },
   infoBox: { backgroundColor: '#FFF3E0', marginHorizontal: 16, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#E65100', flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   infoIcon: { fontSize: 20, marginTop: 2 },
   infoText: { flex: 1, fontSize: 13, fontWeight: '500', color: '#E65100', lineHeight: 18 },
   currentLocationBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     marginHorizontal: 16,
     borderRadius: 10,
     paddingVertical: 12,
@@ -374,21 +376,21 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 10,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchBtnDisabled: { opacity: 0.6 },
   searchBtnText: { fontSize: 20 },
   radiusBanner: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     marginHorizontal: 16,
     marginBottom: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
   },
-  radiusBannerText: { fontSize: 12, color: '#2e7d32', fontWeight: '600', lineHeight: 17 },
+  radiusBannerText: { fontSize: 12, color: '#1565C0', fontWeight: '600', lineHeight: 17 },
   filterBox: { paddingHorizontal: 16, paddingBottom: 12 },
   filterInput: {
     borderWidth: 1,
@@ -417,9 +419,9 @@ const styles = StyleSheet.create({
   resultName: { fontSize: 15, fontWeight: '700', color: '#222' },
   resultAddress: { fontSize: 12, color: '#666' },
   resultDistance: { fontSize: 11, color: '#999', marginTop: 2 },
-  claimedBadge: { fontSize: 11, fontWeight: '700', color: '#4CAF50', backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  claimedBadge: { fontSize: 11, fontWeight: '700', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   claimBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 8,

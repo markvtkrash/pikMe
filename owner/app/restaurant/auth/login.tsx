@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { loginRestaurantOwner, getRestaurantForOwner } from '../../../src/api/restaurantAuth';
@@ -69,6 +69,9 @@ export default function RestaurantLoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.topLeftBar}>
+        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+      </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.brand}>{BRAND_NAME}</Text>
         <Text style={styles.title}>🍽️ Restaurant Owner</Text>
@@ -127,7 +130,9 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     alignSelf: 'center',
   },
-  brand: { fontSize: 15, fontWeight: '700', color: '#2e7d32', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
+  topLeftBar: { paddingTop: 16, paddingLeft: 16 },
+  topLeftLogo: { width: 32, height: 32, borderRadius: 16 },
+  brand: { fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
   input: {
@@ -147,7 +152,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -156,5 +161,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  linkText: { color: '#4CAF50', fontSize: 14, textAlign: 'center', marginTop: 20, fontWeight: '600' },
+  linkText: { color: '#1565C0', fontSize: 14, textAlign: 'center', marginTop: 20, fontWeight: '600' },
 });

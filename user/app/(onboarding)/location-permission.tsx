@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
 import { OnboardingProgress } from '../../src/components/common/OnboardingProgress';
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
   },
   note: { fontSize: 12, color: '#aaa', marginBottom: 44 },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 14,
     paddingVertical: 15,
     paddingHorizontal: 40,

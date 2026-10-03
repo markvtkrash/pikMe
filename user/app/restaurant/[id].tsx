@@ -60,7 +60,7 @@ function placeholderImage(name: string) {
 }
 
 const LOADING_STATES = [
-  { emoji: '📊', text: 'Analyzing nutrition', bg: '#E8F5E9' },
+  { emoji: '📊', text: 'Analyzing nutrition', bg: '#E3F2FD' },
   { emoji: '🎯', text: 'Matching goals', bg: '#E3F2FD' },
   { emoji: '🔍', text: 'Filtering allergens', bg: '#FFF3E0' },
   { emoji: '❤️', text: 'Finding favorites', bg: '#FCE4EC' },
@@ -116,7 +116,7 @@ export default function RestaurantDetailScreen() {
 
   // Keyword filters with colors
   const KEYWORD_FILTERS = [
-    { label: 'Veg', color: '#E8F5E9', textColor: '#2e7d32', keywords: ['veg', 'vegetable', 'salad', 'bean', 'lentil', 'tofu'] },
+    { label: 'Veg', color: '#E3F2FD', textColor: '#1565C0', keywords: ['veg', 'vegetable', 'salad', 'bean', 'lentil', 'tofu'] },
     { label: 'Fish', color: '#E3F2FD', textColor: '#1565C0', keywords: ['fish', 'salmon', 'tuna', 'cod', 'trout', 'seafood'] },
     { label: 'Chicken', color: '#FFF3E0', textColor: '#E65100', keywords: ['chicken', 'poultry', 'wing', 'nugget'] },
     { label: 'Beef', color: '#FFEBEE', textColor: '#C62828', keywords: ['beef', 'steak', 'burger', 'brisket', 'ribeye', 'meatball'] },
@@ -460,9 +460,11 @@ export default function RestaurantDetailScreen() {
       }
     />
 
-    {/* Sticky back buttons — stay fixed on screen regardless of scroll position. */}
+    {/* Sticky back buttons — stay fixed on screen regardless of scroll position.
+        Top one pushed below the global top-left logo badge
+        (app/_layout.tsx's FloatingLogo, left:16 + insets.top+8 + 28px tall). */}
     <TouchableOpacity
-      style={[styles.backBtn, styles.backBtnSticky, { top: insets.top + 12 }]}
+      style={[styles.backBtn, styles.backBtnSticky, { top: insets.top + 44 }]}
       onPress={() => router.back()}
     >
       <Text style={styles.backIcon}>‹</Text>
@@ -581,7 +583,7 @@ const styles = StyleSheet.create({
   bigIcon: { fontSize: 48, marginBottom: 12 },
   errorTitle: { fontSize: 17, fontWeight: '700', color: '#333', marginBottom: 10 },
   backLinkBtn: { marginTop: 8 },
-  backLink: { fontSize: 15, color: '#4CAF50', fontWeight: '600' },
+  backLink: { fontSize: 15, color: '#1565C0', fontWeight: '600' },
 
   // Shrunk from 260 — this is always a generic placeholder photo (never the
   // real restaurant), so it's pure decoration competing for scroll distance
@@ -646,9 +648,9 @@ const styles = StyleSheet.create({
   },
   addressBoxText: { fontSize: 11, color: '#666', fontWeight: '600' },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
-  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  openDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#4CAF50' },
-  statusOpenTxt: { fontSize: 12, color: '#2e7d32', fontWeight: '700' },
+  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  openDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#1565C0' },
+  statusOpenTxt: { fontSize: 12, color: '#1565C0', fontWeight: '700' },
   statusClosed: { backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   statusClosedTxt: { fontSize: 12, color: '#C62828', fontWeight: '700' },
   metaPill: { backgroundColor: '#F6F6F6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
@@ -778,7 +780,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 2,
   },
   progressText: {
@@ -801,7 +803,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   stepActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     opacity: 1,
   },
   stepEmoji: {
@@ -844,7 +846,7 @@ const styles = StyleSheet.create({
   },
   couponChipValue: { fontSize: 16, fontWeight: '900', color: '#D84315' },
   couponChipCode: { fontSize: 12, fontWeight: '800', color: '#E65100', marginTop: 2 },
-  couponChipHint: { fontSize: 10.5, fontWeight: '700', color: '#4CAF50', marginTop: 4 },
+  couponChipHint: { fontSize: 10.5, fontWeight: '700', color: '#1565C0', marginTop: 4 },
 
   disclaimerIcon: { fontSize: 13, lineHeight: 16 },
   disclaimerText: { flex: 1, fontSize: 10.5, color: '#8A5A00', lineHeight: 14, fontWeight: '600' },

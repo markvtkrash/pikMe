@@ -1,19 +1,19 @@
 /**
- * Vectr Vibe Brand Theme
+ * VektraVibe Brand Theme
  * Based on BRAND-GUIDELINES.md
  */
 
-export const BRAND_NAME = 'Vectr Vibe';
+export const BRAND_NAME = 'VektraVibe';
 
 export const BRAND_COLORS = {
   // Primary
-  primary: '#2e7d32', // PikMe Green
-  primaryDark: '#1b4d1b', // Dark Green
-  primaryLight: '#E8F5E9', // Light Green
+  primary: '#1565C0', // VektraVibe Blue
+  primaryDark: '#0D47A1', // Dark Blue
+  primaryLight: '#E3F2FD', // Light Blue
 
   // Accents
-  accent: '#FF6B6B', // Heart Red
-  success: '#4CAF50', // Check Green
+  accent: '#c62828', // VektraVibe Red
+  success: '#1565C0', // Check Blue
   warning: '#e65100', // Orange
   error: '#c62828', // Red
 

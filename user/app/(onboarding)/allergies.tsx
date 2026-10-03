@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     color: '#222',
   },
   addBtn: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingHorizontal: 18,
     justifyContent: 'center',
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 13, color: '#c53030', fontWeight: '500' },
   tagRemove: { fontSize: 11, color: '#c53030' },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingVertical: 15,
     alignItems: 'center',

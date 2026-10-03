@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, } from 'react-native';
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Image, } from 'react-native';
 import { Alert } from '../../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/api/supabase';
@@ -91,6 +91,9 @@ export default function RestaurantChangePasswordScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      <View style={styles.topLeftBar}>
+        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+      </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.title}>🔐 Set a New Password</Text>
         <Text style={styles.subtitle}>
@@ -153,6 +156,8 @@ export default function RestaurantChangePasswordScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  topLeftBar: { paddingTop: 16, paddingLeft: 16 },
+  topLeftLogo: { width: 32, height: 32, borderRadius: 16 },
   inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40, width: '100%', maxWidth: 420, alignSelf: 'center' },
   title: { fontSize: 28, fontWeight: '800', textAlign: 'center', marginBottom: 8, color: '#222' },
   subtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 28, lineHeight: 20 },
@@ -164,11 +169,11 @@ const styles = StyleSheet.create({
   reqBox: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, marginTop: 8, marginBottom: 8, gap: 6 },
   reqTitle: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 4 },
   req: { fontSize: 12, fontWeight: '600' },
-  reqMet: { color: '#2e7d32' },
+  reqMet: { color: '#1565C0' },
   reqUnmet: { color: '#999' },
   errorText: { color: '#e53e3e', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 4 },
   button: {
-    backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 14,
+    backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14,
     alignItems: 'center', marginTop: 16, minHeight: 50, justifyContent: 'center',
   },
   buttonDisabled: { opacity: 0.6 },

@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     marginBottom: 3,
   },
   icon: { fontSize: 22 },

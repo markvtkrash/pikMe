@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   strengthLabel: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 8 },
   requirementsList: { gap: 6 },
   requirement: { fontSize: 11, fontWeight: '600', marginLeft: 4 },
-  requirementMet: { color: '#2e7d32' },
+  requirementMet: { color: '#1565C0' },
   requirementUnmet: { color: '#999' },
   errorMessage: { fontSize: 12, fontWeight: '600', color: '#e53e3e', marginBottom: 12, marginTop: 4 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 24 },

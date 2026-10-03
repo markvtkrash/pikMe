@@ -70,7 +70,7 @@ export default function ActiveCouponsScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -174,21 +174,21 @@ const styles = StyleSheet.create({
   count: { fontSize: 12, color: '#999' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  couponCard: { backgroundColor: '#E8F5E9', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#4CAF50', gap: 12 },
-  activeBadgeContainer: { backgroundColor: '#4CAF50', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignSelf: 'flex-start' },
+  couponCard: { backgroundColor: '#E3F2FD', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#1565C0', gap: 12 },
+  activeBadgeContainer: { backgroundColor: '#1565C0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, alignSelf: 'flex-start' },
   activeBadge: { fontSize: 13, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
   couponInfo: { flex: 1, minWidth: 0 },
   couponHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
   couponCode: { fontSize: 16, fontWeight: '800', color: '#222' },
-  itemBadge: { fontSize: 10, fontWeight: '700', color: '#fff', backgroundColor: '#4CAF50', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  itemBadge: { fontSize: 10, fontWeight: '700', color: '#fff', backgroundColor: '#1565C0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   couponRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4, flexWrap: 'wrap', gap: 6 },
-  discountValue: { fontSize: 18, fontWeight: '800', color: '#2e7d32' },
+  discountValue: { fontSize: 18, fontWeight: '800', color: '#1565C0' },
   expiryText: { fontSize: 11, color: '#666' },
   expiryTextSoon: { color: '#E65100', fontWeight: '700' },
   usageText: { fontSize: 11, color: '#666', fontWeight: '600' },
 
   couponFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 8 },
-  editBtn: { backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  editBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
   editBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
   deactivateBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',

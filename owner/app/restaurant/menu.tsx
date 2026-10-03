@@ -120,7 +120,7 @@ export default function RestaurantMenuScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 1,
   },
-  itemCardWithCoupon: { backgroundColor: '#F0F8FF', borderLeftWidth: 4, borderLeftColor: '#4CAF50' },
+  itemCardWithCoupon: { backgroundColor: '#F0F8FF', borderLeftWidth: 4, borderLeftColor: '#1565C0' },
   itemCardDisabled: { backgroundColor: '#FAFAFA' },
   itemInfo: { flex: 1, minWidth: 0 },
   itemNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -358,13 +358,13 @@ const styles = StyleSheet.create({
   couponIcon: { fontSize: 16 },
   itemNutrition: { fontSize: 12, color: '#666', marginBottom: 6 },
   unverifiedLabel: { fontSize: 11, color: '#E65100', fontWeight: '700', marginBottom: 6 },
-  couponDetailsBox: { backgroundColor: '#F0F8FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#4CAF50', marginTop: 8 },
+  couponDetailsBox: { backgroundColor: '#F0F8FF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#1565C0', marginTop: 8 },
   couponRow: { flexDirection: 'row', alignItems: 'center' },
   couponMetaCol: { flex: 1, minWidth: 0, gap: 1 },
   couponMetaLabel: { fontSize: 10, fontWeight: '800', color: '#555', textTransform: 'uppercase', letterSpacing: 0.3 },
   couponMetaValue: { fontSize: 12, fontWeight: '500', color: '#444' },
-  couponRowEdit: { fontSize: 12, fontWeight: '700', color: '#4CAF50', flexShrink: 0, marginLeft: 10 },
-  actionText: { fontSize: 13, fontWeight: '600', color: '#4CAF50', flexShrink: 0 },
+  couponRowEdit: { fontSize: 12, fontWeight: '700', color: '#1565C0', flexShrink: 0, marginLeft: 10 },
+  actionText: { fontSize: 13, fontWeight: '600', color: '#1565C0', flexShrink: 0 },
   verifyToAddBtn: {
     backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100',
     borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, flexShrink: 0,
@@ -395,6 +395,6 @@ const styles = StyleSheet.create({
   modalBtnDisabled: { opacity: 0.6 },
   modalBtnCancel: { backgroundColor: '#f0f0f0' },
   modalBtnCancelText: { fontSize: 14, fontWeight: '700', color: '#555' },
-  modalBtnConfirm: { backgroundColor: '#4CAF50' },
+  modalBtnConfirm: { backgroundColor: '#1565C0' },
   modalBtnConfirmText: { fontSize: 14, fontWeight: '700', color: '#fff' },
 });

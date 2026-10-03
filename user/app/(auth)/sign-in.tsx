@@ -97,7 +97,7 @@ export default function SignInScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.inner}>
-        <Text style={styles.logo}>🍽️ {BRAND_NAME}</Text>
+        <Text style={styles.logo}>{BRAND_NAME}</Text>
         <Text style={styles.subtitle}>
           {mode === 'sign-in' ? 'Sign in to your account' : 'Create an account'}
         </Text>
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-  logo: { fontSize: 40, textAlign: 'center', marginBottom: 8 },
+  logo: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8, color: '#1565C0' },
   subtitle: { fontSize: 16, color: '#555', textAlign: 'center', marginBottom: 32 },
   input: {
     borderWidth: 1,
@@ -249,14 +249,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   successText: {
-    color: '#2e7d32',
+    color: '#1565C0',
     fontSize: 14,
     marginBottom: 10,
     textAlign: 'center',
     lineHeight: 20,
   },
   button: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   switchMode: { marginTop: 20, alignItems: 'center' },
-  switchText: { color: '#4CAF50', fontSize: 14 },
+  switchText: { color: '#1565C0', fontSize: 14 },
 
   legalContainer: { marginBottom: 16, marginTop: 8 },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -281,8 +281,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
-  checkboxChecked: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  checkboxChecked: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   checkmark: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
   legalText: { fontSize: 12, color: '#555', lineHeight: 18 },
-  link: { color: '#4CAF50', fontWeight: '600', textDecorationLine: 'underline' },
+  link: { color: '#1565C0', fontWeight: '600', textDecorationLine: 'underline' },
 });

@@ -26,7 +26,7 @@ const TYPE_TABS: { key: TypeFilter; label: string }[] = [
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: string }> = {
   open: { bg: '#E3F2FD', text: '#1976D2', label: 'Open' },
   in_progress: { bg: '#FFF3E0', text: '#E65100', label: 'In Progress' },
-  resolved: { bg: '#E8F5E9', text: '#2e7d32', label: 'Resolved' },
+  resolved: { bg: '#E3F2FD', text: '#1565C0', label: 'Resolved' },
   closed: { bg: '#f0f0f0', text: '#666', label: 'Closed' },
 };
 

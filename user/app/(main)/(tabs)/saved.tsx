@@ -57,7 +57,7 @@ export default function SavedScreen() {
       {/* Loading state */}
       {!isLoaded ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#4CAF50" />
+          <ActivityIndicator size="large" color="#1565C0" />
           <Text style={styles.loadingText}>Loading saved items…</Text>
         </View>
       ) : activeTab === 'restaurants' ? (
@@ -67,7 +67,7 @@ export default function SavedScreen() {
           renderItem={({ item }) => <RestaurantCard restaurant={item} hideStatus />}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#4CAF50" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#1565C0" />
           }
           ListEmptyComponent={
             <EmptyState
@@ -86,7 +86,7 @@ export default function SavedScreen() {
           )}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#4CAF50" />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#1565C0" />
           }
           ListEmptyComponent={
             <EmptyState
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
   },
   segmentActive: { backgroundColor: '#f0faf0' },
   segmentText: { fontSize: 13, fontWeight: '600', color: '#888' },
-  segmentTextActive: { color: '#2e7d32' },
+  segmentTextActive: { color: '#1565C0' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontSize: 14, color: '#888' },

@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   rowEnvVar: { fontSize: 10, color: '#1565C0', fontWeight: '600', marginTop: 2 },
   valueInput: { flex: 1, minWidth: 80, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222' },
 
-  saveBtn: { backgroundColor: '#2e7d32', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  saveBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   deleteBtn: { backgroundColor: '#e53e3e', borderRadius: 8, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   deleteBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },

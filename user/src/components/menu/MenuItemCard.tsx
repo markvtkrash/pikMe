@@ -23,8 +23,8 @@ interface Props {
 function ScoreBadge({ score }: { score: number }) {
   const isGood = score >= 75;
   const isMid  = score >= 50;
-  const color  = isGood ? '#2e7d32' : isMid ? '#e65100' : '#c62828';
-  const bg     = isGood ? '#E8F5E9' : isMid ? '#FFF3E0' : '#FFEBEE';
+  const color  = isGood ? '#1565C0' : isMid ? '#e65100' : '#c62828';
+  const bg     = isGood ? '#E3F2FD' : isMid ? '#FFF3E0' : '#FFEBEE';
   return (
     <View style={[styles.scoreBadge, { backgroundColor: bg }]}>
       <Text style={[styles.scoreNum, { color }]}>{score}</Text>
@@ -318,7 +318,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
         >
           {analysisLoading
             ? <View style={styles.analysingRow}>
-                <ActivityIndicator size="small" color="#4CAF50" />
+                <ActivityIndicator size="small" color="#1565C0" />
                 <Text style={styles.analysingText}>Analysing…</Text>
               </View>
             : analysisText.startsWith('Yes')
@@ -427,8 +427,8 @@ const styles = StyleSheet.create({
   nutritionEstimateNote: { fontSize: 10.5, color: '#999', fontStyle: 'italic', marginBottom: 12, lineHeight: 14 },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  chipGood: { backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  chipGoodText: { fontSize: 11, color: '#2e7d32', fontWeight: '600' },
+  chipGood: { backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  chipGoodText: { fontSize: 11, color: '#1565C0', fontWeight: '600' },
   chipWarn: { backgroundColor: '#FFF8E1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
   chipWarnText: { fontSize: 11, color: '#E65100', fontWeight: '600' },
 
@@ -470,13 +470,13 @@ const styles = StyleSheet.create({
   allergenWarningText: { fontSize: 13, color: '#fff', fontWeight: '700', lineHeight: 18 },
 
   safeBox: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
     flexDirection: 'column',
     gap: 8,
-    shadowColor: '#4CAF50',
+    shadowColor: '#1565C0',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -507,11 +507,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: '#1565C0',
   },
   analysisPositive: {
-    backgroundColor: '#E8F5E9',
-    borderLeftColor: '#2e7d32',
+    backgroundColor: '#E3F2FD',
+    borderLeftColor: '#1565C0',
   },
   analysisNegative: {
     backgroundColor: '#FFEBEE',
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
   yesText: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#2e7d32',
+    color: '#1565C0',
     letterSpacing: 1,
   },
   noEmoji: {
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   analysingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   analysingText: { fontSize: 13, color: '#888' },
   analysisText: { fontSize: 13, color: '#333', lineHeight: 21 },
-  analysisPositiveText: { color: '#2e7d32', fontWeight: '600' },
+  analysisPositiveText: { color: '#1565C0', fontWeight: '600' },
   analysisNegativeText: { color: '#C62828', fontWeight: '600' },
 
   couponBannerContainer: { gap: 10, marginBottom: 12, marginHorizontal: -16, marginLeft: -16, marginRight: -16, paddingHorizontal: 16 },
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
   },
   couponTapHintPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -637,17 +637,17 @@ const styles = StyleSheet.create({
   },
   usesLeftPill: {
     alignSelf: 'flex-start',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#E3F2FD',
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: '#1565C0',
   },
   usesLeftText: {
     fontSize: 11.5,
     fontWeight: '800',
-    color: '#2e7d32',
+    color: '#1565C0',
   },
   lowStockPill: {
     alignSelf: 'flex-start',

@@ -1,18 +1,29 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../src/api/supabase';
 
+// Logo pinned to the top-left on every screen that shows this, alongside
+// the back button where there is one — headerLeft (not headerTitle) is what
+// actually guarantees a left position, since headerTitle centers by default
+// on iOS.
 function BackButton() {
   const router = useRouter();
   return (
-    <TouchableOpacity
-      onPress={() => router.push('/admin')}
-      style={styles.backBtn}
-    >
-      <Text style={styles.backBtnText}>← Dashboard</Text>
-    </TouchableOpacity>
+    <View style={styles.headerLeftRow}>
+      <Image source={require('../../assets/logo.png')} style={styles.headerLogo} />
+      <TouchableOpacity
+        onPress={() => router.push('/admin')}
+        style={styles.backBtn}
+      >
+        <Text style={styles.backBtnText}>← Dashboard</Text>
+      </TouchableOpacity>
+    </View>
   );
+}
+
+function LogoOnly() {
+  return <Image source={require('../../assets/logo.png')} style={[styles.headerLogo, { marginLeft: 16 }]} />;
 }
 
 export default function AdminLayout() {
@@ -28,6 +39,7 @@ export default function AdminLayout() {
         headerStyle: { backgroundColor: '#1565C0' },
         headerTintColor: '#fff',
         headerTitleStyle: { fontWeight: '800', fontSize: 18 },
+        headerLeft: () => <LogoOnly />,
       }}
     >
       <Stack.Screen
@@ -154,7 +166,9 @@ export default function AdminLayout() {
 
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backBtn: { marginLeft: 16, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
+  headerLeftRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 16 },
+  headerLogo: { width: 24, height: 24, borderRadius: 12 },
+  backBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
   backBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   logoutBtn: { marginRight: 16, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
   logoutText: { color: '#fff', fontWeight: '600', fontSize: 13 },

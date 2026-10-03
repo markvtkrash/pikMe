@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert } from '../../utils/alert';
 import { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -113,13 +114,13 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
         {/* Status */}
         {!hideStatus && (
           <View style={styles.statusPill}>
-            <View style={[styles.dot, { backgroundColor: hoursDisplay.isOpen ? '#4CAF50' : '#EF5350' }]} />
+            <View style={[styles.dot, { backgroundColor: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.statusTxt, { color: hoursDisplay.isOpen ? '#4CAF50' : '#EF5350' }]}>
+              <Text style={[styles.statusTxt, { color: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]}>
                 {hoursDisplay.todayHours || (hoursDisplay.isOpen ? 'Open' : 'Closed')}
               </Text>
               {hoursDisplay.timeUntil && (
-                <Text style={[styles.statusSubtxt, { color: hoursDisplay.isOpen ? '#4CAF50' : '#EF5350' }]}>
+                <Text style={[styles.statusSubtxt, { color: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]}>
                   {hoursDisplay.timeUntil}
                 </Text>
               )}
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  cardSelected: { borderWidth: 2.5, borderColor: '#4CAF50' },
+  cardSelected: { borderWidth: 2.5, borderColor: '#1565C0' },
 
   imgWrap: { height: 170, position: 'relative' },
   img: { width: '100%', height: 170 },
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  compactSelected: { borderWidth: 2, borderColor: '#4CAF50' },
+  compactSelected: { borderWidth: 2, borderColor: '#1565C0' },
   compactImgBox: { height: 95 },
   compactImg: { width: '100%', height: 95 },
   compactBody: { padding: 10 },

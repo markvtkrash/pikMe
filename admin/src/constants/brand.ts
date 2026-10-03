@@ -1,1 +1,1 @@
-export const BRAND_NAME = 'Vectr Vibe';
+export const BRAND_NAME = 'VektraVibe';

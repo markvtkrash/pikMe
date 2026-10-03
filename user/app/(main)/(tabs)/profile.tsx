@@ -1,7 +1,8 @@
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, TextInput, Platform, Switch,
+  ScrollView, ActivityIndicator, TextInput, Switch,
 } from 'react-native';
+import { Alert } from '../../../src/utils/alert';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -14,12 +15,10 @@ import { useFaceIdStore } from '../../../src/store/faceIdStore';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
 
-// React Native's Alert isn't implemented on react-native-web, so on web we fall
-// back to the browser's native confirm/alert. Returns whether the user confirmed.
+// Alert (../../../src/utils/alert) renders an actual in-app modal on every
+// platform including web, so this no longer needs a native-browser-dialog
+// fallback. Returns whether the user confirmed.
 function confirmDestructive(title: string, message: string, confirmLabel: string): Promise<boolean> {
-  if (Platform.OS === 'web') {
-    return Promise.resolve((globalThis as any).confirm(`${title}\n\n${message}`));
-  }
   return new Promise((resolve) => {
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
@@ -29,11 +28,7 @@ function confirmDestructive(title: string, message: string, confirmLabel: string
 }
 
 function notify(title: string, message: string) {
-  if (Platform.OS === 'web') {
-    (globalThis as any).alert(`${title}\n\n${message}`);
-  } else {
-    Alert.alert(title, message);
-  }
+  Alert.alert(title, message);
 }
 
 function LabelRow({ items, emptyText }: { items: string[]; emptyText: string }) {
@@ -195,7 +190,7 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
       </View>
     );
   }
@@ -364,21 +359,21 @@ export default function ProfileScreen() {
           <View style={styles.inputRow}>
             <TextInput
               style={styles.numberInput}
-              value={String(form.searchRadiusMeters / 1000)}
+              value={String((form.searchRadiusMeters! / 1609.34).toFixed(1))}
               onChangeText={(text) =>
                 setEditForm({
                   ...form,
-                  searchRadiusMeters: Math.max(500, parseInt(text) * 1000 || 2000),
+                  searchRadiusMeters: Math.max(500, parseFloat(text) * 1609.34 || 2000),
                 })
               }
-              placeholder="km"
+              placeholder="mi"
               keyboardType="decimal-pad"
             />
-            <Text style={styles.inputLabel}>km</Text>
+            <Text style={styles.inputLabel}>mi</Text>
           </View>
         ) : (
           <Text style={styles.targetText}>
-            {(form.searchRadiusMeters / 1000).toFixed(1)} km
+            {(form.searchRadiusMeters! / 1609.34).toFixed(1)} mi
           </Text>
         )}
       </View>
@@ -414,7 +409,7 @@ export default function ProfileScreen() {
             <Switch
               value={requireFaceId ?? true}
               onValueChange={setRequireFaceId}
-              trackColor={{ false: '#ddd', true: '#4CAF50' }}
+              trackColor={{ false: '#ddd', true: '#1565C0' }}
               thumbColor="#fff"
             />
           </View>
@@ -467,7 +462,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#1565C0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
@@ -479,7 +474,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#222',
     borderBottomWidth: 2,
-    borderBottomColor: '#4CAF50',
+    borderBottomColor: '#1565C0',
     paddingVertical: 6,
     paddingHorizontal: 8,
   },
@@ -500,7 +495,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c3e6cb',
   },
-  tagText: { fontSize: 13, color: '#2e7d32', fontWeight: '500' },
+  tagText: { fontSize: 13, color: '#1565C0', fontWeight: '500' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     borderWidth: 1,
@@ -511,8 +506,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fafafa',
   },
   chipSelected: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: '#1565C0',
+    borderColor: '#1565C0',
   },
   chipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   chipTextSelected: { color: '#fff' },
@@ -547,9 +542,9 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: 'center',
   },
-  editBtn: { backgroundColor: '#4CAF50' },
+  editBtn: { backgroundColor: '#1565C0' },
   editBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  saveBtn: { backgroundColor: '#4CAF50' },
+  saveBtn: { backgroundColor: '#1565C0' },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   cancelBtn: { borderWidth: 1, borderColor: '#999' },
   cancelBtnText: { color: '#666', fontSize: 15, fontWeight: '600' },

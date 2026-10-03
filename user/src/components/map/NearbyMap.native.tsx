@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   View, Text, FlatList, ActivityIndicator,
-  StyleSheet, TouchableOpacity, Dimensions,
+  StyleSheet, TouchableOpacity, Dimensions, Linking,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useLocation } from '../../hooks/useLocation';
@@ -17,7 +17,7 @@ const CARD_WIDTH = width * 0.75;
 export function NearbyMap() {
   const mapRef = useRef<MapView>(null);
   const listRef = useRef<FlatList>(null);
-  const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
+  const { location, loading: locationLoading, error: locationError, canAskAgain, refresh } = useLocation();
   const { selectedRestaurantId, setSelectedRestaurantId, searchRadiusMeters } = useRestaurantStore();
   const { data: restaurants = [], isLoading, error: fetchError, refetch } = useNearbyRestaurants(location);
   // Fetching always covers the max radius; filter to the selected distance client-side.
@@ -46,7 +46,7 @@ export function NearbyMap() {
   if (locationLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
         <Text style={styles.statusText}>Getting your location…</Text>
       </View>
     );
@@ -58,9 +58,15 @@ export function NearbyMap() {
         <Text style={styles.icon}>📍</Text>
         <Text style={styles.errorTitle}>Location needed</Text>
         <Text style={styles.errorBody}>{locationError}</Text>
-        <TouchableOpacity style={styles.btn} onPress={refresh}>
-          <Text style={styles.btnText}>Enable Location</Text>
-        </TouchableOpacity>
+        {!canAskAgain ? (
+          <TouchableOpacity style={styles.btn} onPress={() => Linking.openSettings()}>
+            <Text style={styles.btnText}>Open Settings</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.btn} onPress={refresh}>
+            <Text style={styles.btnText}>Enable Location</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
@@ -104,7 +110,9 @@ export function NearbyMap() {
       )}
 
       {/* Radius selector overlay — flush with the Food/Entertainment bar above,
-          which already accounts for the safe-area top inset. */}
+          which already accounts for the safe-area top inset (and, since
+          that bar clears the global logo badge itself, this doesn't need to
+          clear it separately). */}
       <View style={[styles.radiusOverlay, { top: 12 }]}>
         <RadiusSelector />
       </View>
@@ -113,7 +121,7 @@ export function NearbyMap() {
       <View style={styles.cardStrip}>
         {isLoading ? (
           <View style={styles.stripLoading}>
-            <ActivityIndicator color="#4CAF50" />
+            <ActivityIndicator color="#1565C0" />
             <Text style={styles.statusText}>Finding restaurants…</Text>
           </View>
         ) : fetchError ? (
@@ -172,9 +180,9 @@ const styles = StyleSheet.create({
   statusText: { marginTop: 10, fontSize: 14, color: '#888' },
   errorTitle: { fontSize: 17, fontWeight: '600', color: '#333', marginBottom: 6, textAlign: 'center' },
   errorBody: { fontSize: 14, color: '#888', textAlign: 'center' },
-  btn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 28, marginTop: 16 },
+  btn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 28, marginTop: 16 },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-  retryLink: { color: '#4CAF50', fontWeight: '600', fontSize: 14, marginTop: 8 },
+  retryLink: { color: '#1565C0', fontWeight: '600', fontSize: 14, marginTop: 8 },
   markerBubble: {
     backgroundColor: '#fff',
     borderRadius: 8,
@@ -189,7 +197,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#e0e0e0',
   },
-  markerSelected: { borderColor: '#4CAF50', backgroundColor: '#f0faf0' },
+  markerSelected: { borderColor: '#1565C0', backgroundColor: '#f0faf0' },
   markerText: { fontSize: 11, fontWeight: '600', color: '#1a1a1a' },
   cardStrip: {
     position: 'absolute',

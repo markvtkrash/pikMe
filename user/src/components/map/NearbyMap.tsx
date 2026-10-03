@@ -19,7 +19,7 @@ export function NearbyMap() {
   if (locationLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color="#1565C0" />
         <Text style={styles.statusText}>Getting your location…</Text>
       </View>
     );
@@ -48,7 +48,7 @@ export function NearbyMap() {
 
       {isLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#4CAF50" />
+          <ActivityIndicator color="#1565C0" />
           <Text style={styles.statusText}>Finding nearby restaurants…</Text>
         </View>
       ) : fetchError ? (
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   statusText: { marginTop: 12, fontSize: 14, color: '#888' },
   errorTitle: { fontSize: 17, fontWeight: '600', color: '#333', marginBottom: 6, textAlign: 'center' },
   errorBody: { fontSize: 14, color: '#888', textAlign: 'center', marginBottom: 20 },
-  btn: { backgroundColor: '#4CAF50', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 28 },
+  btn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 28 },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   list: { paddingTop: 12, paddingBottom: 32 },
 

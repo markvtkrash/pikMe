@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
 import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
@@ -148,6 +148,7 @@ export function OwnerNavHeader() {
   return (
     <View style={styles.wrapper}>
       <View style={styles.brandRow}>
+        <Image source={require('../../../assets/logo.png')} style={styles.brandLogo} />
         <View style={styles.brandTextGroup}>
           <Text style={styles.brandSmall}>{BRAND_NAME}</Text>
           <Text style={styles.brand} numberOfLines={1}>
@@ -222,8 +223,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6,
   },
+  brandLogo: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
   brandTextGroup: { flexShrink: 1 },
-  brandSmall: { fontSize: 11, fontWeight: '700', color: '#2e7d32', letterSpacing: 0.3 },
+  brandSmall: { fontSize: 11, fontWeight: '700', color: '#1565C0', letterSpacing: 0.3 },
   brand: { fontSize: 15, fontWeight: '800', color: '#222', flexShrink: 1 },
   navWrapOuter: { position: 'relative' },
   // Bridges the gap between the pill's own bottom edge and the triangle
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
   // the triangle's own 1px offset = 13px) so the pointer reads as touching
   // the pill instead of floating separately under it. Explicit height, not
   // top+bottom stretch -- that didn't render reliably.
-  navConnector: { position: 'absolute', width: 2, backgroundColor: '#4CAF50' },
+  navConnector: { position: 'absolute', width: 2, backgroundColor: '#1565C0' },
   navWrap: {
     flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
     paddingHorizontal: 16, paddingBottom: 8,
@@ -243,13 +245,13 @@ const styles = StyleSheet.create({
   navPointer: {
     position: 'absolute', bottom: -1, width: 0, height: 0,
     borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 7,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#4CAF50',
+    borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: '#1565C0',
   },
   navBtn: {
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 4, marginBottom: 4,
-    borderWidth: 1, borderColor: '#A5D6A7', backgroundColor: '#C8E6C9',
+    borderWidth: 1, borderColor: '#90CAF9', backgroundColor: '#BBDEFB',
   },
-  navBtnActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  navBtnActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   navBtnText: { fontSize: 13, fontWeight: '700', color: '#555' },
   navBtnTextActive: { color: '#fff' },
   logoutBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#f0f0f0', flexShrink: 0 },
@@ -262,9 +264,9 @@ const styles = StyleSheet.create({
   },
   subBtn: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginRight: 8, marginBottom: 6,
-    borderWidth: 1, borderColor: '#A5D6A7', backgroundColor: '#C8E6C9',
+    borderWidth: 1, borderColor: '#90CAF9', backgroundColor: '#BBDEFB',
   },
-  subBtnActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
+  subBtnActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   subBtnText: { fontSize: 12, fontWeight: '700', color: '#555' },
   subBtnTextActive: { color: '#fff' },
 });
