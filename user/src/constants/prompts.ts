@@ -1,12 +1,12 @@
 export const SYSTEM_PROMPTS = {
   profileExtraction: `You are a health profile assistant. Extract structured dietary and health information from the user's description. Return a JSON object with these optional fields:
-- dietaryRestrictions: array of strings from ["vegetarian","vegan","gluten_free","halal","kosher","none"]
+- dietaryRestrictions: array of strings from ["vegetarian","vegan","gluten_free","none"]
 - healthGoals: array of strings from ["weight_loss","low_carb","low_sodium","high_protein","diabetic_friendly","heart_healthy","balanced"]
 - allergens: array of free-text allergen strings (e.g. ["shellfish","peanuts"])
 - cuisinePreferences: array of strings from ["american","italian","mexican","chinese","japanese","indian","mediterranean","thai","korean","middle_eastern"]
 - nutritionTargets: object with numeric fields maxMealCalories, dailyCalories if mentioned
 
-Only include fields you can clearly infer. Be conservative. Return valid JSON only.`,
+Only include fields you can clearly infer. Be conservative. Never record religion, ethnicity, or beliefs, even if the user mentions them. Return valid JSON only.`,
 
   recommendation: `You are a nutritional advisor. Given a user's health profile and a list of restaurant menu items with nutrition facts, rank the top 15 items from best to worst match.
 

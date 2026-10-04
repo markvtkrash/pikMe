@@ -7,6 +7,7 @@ import { Alert } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { adminSetOwnerActive } from '../../src/api/restaurantAuth';
+import { filterUsers } from '../../src/utils/userFilter';
 import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
 
 type UserRole = 'admin' | 'owner' | 'customer';
@@ -27,6 +28,8 @@ interface AppUser {
   created_at: string;
   last_sign_in_at: string | null;
   is_active: boolean | null;
+  restaurant_name: string | null;
+  restaurant_address: string | null;
 }
 
 const ROLE_COLORS: Record<UserRole, string> = {
@@ -86,17 +89,7 @@ export default function AdminUsersScreen() {
     }
   }
 
-  const filteredUsers = users.filter((u) => {
-    const matchesTab = activeTab === 'all' || u.role === activeTab;
-    if (!matchesTab) return false;
-
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      u.email?.toLowerCase().includes(query) ||
-      u.business_name?.toLowerCase().includes(query)
-    );
-  });
+  const filteredUsers = filterUsers(users, activeTab, searchQuery);
 
   if (loading) {
     return (
@@ -131,7 +124,7 @@ export default function AdminUsersScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by email or business name..."
+          placeholder="Search by email, business, restaurant or address..."
           placeholderTextColor="#999"
           autoCapitalize="none"
           value={searchQuery}
@@ -157,6 +150,11 @@ export default function AdminUsersScreen() {
                   <Text style={styles.email}>{item.email}</Text>
                   {item.business_name ? (
                     <Text style={styles.businessName}>{item.business_name}</Text>
+                  ) : null}
+                  {item.role === 'owner' && (item.restaurant_name || item.restaurant_address) ? (
+                    <Text style={styles.restaurantLine}>
+                      🍽️ {[item.restaurant_name, item.restaurant_address].filter(Boolean).join(' — ')}
+                    </Text>
                   ) : null}
                   <Text style={styles.meta}>
                     Joined {new Date(item.created_at).toLocaleDateString()}
@@ -265,6 +263,7 @@ const styles = StyleSheet.create({
   userInfo: { flex: 1, marginRight: 12 },
   email: { fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 2 },
   businessName: { fontSize: 12, color: '#1565C0', fontWeight: '600', marginBottom: 2 },
+  restaurantLine: { fontSize: 12, color: '#555', marginBottom: 2 },
   meta: { fontSize: 11, color: '#999' },
   roleBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   roleText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },

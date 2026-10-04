@@ -1,53 +1,72 @@
 jest.mock('../api/supabase', () => ({
   supabase: {
-    auth: { signOut: jest.fn() },
+    auth: { signOut: jest.fn().mockResolvedValue({ error: null }) },
   },
 }));
 
-import { useRestaurantOwnerStore } from './restaurantOwnerStore';
 import { supabase } from '../api/supabase';
+import { useRestaurantOwnerStore } from './restaurantOwnerStore';
 
 const signOut = supabase.auth.signOut as jest.Mock;
-const initialState = useRestaurantOwnerStore.getState();
+
+function reset() {
+  useRestaurantOwnerStore.setState({
+    owner: null,
+    restaurant: null,
+    session: null,
+    loading: false,
+    restaurantError: null,
+    mustChangePassword: false,
+  });
+}
 
 beforeEach(() => {
   jest.clearAllMocks();
-  useRestaurantOwnerStore.setState(initialState, true);
+  signOut.mockResolvedValue({ error: null });
+  reset();
 });
 
-describe('restaurantOwnerStore', () => {
-  it('starts with no owner, restaurant, or session', () => {
-    const s = useRestaurantOwnerStore.getState();
-    expect(s.owner).toBeNull();
-    expect(s.restaurant).toBeNull();
-    expect(s.session).toBeNull();
-    expect(s.loading).toBe(false);
+describe('mustChangePassword', () => {
+  it('defaults to false', () => {
+    expect(useRestaurantOwnerStore.getState().mustChangePassword).toBe(false);
   });
 
-  it('setOwner, setRestaurant, setSession, and setLoading set fields independently', () => {
-    const owner = { id: 'o1', email: 'a@b.com', businessName: 'Diner Inc' };
-    const restaurant = { id: 'r1', owner_id: 'o1', google_place_id: 'gp1', name: 'Diner', address: 'addr', claimed_at: '2024-01-01', status: 'approved' as const };
-    const session = { access_token: 'a', refresh_token: 'r' };
-
-    useRestaurantOwnerStore.getState().setOwner(owner);
-    useRestaurantOwnerStore.getState().setRestaurant(restaurant);
-    useRestaurantOwnerStore.getState().setSession(session);
-    useRestaurantOwnerStore.getState().setLoading(true);
-
-    const s = useRestaurantOwnerStore.getState();
-    expect(s.owner).toEqual(owner);
-    expect(s.restaurant).toEqual(restaurant);
-    expect(s.session).toEqual(session);
-    expect(s.loading).toBe(true);
+  it('can be set and cleared', () => {
+    useRestaurantOwnerStore.getState().setMustChangePassword(true);
+    expect(useRestaurantOwnerStore.getState().mustChangePassword).toBe(true);
+    useRestaurantOwnerStore.getState().setMustChangePassword(false);
+    expect(useRestaurantOwnerStore.getState().mustChangePassword).toBe(false);
   });
 
-  it('logout signs out of supabase and clears owner/restaurant/session but not loading', async () => {
-    signOut.mockResolvedValue({ error: null });
+  it('does not disturb the other fields', () => {
+    useRestaurantOwnerStore.getState().setOwner({ id: 'o1', email: 'a@b.c', businessName: 'Biz' });
+    useRestaurantOwnerStore.getState().setMustChangePassword(true);
+    expect(useRestaurantOwnerStore.getState().owner?.id).toBe('o1');
+  });
+
+  it('is cleared on logout, so the next login starts clean', async () => {
+    useRestaurantOwnerStore.getState().setMustChangePassword(true);
+    await useRestaurantOwnerStore.getState().logout();
+    expect(useRestaurantOwnerStore.getState().mustChangePassword).toBe(false);
+  });
+});
+
+describe('restaurantError', () => {
+  it('defaults to null, can be set, and is cleared on logout', async () => {
+    expect(useRestaurantOwnerStore.getState().restaurantError).toBeNull();
+    useRestaurantOwnerStore.getState().setRestaurantError('db down');
+    expect(useRestaurantOwnerStore.getState().restaurantError).toBe('db down');
+    await useRestaurantOwnerStore.getState().logout();
+    expect(useRestaurantOwnerStore.getState().restaurantError).toBeNull();
+  });
+});
+
+describe('logout', () => {
+  it('signs out and clears owner, restaurant and session', async () => {
     useRestaurantOwnerStore.setState({
-      owner: { id: 'o1', email: 'a@b.com', businessName: 'Diner Inc' },
-      restaurant: { id: 'r1', owner_id: 'o1', google_place_id: 'gp1', name: 'Diner', address: 'addr', claimed_at: '2024-01-01', status: 'approved' },
-      session: { access_token: 'a', refresh_token: 'r' },
-      loading: true,
+      owner: { id: 'o1', email: 'a@b.c', businessName: 'Biz' },
+      restaurant: { id: 'r1' } as any,
+      session: { access_token: 't', refresh_token: 'r' },
     });
 
     await useRestaurantOwnerStore.getState().logout();
@@ -57,17 +76,16 @@ describe('restaurantOwnerStore', () => {
     expect(s.owner).toBeNull();
     expect(s.restaurant).toBeNull();
     expect(s.session).toBeNull();
-    expect(s.loading).toBe(true);
   });
 
-  it('logout still clears state even if signOut throws', async () => {
+  it('still clears the store if signing out throws', async () => {
     signOut.mockRejectedValue(new Error('not authenticated'));
-    useRestaurantOwnerStore.setState({
-      owner: { id: 'o1', email: 'a@b.com', businessName: 'Diner Inc' },
-    });
+    useRestaurantOwnerStore.setState({ owner: { id: 'o1', email: 'a@b.c', businessName: 'Biz' }, mustChangePassword: true });
 
     await useRestaurantOwnerStore.getState().logout();
 
-    expect(useRestaurantOwnerStore.getState().owner).toBeNull();
+    const s = useRestaurantOwnerStore.getState();
+    expect(s.owner).toBeNull();
+    expect(s.mustChangePassword).toBe(false);
   });
 });

@@ -25,6 +25,17 @@ async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   }
 }
 
+// PikMe does not collect or use religious preference data. Strips any such
+// dietary value (Halal, Kosher, Hindu Meal, ...) — keep in sync with
+// user/src/utils/religiousData.ts and public.is_religious_dietary_value.
+const RELIGIOUS_VALUE_PATTERN =
+  /halal|kosher|hindu|jain|buddh|muslim|islam|jewish|christian|sikh|religio|ramadan|sabbath/i;
+function stripReligiousDietary(values: unknown): string[] {
+  return Array.isArray(values)
+    ? values.filter((v): v is string => typeof v === 'string' && !RELIGIOUS_VALUE_PATTERN.test(v))
+    : [];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -64,7 +75,7 @@ serve(async (req) => {
     const prompt = `Extract health and food preference information from the user's description below.
 Return ONLY valid JSON with these exact fields (omit any field not mentioned in the text):
 {
-  "dietaryRestrictions": [],   // only values from: vegetarian, vegan, gluten_free, halal, kosher, none
+  "dietaryRestrictions": [],   // only values from: vegetarian, vegan, gluten_free, none
   "healthGoals": [],           // only values from: weight_loss, low_carb, low_sodium, high_protein, diabetic_friendly, heart_healthy, balanced
   "allergens": [],             // free-text allergens (e.g. "peanuts", "shellfish", "dairy")
   "cuisinePreferences": []     // only values from: american, italian, mexican, chinese, japanese, indian, mediterranean, thai, korean, middle_eastern
@@ -72,6 +83,7 @@ Return ONLY valid JSON with these exact fields (omit any field not mentioned in 
 
 User description: "${freeText.replace(/"/g, '\\"')}"
 
+Never record or infer religion, ethnicity, or beliefs, even if the description mentions them — ignore that part.
 Return only the JSON object. No explanation, no markdown, no code fences.`;
 
     console.log('[ai-onboard] User input:', freeText.slice(0, 200));
@@ -139,6 +151,11 @@ Return only the JSON object. No explanation, no markdown, no code fences.`;
       extracted = JSON.parse(cleaned);
     } catch {
       console.warn('[ai-onboard] JSON parse failed, returning empty extraction');
+    }
+
+    // Whatever the model returned, never pass a religious value back.
+    if ('dietaryRestrictions' in extracted) {
+      extracted.dietaryRestrictions = stripReligiousDietary(extracted.dietaryRestrictions);
     }
 
     return new Response(JSON.stringify(extracted), {

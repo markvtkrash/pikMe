@@ -28,6 +28,7 @@ export default function AdminLayout() {
       <Stack.Screen name="menu-management" options={{ title: '🧾 Menu Management' }} />
       <Stack.Screen name="menu-management/[id]" options={{ title: 'Menu Items' }} />
       <Stack.Screen name="menu-view" options={{ title: '👁 View Menu' }} />
+      <Stack.Screen name="menu-edit" options={{ title: '📝 Manual Edit' }} />
       <Stack.Screen name="coupons" options={{ title: '🎟️ Coupon Management' }} />
       <Stack.Screen name="owners" options={{ title: '🏪 Manage Restaurants' }} />
       <Stack.Screen name="users" options={{ title: '👥 All Users' }} />

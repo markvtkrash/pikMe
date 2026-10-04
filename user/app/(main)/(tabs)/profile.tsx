@@ -124,7 +124,6 @@ export default function ProfileScreen() {
         allergens: profile.allergens,
         cuisinePreferences: profile.cuisinePreferences,
         nutritionTargets: profile.nutritionTargets,
-        searchRadiusMeters: profile.searchRadiusMeters,
       });
       setAllergenInput(profile.allergens.join(', '));
       setIsEditing(true);
@@ -148,7 +147,8 @@ export default function ProfileScreen() {
         allergens: editForm.allergens || profile.allergens,
         cuisinePreferences: editForm.cuisinePreferences || profile.cuisinePreferences,
         nutritionTargets: editForm.nutritionTargets || profile.nutritionTargets,
-        searchRadiusMeters: editForm.searchRadiusMeters || profile.searchRadiusMeters,
+        // Not editable here (nothing reads it); the stored value is passed through unchanged.
+        searchRadiusMeters: profile.searchRadiusMeters,
         onboardingComplete: true,
       });
       Alert.alert('Success', 'Profile updated!');
@@ -352,32 +352,6 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Search Radius */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Search Radius</Text>
-        {isEditing ? (
-          <View style={styles.inputRow}>
-            <TextInput
-              style={styles.numberInput}
-              value={String((form.searchRadiusMeters! / 1609.34).toFixed(1))}
-              onChangeText={(text) =>
-                setEditForm({
-                  ...form,
-                  searchRadiusMeters: Math.max(500, parseFloat(text) * 1609.34 || 2000),
-                })
-              }
-              placeholder="mi"
-              keyboardType="decimal-pad"
-            />
-            <Text style={styles.inputLabel}>mi</Text>
-          </View>
-        ) : (
-          <Text style={styles.targetText}>
-            {(form.searchRadiusMeters! / 1609.34).toFixed(1)} mi
-          </Text>
-        )}
-      </View>
-
       {/* Buttons */}
       <View style={styles.buttonGroup}>
         {isEditing ? (
@@ -520,21 +494,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     minHeight: 60,
   },
-  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  numberInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-  },
-  inputLabel: { fontSize: 14, color: '#666', fontWeight: '500' },
   emptyText: { fontSize: 14, color: '#bbb', fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontSize: 14, color: '#444', fontWeight: '500', flex: 1, marginRight: 12 },
-  targetText: { fontSize: 15, color: '#444', marginBottom: 4 },
   errorText: { fontSize: 15, color: '#999', marginBottom: 24 },
   buttonGroup: { flexDirection: 'column', gap: 10, marginTop: 28, marginBottom: 20 },
   btn: {

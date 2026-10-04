@@ -2,9 +2,6 @@ export const DIETARY_RESTRICTIONS = [
   { value: 'vegetarian', label: 'Vegetarian', icon: '🥗' },
   { value: 'vegan', label: 'Vegan', icon: '🌱' },
   { value: 'gluten_free', label: 'Gluten-Free', icon: '🌾' },
-  { value: 'halal', label: 'Halal', icon: '☪️' },
-  { value: 'kosher', label: 'Kosher', icon: '✡️' },
-  { value: 'hindu_meal', label: 'Hindu Meal', icon: '🕉️' },
   { value: 'none', label: 'No Restrictions', icon: '✅' },
 ] as const;
 

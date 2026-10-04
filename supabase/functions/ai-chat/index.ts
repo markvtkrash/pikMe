@@ -25,6 +25,17 @@ async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   }
 }
 
+// PikMe does not collect or use religious preference data. Strips any such
+// dietary value (Halal, Kosher, Hindu Meal, ...) — keep in sync with
+// user/src/utils/religiousData.ts and public.is_religious_dietary_value.
+const RELIGIOUS_VALUE_PATTERN =
+  /halal|kosher|hindu|jain|buddh|muslim|islam|jewish|christian|sikh|religio|ramadan|sabbath/i;
+function stripReligiousDietary(values: unknown): string[] {
+  return Array.isArray(values)
+    ? values.filter((v): v is string => typeof v === 'string' && !RELIGIOUS_VALUE_PATTERN.test(v))
+    : [];
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -88,7 +99,7 @@ serve(async (req) => {
     }
 
     const goals = (profile?.healthGoals ?? []).join(', ') || 'balanced diet';
-    const restrictions = (profile?.dietaryRestrictions ?? []).join(', ') || 'none';
+    const restrictions = stripReligiousDietary(profile?.dietaryRestrictions).join(', ') || 'none';
     const allergens = (profile?.allergens ?? []).join(', ') || 'none';
     const cuisines = (profile?.cuisinePreferences ?? []).join(', ') || 'any';
     const restaurants = (nearbyRestaurantNames ?? []).slice(0, 15).join(', ') || 'none known';

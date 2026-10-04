@@ -20,13 +20,15 @@ Please read this Privacy Policy carefully. If you do not agree with our policies
 
 ### 2.2 User Profile Information
 You voluntarily provide:
-- Dietary preferences (vegetarian, vegan, halal, kosher, etc.)
+- Dietary preferences (vegetarian, vegan, gluten-free)
 - Health goals (weight loss, low sodium, high protein, etc.)
 - Allergens/food restrictions
 - Cuisine preferences
 - Display name
 
 **Storage:** Encrypted and stored in Supabase database
+
+**We do not collect or use religious beliefs or preferences.** The app does not ask for them, and if you mention them in free text they are not recorded or used.
 
 ### 2.3 Usage Data
 - Menu items viewed

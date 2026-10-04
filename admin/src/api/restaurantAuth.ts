@@ -470,23 +470,46 @@ export interface ResetOwnerPasswordResult {
   mustChangePasswordFlagged: boolean;
 }
 
-// Admin-only: sets a new random temporary password on an owner's login. The
-// password is generated server-side and returned once; the owner is made to
-// change it at next login.
+// Admin-only: sets a temporary password on an owner's login. Pass
+// `temporaryPassword` to use one the admin chose (it must meet the strength
+// rules; the server rejects anything weaker); omit it and the server generates
+// one. The password comes back once; the owner is made to change it at next login.
 export async function adminResetOwnerPassword(params: {
   ownerId: string;
   accessToken: string;
+  temporaryPassword?: string;
 }): Promise<ResetOwnerPasswordResult> {
+  const body: Record<string, unknown> = { ownerId: params.ownerId };
+  if (params.temporaryPassword !== undefined) body.temporaryPassword = params.temporaryPassword;
+
   const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-owner-password`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${params.accessToken}`,
     },
-    body: JSON.stringify({ ownerId: params.ownerId }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Failed to reset password');
   return data;
+}
+
+// Asks the server for a suggested strong password. Nothing is changed — the
+// reset dialog shows it in an editable field and the admin applies it (or an
+// edited version) with adminResetOwnerPassword.
+export async function adminGenerateOwnerPassword(accessToken: string): Promise<string> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-owner-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ generateOnly: true }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to generate a password');
+  return data.temporaryPassword as string;
 }

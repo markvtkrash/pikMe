@@ -12,11 +12,13 @@
 -- admin app's Franchise List page.
 
 -- ── 1. Name normalization ───────────────────────────────────────────────────
--- "McDonald's #4521" -> "mcdonalds", "The Cheesecake Factory - Downtown" ->
+-- "McDonald's #4521" -> "mcdonalds", "Cheesecake Factory - Downtown" ->
 -- "cheesecake factory", "Chick-fil-A" -> "chick fil a". Applied to both the
 -- stored names and the name being looked up, so punctuation, store numbers,
--- trailing " - location" text, parenthesised text and a leading "The" never
--- cause a miss.
+-- trailing " - location" text and parenthesised text never cause a miss.
+-- A leading "The" is deliberately NOT stripped (that would let an independent
+-- "The Subway" match "Subway"); chains commonly written with it carry an alias
+-- instead, e.g. "The Cheesecake Factory".
 CREATE OR REPLACE FUNCTION public.normalize_restaurant_name(p_name TEXT)
 RETURNS TEXT
 LANGUAGE sql

@@ -6,6 +6,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../src/api/supabase';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { useRestaurantOwnerStore } from '../src/store/restaurantOwnerStore';
+import { resolveOwnerRoute } from '../src/utils/ownerRouting';
 import { getRestaurantForOwner } from '../src/api/restaurantAuth';
 import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
 import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
@@ -46,6 +47,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const setStoreRestaurant = useRestaurantOwnerStore((s) => s.setRestaurant);
   const setStoreSession = useRestaurantOwnerStore((s) => s.setSession);
   const setStoreRestaurantError = useRestaurantOwnerStore((s) => s.setRestaurantError);
+  const mustChangePassword = useRestaurantOwnerStore((s) => s.mustChangePassword);
+  const setStoreMustChangePassword = useRestaurantOwnerStore((s) => s.setMustChangePassword);
   // Tracks whether a rehydration attempt has finished (success or failure) —
   // distinct from storeOwner being set, so a failed fetch doesn't leave the
   // gate below stuck showing a spinner forever.
@@ -152,7 +155,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       try {
         const { data: ownerRow, error: ownerError } = await supabase
           .from('restaurant_owners')
-          .select('id, email, business_name')
+          .select('id, email, business_name, must_change_password')
           .eq('id', session.user.id)
           .single();
         if (ownerError || !ownerRow) {
@@ -173,6 +176,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         setStoreOwner({ id: ownerRow.id, email: ownerRow.email, businessName: ownerRow.business_name });
         setStoreSession({ access_token: session.access_token, refresh_token: session.refresh_token });
         setStoreRestaurantError(lookupError);
+        // Re-read from the database so a reload can't skip a forced password change.
+        setStoreMustChangePassword(ownerRow.must_change_password === true);
         if (restaurant) setStoreRestaurant(restaurant);
       } catch (err) {
         console.error('[AuthGate] Rehydration failed:', err);
@@ -182,61 +187,26 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     })();
   }, [session, isRestaurantOwner, roleCheckComplete, storeOwner]);
 
-  // Routing guard — runs whenever session or role state or segment changes
+  // Routing guard — runs whenever session, role, password-change state or the
+  // route changes. The decision itself lives in resolveOwnerRoute (tested in
+  // ownerRouting.test.ts); it also holds an owner whose password must be changed
+  // (after an admin reset) on the change-password page.
   useEffect(() => {
     if (session === undefined) return;
 
-    // Allow entry point pages (and the bare root route) to handle their own redirects
-    const isEntryPoint = segments[0] === 'owner' || segments[0] === undefined;
-    if (isEntryPoint) {
-      console.log('[AuthGate] On entry point page, skipping guards');
-      return;
-    }
-
-    console.log('[AuthGate] segments:', segments, 'session:', !!session, 'isRestaurantOwner:', isRestaurantOwner);
-
     const segmentList: string[] = segments;
-    const isRestaurantAuthPage = segmentList[0] === 'restaurant' && segmentList[1] === 'auth';
+    const target = resolveOwnerRoute({
+      hasSession: !!session,
+      roleCheckComplete,
+      isRestaurantOwner,
+      hasStoreOwner: !!storeOwner,
+      mustChangePassword,
+      segments: segmentList,
+    });
 
-    if (!session && !isRestaurantAuthPage) {
-      console.log('[AuthGate] No session and not on an auth page, redirecting to owner login');
-      router.replace('/restaurant/auth/login');
-      return;
-    }
-
-    // Role check is still in flight — wait rather than guessing.
-    if (!roleCheckComplete) {
-      console.log('[AuthGate] Role check still in flight, waiting...');
-      return;
-    }
-
-    if (isRestaurantOwner) {
-      const inRestaurant = segments[0] === 'restaurant';
-      // Only force an authenticated owner off the login/signup/change-
-      // password pages once rehydration has actually confirmed a usable
-      // owner in the store (storeOwner). Gating on isRestaurantOwner alone
-      // caused a loop: if rehydration ever fails to populate storeOwner,
-      // dashboard.tsx's own "if (!owner) redirect to login" guard would send
-      // them back here, and this would immediately bounce them to the
-      // dashboard again — forever. Requiring storeOwner breaks that cycle:
-      // a failed hydration just leaves them on the current page instead of
-      // fighting another redirect over it.
-      if (!inRestaurant || (isRestaurantAuthPage && storeOwner)) {
-        console.log('[AuthGate] Owner already authenticated, redirecting to /restaurant/dashboard');
-        router.replace('/restaurant/dashboard');
-      }
-      return;
-    }
-
-    // Signed in, but not an owner — this account has no business being in
-    // this app (e.g. a customer/admin credential used by mistake). There's
-    // no other flow to fall back to here, so send them back to the owner
-    // login rather than showing a stranded blank screen.
-    if (!isRestaurantAuthPage) {
-      console.log('[AuthGate] Session has no owner role, redirecting to owner login');
-      router.replace('/restaurant/auth/login');
-    }
-  }, [session, isRestaurantOwner, roleCheckComplete, segments, storeOwner]);
+    console.log('[AuthGate] segments:', segments, 'session:', !!session, 'isRestaurantOwner:', isRestaurantOwner, 'mustChangePassword:', mustChangePassword, '->', target ?? 'stay');
+    if (target) router.replace(target as any);
+  }, [session, isRestaurantOwner, roleCheckComplete, segments, storeOwner, mustChangePassword]);
 
   // Block on the initial session check, and — when signed in — on the
   // rehydration attempt above, so pages never render with a signed-in

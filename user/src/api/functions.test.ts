@@ -314,10 +314,43 @@ describe('toggleSavedMenuItem', () => {
 
 describe('getUserProfile', () => {
   it('returns the profile data', async () => {
-    const profile = { id: 'u1', displayName: 'Alex' };
+    const profile = { id: 'u1', displayName: 'Alex', dietaryRestrictions: ['vegan'] };
     rpc.mockResolvedValue({ data: profile, error: null });
 
-    await expect(getUserProfile()).resolves.toBe(profile);
+    await expect(getUserProfile()).resolves.toEqual(profile);
+  });
+
+  it('returns null when there is no profile yet', async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(getUserProfile()).resolves.toBeNull();
+  });
+
+  it('never returns religious dietary values, even if they are stored', async () => {
+    rpc.mockResolvedValue({
+      data: {
+        id: 'u1',
+        displayName: 'Alex',
+        dietaryRestrictions: ['vegan', 'halal', 'kosher', 'gluten_free', 'hindu_meal'],
+        healthGoals: ['low_carb'],
+      },
+      error: null,
+    });
+
+    const profile = await getUserProfile();
+
+    expect(profile?.dietaryRestrictions).toEqual(['vegan', 'gluten_free']);
+    // Everything else on the profile is untouched.
+    expect(profile?.healthGoals).toEqual(['low_carb']);
+    expect(profile?.displayName).toBe('Alex');
+  });
+
+  it('handles a profile with no dietaryRestrictions field', async () => {
+    rpc.mockResolvedValue({ data: { id: 'u1' }, error: null });
+
+    const profile = await getUserProfile();
+
+    expect(profile?.dietaryRestrictions).toEqual([]);
   });
 
   it('throws on error', async () => {
@@ -353,6 +386,60 @@ describe('upsertUserProfile', () => {
       p_search_radius_meters: 5000,
       p_onboarding_complete: true,
     });
+  });
+});
+
+describe('upsertUserProfile (religious data)', () => {
+  const base: Omit<UserProfile, 'id'> = {
+    displayName: 'Alex',
+    dietaryRestrictions: [],
+    healthGoals: [],
+    cuisinePreferences: [],
+    allergens: [],
+    nutritionTargets: {},
+    searchRadiusMeters: 5000,
+    onboardingComplete: true,
+  };
+
+  it('never sends religious dietary values to the database', async () => {
+    rpc.mockResolvedValue({ error: null });
+
+    await upsertUserProfile({
+      ...base,
+      dietaryRestrictions: ['vegetarian', 'halal', 'kosher', 'hindu_meal'] as any,
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'upsert_user_profile',
+      expect.objectContaining({ p_dietary_restrictions: ['vegetarian'] })
+    );
+  });
+
+  it('sends an empty list when only religious values were given', async () => {
+    rpc.mockResolvedValue({ error: null });
+
+    await upsertUserProfile({ ...base, dietaryRestrictions: ['halal', 'kosher'] as any });
+
+    expect(rpc).toHaveBeenCalledWith(
+      'upsert_user_profile',
+      expect.objectContaining({ p_dietary_restrictions: [] })
+    );
+  });
+
+  it('keeps "none" and the supported restrictions', async () => {
+    rpc.mockResolvedValue({ error: null });
+
+    await upsertUserProfile({ ...base, dietaryRestrictions: ['none'] });
+    expect(rpc).toHaveBeenLastCalledWith(
+      'upsert_user_profile',
+      expect.objectContaining({ p_dietary_restrictions: ['none'] })
+    );
+
+    await upsertUserProfile({ ...base, dietaryRestrictions: ['vegan', 'gluten_free'] });
+    expect(rpc).toHaveBeenLastCalledWith(
+      'upsert_user_profile',
+      expect.objectContaining({ p_dietary_restrictions: ['vegan', 'gluten_free'] })
+    );
   });
 });
 

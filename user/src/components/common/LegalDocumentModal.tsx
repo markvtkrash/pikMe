@@ -239,9 +239,8 @@ Menu items and recommendations are AI-generated and may:
 
 ## Religious/Cultural Dietary Requirements
 
-Religious and cultural dietary requirements require verification:
-- Halal certifications may vary
-- Kosher preparations vary by denomination
+PikMe does not collect or use religious or cultural preferences, and its menu information does not indicate whether food meets any religious dietary requirement.
+- Certification and preparation methods vary by restaurant
 - Vegan products may use processing aids
 - Always confirm with restaurant staff
 

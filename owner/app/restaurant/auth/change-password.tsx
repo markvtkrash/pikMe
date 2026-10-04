@@ -20,7 +20,7 @@ function validatePassword(password: string) {
 
 export default function RestaurantChangePasswordScreen() {
   const router = useRouter();
-  const { owner, setRestaurant } = useRestaurantOwnerStore();
+  const { owner, setRestaurant, setMustChangePassword } = useRestaurantOwnerStore();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
@@ -60,6 +60,9 @@ export default function RestaurantChangePasswordScreen() {
           console.error('[restaurant-change-password] Failed to clear flag:', flagError);
         }
       }
+
+      // The forced change is done: release the route guard.
+      setMustChangePassword(false);
 
       // Continue into the app
       const restaurant = await getRestaurantForOwner();

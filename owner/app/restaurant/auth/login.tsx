@@ -11,7 +11,7 @@ import { BRAND_NAME } from '../../../src/constants/brand';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
-  const { setOwner, setRestaurant, setSession, setRestaurantError } = useRestaurantOwnerStore();
+  const { setOwner, setRestaurant, setSession, setRestaurantError, setMustChangePassword } = useRestaurantOwnerStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -39,11 +39,14 @@ export default function RestaurantLoginScreen() {
 
       // Force password change on first login (admin-provisioned accounts)
       if (result.mustChangePassword) {
+        // Flag first, so the route guard already knows when the owner appears in the store.
+        setMustChangePassword(true);
         setOwner(result.user);
         setSession(result.session);
         router.replace('/restaurant/auth/change-password');
         return;
       }
+      setMustChangePassword(false);
 
       // Look the restaurant up BEFORE storing the owner: storing the owner is
       // what lets the route guard move us to the dashboard, and doing it first

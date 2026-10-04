@@ -19,6 +19,8 @@ import {
   getRestaurantCoupons,
   getRestaurantMenuItems,
   refreshRestaurantMenu,
+  adminResetOwnerPassword,
+  adminGenerateOwnerPassword,
 } from './restaurantAuth';
 
 const getUser = supabase.auth.getUser as jest.Mock;
@@ -276,5 +278,90 @@ describe('refreshRestaurantMenu', () => {
     mockFetch(500, { unexpected: true });
 
     await expect(refreshRestaurantMenu('r1', 'Diner', 'token')).rejects.toThrow(JSON.stringify({ unexpected: true }));
+  });
+});
+
+describe('adminResetOwnerPassword', () => {
+  const sentBody = () => JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
+
+  it('posts to admin-reset-owner-password with the admin token and returns the credentials', async () => {
+    mockFetch(200, { email: 'o@x.com', temporaryPassword: 'Abcdef1!', mustChangePasswordFlagged: true });
+
+    const result = await adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok' });
+
+    expect(result).toEqual({ email: 'o@x.com', temporaryPassword: 'Abcdef1!', mustChangePasswordFlagged: true });
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toMatch(/\/functions\/v1\/admin-reset-owner-password$/);
+    expect(init.method).toBe('POST');
+    expect(init.headers.Authorization).toBe('Bearer tok');
+  });
+
+  it('lets the server generate the password when none is given (no temporaryPassword key sent)', async () => {
+    mockFetch(200, { email: 'o@x.com', temporaryPassword: 'ServerMade1!', mustChangePasswordFlagged: true });
+
+    await adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok' });
+
+    expect(sentBody()).toEqual({ ownerId: 'o1' });
+  });
+
+  it('sends the password the admin chose', async () => {
+    mockFetch(200, { email: 'o@x.com', temporaryPassword: 'MyChoice1!', mustChangePasswordFlagged: true });
+
+    await adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok', temporaryPassword: 'MyChoice1!' });
+
+    expect(sentBody()).toEqual({ ownerId: 'o1', temporaryPassword: 'MyChoice1!' });
+  });
+
+  it('never sends generateOnly on a real reset', async () => {
+    mockFetch(200, { email: 'o@x.com', temporaryPassword: 'MyChoice1!', mustChangePasswordFlagged: true });
+
+    await adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok', temporaryPassword: 'MyChoice1!' });
+
+    expect(sentBody()).not.toHaveProperty('generateOnly');
+  });
+
+  it("surfaces the server's message (e.g. a weak password)", async () => {
+    mockFetch(400, { error: 'Password needs a number' });
+
+    await expect(
+      adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok', temporaryPassword: 'Abcdefg!' })
+    ).rejects.toThrow('Password needs a number');
+  });
+
+  it('falls back to a generic message when the error body has no error field', async () => {
+    mockFetch(500, {});
+
+    await expect(adminResetOwnerPassword({ ownerId: 'o1', accessToken: 'tok' })).rejects.toThrow(
+      'Failed to reset password'
+    );
+  });
+});
+
+describe('adminGenerateOwnerPassword', () => {
+  it('asks for a suggestion only (generateOnly) and returns the password', async () => {
+    mockFetch(200, { temporaryPassword: 'Suggested1!' });
+
+    await expect(adminGenerateOwnerPassword('tok')).resolves.toBe('Suggested1!');
+
+    const [url, init] = (global.fetch as jest.Mock).mock.calls[0];
+    expect(url).toMatch(/\/functions\/v1\/admin-reset-owner-password$/);
+    expect(init.headers.Authorization).toBe('Bearer tok');
+    expect(JSON.parse(init.body)).toEqual({ generateOnly: true });
+  });
+
+  it('does not send an owner id (nothing is changed)', async () => {
+    mockFetch(200, { temporaryPassword: 'Suggested1!' });
+
+    await adminGenerateOwnerPassword('tok');
+
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).not.toHaveProperty('ownerId');
+  });
+
+  it("surfaces the server's message, or a generic one", async () => {
+    mockFetch(403, { error: 'Admin access required' });
+    await expect(adminGenerateOwnerPassword('tok')).rejects.toThrow('Admin access required');
+
+    mockFetch(500, {});
+    await expect(adminGenerateOwnerPassword('tok')).rejects.toThrow('Failed to generate a password');
   });
 });

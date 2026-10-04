@@ -1,4 +1,5 @@
 import type { MenuItem, UserProfile, Restaurant, Recommendation, NutritionTargets } from '../types';
+import { stripReligiousDietary } from '../utils/religiousData';
 
 // ── Reference thresholds ──────────────────────────────────────────────────────
 const CAL_IDEAL = 400;
@@ -58,8 +59,6 @@ const VEGETARIAN_PATTERN =
   /chicken|beef|pork|fish|shrimp|turkey|bacon|ham|lamb/i;
 const GLUTEN_PATTERN =
   /bread|pasta|bun|wrap|tortilla|wheat|flour|sandwich|sub|burger|waffle|pancake/i;
-const HALAL_PATTERN =
-  /pork|bacon|ham|lard/i;
 
 function passesHardFilters(
   item: MenuItem,
@@ -77,7 +76,6 @@ function passesHardFilters(
   if (restrictions.includes('vegan') && VEGAN_PATTERN.test(name)) return false;
   if (restrictions.includes('vegetarian') && VEGETARIAN_PATTERN.test(name)) return false;
   if (restrictions.includes('gluten_free') && GLUTEN_PATTERN.test(name)) return false;
-  if (restrictions.includes('halal') && HALAL_PATTERN.test(name)) return false;
 
   // Allergens
   for (const allergen of allergens) {
@@ -209,7 +207,8 @@ export function scoreAndRankItems(
   const cuisineMatch = hasCuisineMatch(restaurant, profile.cuisinePreferences);
   const targets = profile.nutritionTargets ?? {};
   const allergens = profile.allergens ?? [];
-  const restrictions = profile.dietaryRestrictions ?? [];
+  // Religious values are never used, even if a stored profile still has some.
+  const restrictions = stripReligiousDietary(profile.dietaryRestrictions ?? []) as UserProfile['dietaryRestrictions'];
 
   const passed = items.filter((item) =>
     passesHardFilters(item, restrictions, allergens, targets)

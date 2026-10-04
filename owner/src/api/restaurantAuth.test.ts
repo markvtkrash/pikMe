@@ -33,13 +33,19 @@ function mockFetch(status: number, body: any) {
   });
 }
 
+// Chainable stand-in for supabase's query builder. Every filter/modifier
+// returns the builder; awaiting the builder, or ending the chain with
+// single()/maybeSingle(), resolves to the canned result.
 function makeQueryBuilder(terminalResult: any) {
   const builder: any = {};
   builder.select = jest.fn(() => builder);
   builder.eq = jest.fn(() => builder);
-  builder.order = jest.fn(() => Promise.resolve(terminalResult));
+  builder.ilike = jest.fn(() => builder);
+  builder.order = jest.fn(() => builder);
+  builder.limit = jest.fn(() => builder);
   builder.single = jest.fn(() => Promise.resolve(terminalResult));
   builder.maybeSingle = jest.fn(() => Promise.resolve(terminalResult));
+  builder.then = (resolve: any, reject: any) => Promise.resolve(terminalResult).then(resolve, reject);
   return builder;
 }
 
@@ -153,18 +159,42 @@ describe('getRestaurantForOwner', () => {
     await expect(getRestaurantForOwner()).resolves.toEqual({ id: 'r1' });
   });
 
-  it('returns null when no row is found (PGRST116)', async () => {
+  it('returns null when the owner has no restaurant', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    from.mockReturnValue(makeQueryBuilder({ data: null, error: { code: 'PGRST116' } }));
+    from.mockReturnValue(makeQueryBuilder({ data: null, error: null }));
 
     await expect(getRestaurantForOwner()).resolves.toBeNull();
   });
 
-  it('throws for any other database error', async () => {
+  it('looks up by the logged-in user and takes only the most recent claim', async () => {
+    // Regression: .single() treated "several rows" like "no rows" (both
+    // PGRST116 -> null), so an owner with a duplicate saw "No Restaurant Claimed".
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const builder = makeQueryBuilder({ data: { id: 'r2' }, error: null });
+    from.mockReturnValue(builder);
+
+    await getRestaurantForOwner();
+
+    expect(from).toHaveBeenCalledWith('restaurants');
+    expect(builder.eq).toHaveBeenCalledWith('owner_id', 'u1');
+    expect(builder.order).toHaveBeenCalledWith('claimed_at', { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(1);
+    expect(builder.maybeSingle).toHaveBeenCalled();
+    expect(builder.single).not.toHaveBeenCalled();
+  });
+
+  it('throws for a database error instead of reporting "no restaurant"', async () => {
     getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     from.mockReturnValue(makeQueryBuilder({ data: null, error: { code: '500', message: 'db down' } }));
 
     await expect(getRestaurantForOwner()).rejects.toEqual({ code: '500', message: 'db down' });
+  });
+
+  it('does not swallow PGRST116 any more (a real error must surface)', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    from.mockReturnValue(makeQueryBuilder({ data: null, error: { code: 'PGRST116', message: 'multiple rows' } }));
+
+    await expect(getRestaurantForOwner()).rejects.toEqual({ code: 'PGRST116', message: 'multiple rows' });
   });
 });
 
@@ -244,10 +274,32 @@ describe('getRestaurantCoupons', () => {
 });
 
 describe('getRestaurantMenuItems', () => {
-  it('returns the ordered menu items', async () => {
-    from.mockReturnValue(makeQueryBuilder({ data: [{ id: 'm1' }], error: null }));
+  it('maps rows to the owner menu shape and sorts them by name', async () => {
+    from.mockReturnValue(
+      makeQueryBuilder({
+        data: [
+          { item_id: 'i2', name: 'Burrito', calories: 500, protein_g: 20, is_verified: false, is_out_of_stock: true },
+          { item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false },
+        ],
+        error: null,
+      })
+    );
 
-    await expect(getRestaurantMenuItems('r1')).resolves.toEqual([{ id: 'm1' }]);
+    await expect(getRestaurantMenuItems('Taco Bell')).resolves.toEqual([
+      { id: 'i2', item_id: 'i2', name: 'Burrito', calories: 500, protein_g: 20, is_verified: false, is_out_of_stock: true },
+      { id: 'i1', item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false },
+    ]);
+  });
+
+  it('looks the menu up by trimmed restaurant name, newest first', async () => {
+    const builder = makeQueryBuilder({ data: [], error: null });
+    from.mockReturnValue(builder);
+
+    await getRestaurantMenuItems('  Taco Bell  ');
+
+    expect(from).toHaveBeenCalledWith('menu_items');
+    expect(builder.ilike).toHaveBeenCalledWith('restaurant_name', 'Taco Bell');
+    expect(builder.order).toHaveBeenCalledWith('cached_at', { ascending: false });
   });
 
   it('returns an empty array when data is null and throws on error', async () => {

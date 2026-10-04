@@ -77,11 +77,10 @@
 - Ingredient sourcing may vary
 - **Always confirm with restaurant**
 
-### Halal/Kosher
-- Certification requirements vary by restaurant
-- Preparation methods may not be compliant
-- Must verify with restaurant
-- **Consult religious authority if unsure**
+### Religious or cultural dietary requirements
+- PikMe does not collect or use religious preferences, and its menu information does not indicate whether food meets any religious dietary requirement
+- Certification and preparation methods vary by restaurant
+- **Always verify with the restaurant, and consult your religious authority if unsure**
 
 ### Gluten-Free
 - Cross-contamination risk (shared equipment)

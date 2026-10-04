@@ -170,14 +170,20 @@ export default function AdminMenuManagementScreen() {
                 </View>
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.viewBtn} onPress={() => viewMenu(item.restaurant_name)}>
-                    <Text style={styles.viewBtnText}>👁 View Menu</Text>
+                    <Text style={styles.viewBtnText} numberOfLines={1}>👁 View Menu</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.manualBtn}
+                    onPress={() => router.push({ pathname: '/admin/menu-edit', params: { name: item.restaurant_name } } as any)}
+                  >
+                    <Text style={styles.manualBtnText} numberOfLines={1}>📝 Manual Edit</Text>
                   </TouchableOpacity>
                   {claimed && item.restaurant_id && (
                     <TouchableOpacity
                       style={styles.updateBtn}
                       onPress={() => router.push(`/admin/menu-management/${item.restaurant_id}` as any)}
                     >
-                      <Text style={styles.updateBtnText}>✏️ Update Menu</Text>
+                      <Text style={styles.updateBtnText} numberOfLines={1}>🔄 Update Menu</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -232,8 +238,8 @@ const styles = StyleSheet.create({
   rangeText: { fontSize: 12, color: '#888', paddingHorizontal: 16, paddingTop: 10 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1, flexWrap: 'wrap' },
-  restaurantInfo: { flex: 1, minWidth: 200 },
+  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1 },
+  restaurantInfo: {},
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
   restaurantName: { fontSize: 15, fontWeight: '700', color: '#222' },
   sourceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
@@ -247,10 +253,13 @@ const styles = StyleSheet.create({
   ownerEmail: { fontSize: 12, color: '#555', fontWeight: '600', marginTop: 2 },
   sharedNote: { fontSize: 11, color: '#E65100', fontWeight: '600', marginTop: 2 },
   itemCounts: { fontSize: 12, color: '#888', marginTop: 4, fontWeight: '600' },
-  actions: { gap: 8 },
-  viewBtn: { backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  // View Menu, Manual Edit and Update Menu share one line, equal width.
+  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  viewBtn: { flex: 1, backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 8, alignItems: 'center' },
   viewBtnText: { color: '#1565C0', fontWeight: '700', fontSize: 12 },
-  updateBtn: { backgroundColor: '#ECEFF1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  manualBtn: { flex: 1, backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 8, alignItems: 'center' },
+  manualBtnText: { color: '#E65100', fontWeight: '700', fontSize: 12 },
+  updateBtn: { flex: 1, backgroundColor: '#ECEFF1', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 8, alignItems: 'center' },
   updateBtnText: { color: '#222', fontWeight: '700', fontSize: 12 },
 
   pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 8 },

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { UserProfile, Restaurant, MenuItem, Recommendation, SavedItems, Message } from '../types';
+import { stripReligiousDietary } from '../utils/religiousData';
 
 // ─── Onboarding ───────────────────────────────────────────────────────────────
 
@@ -236,13 +237,19 @@ export async function toggleSavedMenuItem(itemId: string, menuItem?: MenuItem): 
 export async function getUserProfile(): Promise<UserProfile | null> {
   const { data, error } = await supabase.rpc('get_user_profile');
   if (error) throw error;
-  return data as UserProfile | null;
+  if (!data) return null;
+  // Religious dietary values are never used, even if an old profile still has some.
+  const profile = data as UserProfile;
+  return {
+    ...profile,
+    dietaryRestrictions: stripReligiousDietary(profile.dietaryRestrictions) as UserProfile['dietaryRestrictions'],
+  };
 }
 
 export async function upsertUserProfile(profile: Omit<UserProfile, 'id'>): Promise<void> {
   const { error } = await supabase.rpc('upsert_user_profile', {
     p_display_name:         profile.displayName,
-    p_dietary_restrictions: profile.dietaryRestrictions,
+    p_dietary_restrictions: stripReligiousDietary(profile.dietaryRestrictions),
     p_health_goals:         profile.healthGoals,
     p_allergens:            profile.allergens,
     p_cuisine_preferences:  profile.cuisinePreferences,

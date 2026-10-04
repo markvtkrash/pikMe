@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { OnboardingProgress } from '../../src/components/common/OnboardingProgress';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { aiOnboard } from '../../src/api/functions';
+import { stripReligiousDietary } from '../../src/utils/religiousData';
 
 export default function AiProfileScreen() {
   const router = useRouter();
@@ -35,7 +36,8 @@ export default function AiProfileScreen() {
         const extracted = await aiOnboard(description.trim());
         if (extracted && typeof extracted === 'object') {
           updateDraft({
-            dietaryRestrictions: (extracted as any).dietaryRestrictions ?? draft.dietaryRestrictions,
+            // Never keep a religious value, even if the AI returns one.
+            dietaryRestrictions: stripReligiousDietary((extracted as any).dietaryRestrictions ?? draft.dietaryRestrictions),
             healthGoals: (extracted as any).healthGoals ?? draft.healthGoals,
             allergens: (extracted as any).allergens ?? draft.allergens,
             cuisinePreferences: (extracted as any).cuisinePreferences ?? draft.cuisinePreferences,

@@ -75,6 +75,44 @@ describe('scoreAndRankItems', () => {
     expect(results.map((r) => r.menuItem.itemId)).toEqual(['salad']);
   });
 
+  it('does not filter anything on religious dietary values, even if a stored profile has them', () => {
+    // Religious preferences are never collected or used. A stale profile that
+    // still carries halal/kosher must rank exactly like one without them.
+    const items = [
+      makeItem({ itemId: 'a', name: 'Pork Belly Bowl' }),
+      makeItem({ itemId: 'b', name: 'Bacon Cheeseburger' }),
+      makeItem({ itemId: 'c', name: 'Ham Sandwich' }),
+    ];
+    const restaurant = makeRestaurant();
+
+    const withReligious = scoreAndRankItems(
+      makeProfile({ dietaryRestrictions: ['halal', 'kosher'] as any }),
+      items,
+      restaurant
+    );
+    const without = scoreAndRankItems(makeProfile({ dietaryRestrictions: [] }), items, restaurant);
+
+    expect(withReligious.map((r) => r.menuItem.itemId).sort()).toEqual(['a', 'b', 'c']);
+    expect(withReligious.map((r) => [r.menuItem.itemId, r.score])).toEqual(
+      without.map((r) => [r.menuItem.itemId, r.score])
+    );
+  });
+
+  it('still applies the supported restrictions when religious values are also present', () => {
+    const items = [
+      makeItem({ itemId: 'veg', name: 'Garden Salad' }),
+      makeItem({ itemId: 'meat', name: 'Chicken Wrap' }),
+    ];
+
+    const result = scoreAndRankItems(
+      makeProfile({ dietaryRestrictions: ['vegetarian', 'halal'] as any }),
+      items,
+      makeRestaurant()
+    );
+
+    expect(result.map((r) => r.menuItem.itemId)).toEqual(['veg']);
+  });
+
   it('filters out items above 1.5x the max meal calorie cap', () => {
     const profile = makeProfile({ nutritionTargets: { maxMealCalories: 500 } });
     const restaurant = makeRestaurant();

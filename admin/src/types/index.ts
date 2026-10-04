@@ -1,7 +1,7 @@
 export interface UserProfile {
   id: string;
   displayName: string;
-  dietaryRestrictions: ('vegetarian' | 'vegan' | 'gluten_free' | 'halal' | 'kosher' | 'none')[];
+  dietaryRestrictions: ('vegetarian' | 'vegan' | 'gluten_free' | 'none')[];
   healthGoals: (
     | 'weight_loss'
     | 'low_carb'

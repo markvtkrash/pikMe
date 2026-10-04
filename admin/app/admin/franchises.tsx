@@ -70,7 +70,7 @@ export default function AdminFranchiseLookupScreen() {
           Restaurants whose name exactly matches an entry here (or one of its aliases) are treated as
           franchises: the consumer app also shows AI-estimated menu items for them. Everything else only
           shows items the restaurant confirmed. Matching ignores case, punctuation, store numbers and a
-          leading "The". This list is read-only.
+          trailing "- location". This list is read-only.
         </Text>
 
         <FlatList
