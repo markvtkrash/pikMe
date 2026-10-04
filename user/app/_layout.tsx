@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, LogBox, Image, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as LocalAuthentication from 'expo-local-authentication';
 import type { Session } from '@supabase/supabase-js';
@@ -288,7 +288,15 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
           <AuthGate>
-            <Slot />
+            {/* Stack (not Slot) so the restaurant detail can present as a
+                transparent modal over the screen that opened it, keeping
+                Explore/Saved mounted underneath instead of replacing them. */}
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen
+                name="restaurant/[id]"
+                options={{ presentation: 'transparentModal', animation: 'fade' }}
+              />
+            </Stack>
           </AuthGate>
           <FloatingLogo />
           <AlertModalHost />

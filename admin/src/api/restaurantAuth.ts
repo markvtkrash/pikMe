@@ -463,3 +463,30 @@ export async function extractMenuFromText(
   if (!response.ok) throw new Error(data.error || 'Failed to extract menu from that text');
   return data;
 }
+
+export interface ResetOwnerPasswordResult {
+  email: string;
+  temporaryPassword: string;
+  mustChangePasswordFlagged: boolean;
+}
+
+// Admin-only: sets a new random temporary password on an owner's login. The
+// password is generated server-side and returned once; the owner is made to
+// change it at next login.
+export async function adminResetOwnerPassword(params: {
+  ownerId: string;
+  accessToken: string;
+}): Promise<ResetOwnerPasswordResult> {
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-reset-owner-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${params.accessToken}`,
+    },
+    body: JSON.stringify({ ownerId: params.ownerId }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Failed to reset password');
+  return data;
+}

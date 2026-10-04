@@ -45,6 +45,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const setStoreOwner = useRestaurantOwnerStore((s) => s.setOwner);
   const setStoreRestaurant = useRestaurantOwnerStore((s) => s.setRestaurant);
   const setStoreSession = useRestaurantOwnerStore((s) => s.setSession);
+  const setStoreRestaurantError = useRestaurantOwnerStore((s) => s.setRestaurantError);
   // Tracks whether a rehydration attempt has finished (success or failure) —
   // distinct from storeOwner being set, so a failed fetch doesn't leave the
   // gate below stuck showing a spinner forever.
@@ -158,10 +159,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           console.error('[AuthGate] Rehydration: failed to load owner profile:', ownerError);
           return;
         }
+        // Fetch the restaurant BEFORE storing the owner (storing the owner is
+        // what lets the route guard move on), and record a failed lookup so the
+        // dashboard can show it instead of a misleading "No Restaurant Claimed".
+        let restaurant = null;
+        let lookupError: string | null = null;
+        try {
+          restaurant = await getRestaurantForOwner();
+        } catch (lookupErr: any) {
+          console.error('[AuthGate] Rehydration: restaurant lookup failed:', lookupErr);
+          lookupError = lookupErr?.message || 'Could not load your restaurant';
+        }
         setStoreOwner({ id: ownerRow.id, email: ownerRow.email, businessName: ownerRow.business_name });
         setStoreSession({ access_token: session.access_token, refresh_token: session.refresh_token });
-
-        const restaurant = await getRestaurantForOwner();
+        setStoreRestaurantError(lookupError);
         if (restaurant) setStoreRestaurant(restaurant);
       } catch (err) {
         console.error('[AuthGate] Rehydration failed:', err);

@@ -33,6 +33,11 @@ interface RestaurantOwnerStore {
   restaurant: Restaurant | null;
   session: { access_token: string; refresh_token: string } | null;
   loading: boolean;
+  // Set when looking up the owner's restaurant FAILED (as opposed to finding
+  // none), so the dashboard can show the real problem plus a retry instead of
+  // "No Restaurant Claimed".
+  restaurantError: string | null;
+  setRestaurantError: (message: string | null) => void;
   setOwner: (owner: RestaurantOwner | null) => void;
   setRestaurant: (restaurant: Restaurant | null) => void;
   setSession: (session: any | null) => void;
@@ -45,6 +50,8 @@ export const useRestaurantOwnerStore = create<RestaurantOwnerStore>((set) => ({
   restaurant: null,
   session: null,
   loading: false,
+  restaurantError: null,
+  setRestaurantError: (restaurantError) => set({ restaurantError }),
   setOwner: (owner) => set({ owner }),
   setRestaurant: (restaurant) => set({ restaurant }),
   setSession: (session) => set({ session }),
@@ -59,7 +66,7 @@ export const useRestaurantOwnerStore = create<RestaurantOwnerStore>((set) => ({
       console.log('[restaurantOwnerStore] signOut error (expected if not authenticated):', err);
     }
     // Clear store state
-    set({ owner: null, restaurant: null, session: null });
+    set({ owner: null, restaurant: null, session: null, restaurantError: null });
     console.log('[restaurantOwnerStore] Store cleared');
   },
 }));

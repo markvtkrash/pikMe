@@ -6,12 +6,14 @@ import { BRAND_COLORS, BRAND_SHADOWS, BRAND_TYPOGRAPHY } from '../../constants/b
 import type { Recommendation, MenuItem, Coupon } from '../../types';
 import { getItemAnalysis } from '../../api/functions';
 import { useUserProfile } from '../../hooks/useUserProfile';
+import { useIsFranchise } from '../../hooks/useIsFranchise';
 import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
 import { useCouponActivation } from '../../hooks/useCouponActivation';
 import { getItemWarnings, getSafeIndicator } from './menuItemWarnings';
 import { CouponActivationModal } from '../coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
+import { NutritionInfoModal } from './NutritionInfoModal';
 import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../utils/couponDisplay';
 
 interface Props {
@@ -33,18 +35,10 @@ function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-function Macro({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
-  return (
-    <View style={styles.macro}>
-      <Text style={[styles.macroVal, { color }]}>{Math.round(value)}<Text style={styles.macroUnit}>{unit}</Text></Text>
-      <Text style={styles.macroLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed }: Props) {
   const { menuItem: item, score, reasons, warnings } = recommendation;
   const n = item.nutrition;
+  const { data: isFranchise = false } = useIsFranchise(recommendation.restaurant?.name);
   const { data: profile } = useUserProfile();
 
   const isSaved = useSavedStore((s) => s.menuItemIds.has(item.itemId));
@@ -54,6 +48,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
   const [analysisText, setAnalysisText]     = useState('');
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisOpen, setAnalysisOpen]     = useState(false);
+  const [nutritionModalOpen, setNutritionModalOpen] = useState(false);
 
   // Animation values
   const buttonScale = useSharedValue(1);
@@ -141,7 +136,15 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
         </View>
       </View>
 
-      {!item.isVerified && (
+      {!item.isVerified && isFranchise && (
+        <View style={styles.estimatedBadge}>
+          <Text style={styles.estimatedBadgeText}>
+            🤖 AI-estimated — based on typical menu for this chain. Confirm ingredients and allergens with the restaurant.
+          </Text>
+        </View>
+      )}
+
+      {!item.isVerified && !isFranchise && (
         <View style={styles.unverifiedBanner}>
           <Text style={styles.unverifiedIcon}>⚠️</Text>
           <Text style={styles.unverifiedText}>
@@ -154,33 +157,16 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Macros */}
-      <View style={styles.macroRow}>
-        <View style={styles.calBlock}>
-          <Text style={styles.calNum}>{n.calories}</Text>
-          <Text style={styles.calLabel}>cal</Text>
-        </View>
-        <View style={styles.macroDivider} />
-        <View style={styles.macros}>
-          <Macro label="protein"  value={n.protein_g}    unit="g"  color="#1565C0" />
-          <Macro label="carbs"    value={n.totalCarbs_g} unit="g"  color="#6A1B9A" />
-          <Macro label="fat"      value={n.totalFat_g}   unit="g"  color="#E65100" />
-          <Macro label="sodium"   value={n.sodium_mg}    unit="mg" color="#B71C1C" />
-        </View>
-      </View>
-
-      {/* Nutrition-accuracy note — isVerified only confirms the DISH NAME is
-          real, not that these macro values are accurate; nutrition is always
-          AI-estimated unless an owner has explicitly entered real values
-          (nutritionSource === 'owner_provided'). The unverified banner above
-          already covers the AI-estimate case for unverified items, so this
-          only needs to show for verified-but-still-AI-estimated ones —
-          otherwise the two would say the same thing twice. */}
-      {item.isVerified && item.nutritionSource !== 'owner_provided' && (
-        <Text style={styles.nutritionEstimateNote}>
-          🤖 Nutrition values are an AI estimate, not confirmed by the restaurant.
-        </Text>
-      )}
+      {/* Nutrition is shown on request, not up front — see NutritionInfoModal
+          for why only qualitative "High X" flags are shown, never exact
+          numbers or a "Low X" claim. */}
+      <TouchableOpacity
+        style={styles.nutritionBtn}
+        onPress={() => setNutritionModalOpen(true)}
+        activeOpacity={0.85}
+      >
+        <Text style={styles.nutritionBtnText}>📊 Nutrition Info ›</Text>
+      </TouchableOpacity>
 
       {/* Chips */}
       {(goodChips.length > 0 || warnChips.length > 0) && (
@@ -356,6 +342,11 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
       onCancel={couponActivation.cancelActivate}
       onConfirm={couponActivation.confirmActivate}
     />
+    <NutritionInfoModal
+      visible={nutritionModalOpen}
+      nutrition={n}
+      onClose={() => setNutritionModalOpen(false)}
+    />
     </>
   );
 }
@@ -394,6 +385,18 @@ const styles = StyleSheet.create({
   name: { flex: 1, fontSize: 15, fontWeight: '700', color: '#141414', lineHeight: 21 },
   heart: { fontSize: 19, marginTop: 1 },
 
+  estimatedBadge: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#1565C0',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  estimatedBadgeText: { fontSize: 11.5, color: '#0D47A1', lineHeight: 16, fontWeight: '600' },
+
   unverifiedBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -413,18 +416,16 @@ const styles = StyleSheet.create({
 
   divider: { height: 1, backgroundColor: '#F3F3F3', marginBottom: 12 },
 
-  macroRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  calBlock: { alignItems: 'center', paddingRight: 14 },
-  calNum: { fontSize: 22, fontWeight: '800', color: '#141414', lineHeight: 24 },
-  calLabel: { fontSize: 10, color: '#6B6B6B', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  macroDivider: { width: 1, height: 36, backgroundColor: '#F0F0F0', marginRight: 14 },
-  macros: { flex: 1, flexDirection: 'row', justifyContent: 'space-between' },
-  macro: { alignItems: 'center' },
-  macroVal: { fontSize: 14, fontWeight: '700' },
-  macroUnit: { fontSize: 10, fontWeight: '500' },
-  macroLabel: { fontSize: 10, color: '#AEAEB2', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.3 },
-
-  nutritionEstimateNote: { fontSize: 10.5, color: '#999', fontStyle: 'italic', marginBottom: 12, lineHeight: 14 },
+  nutritionBtn: {
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1.5,
+    borderColor: '#1565C0',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  nutritionBtnText: { fontSize: 13, fontWeight: '700', color: '#1565C0' },
 
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
   chipGood: { backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },

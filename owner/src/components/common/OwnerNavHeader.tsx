@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, Modal, Pressable } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
 import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
 import { BRAND_NAME } from '../../constants/brand';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 function pathIs(pathname: string, target: string) {
   return pathname === target || pathname.startsWith(target + '/');
@@ -127,6 +128,8 @@ export function OwnerNavHeader() {
   // fixed spot — pills reflow depending on how many wrap to each row.
   const [pointerX, setPointerX] = useState<number | null>(null);
   const [pillBottom, setPillBottom] = useState<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const activeItem = NAV_ITEMS.find((item) => item.isActive(pathname));
 
@@ -155,10 +158,46 @@ export function OwnerNavHeader() {
             {restaurant ? restaurant.name : 'Owner Portal'}
           </Text>
         </View>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutBtnText}>Logout</Text>
+        <TouchableOpacity
+          style={styles.gearBtn}
+          onPress={() => setSettingsOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Account settings"
+        >
+          <Text style={styles.gearIcon}>⚙️</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={settingsOpen} transparent animationType="fade" onRequestClose={() => setSettingsOpen(false)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setSettingsOpen(false)}>
+          {/* Inner Pressable swallows taps so touching the menu doesn't close it. */}
+          <Pressable style={styles.menuCard} onPress={() => {}}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setSettingsOpen(false);
+                setChangePasswordOpen(true);
+              }}
+            >
+              <Text style={styles.menuIcon}>🔑</Text>
+              <Text style={styles.menuLabel}>Change Password</Text>
+            </TouchableOpacity>
+            <View style={styles.menuDivider} />
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setSettingsOpen(false);
+                handleLogout();
+              }}
+            >
+              <Text style={styles.menuIcon}>🚪</Text>
+              <Text style={[styles.menuLabel, styles.menuLogout]}>Logout</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <ChangePasswordModal visible={changePasswordOpen} onClose={() => setChangePasswordOpen(false)} />
 
       <View style={styles.navWrapOuter}>
         <View style={styles.navWrap}>
@@ -254,8 +293,18 @@ const styles = StyleSheet.create({
   navBtnActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   navBtnText: { fontSize: 13, fontWeight: '700', color: '#555' },
   navBtnTextActive: { color: '#fff' },
-  logoutBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#f0f0f0', flexShrink: 0 },
-  logoutBtnText: { fontSize: 13, fontWeight: '700', color: '#e53e3e' },
+  gearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  gearIcon: { fontSize: 18 },
+  menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'flex-end', paddingTop: 56, paddingRight: 12 },
+  menuCard: {
+    backgroundColor: '#fff', borderRadius: 12, paddingVertical: 6, minWidth: 200,
+    elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10,
+  },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  menuIcon: { fontSize: 16, width: 22, textAlign: 'center' },
+  menuLabel: { fontSize: 14, fontWeight: '600', color: '#222' },
+  menuLogout: { color: '#e53e3e' },
+  menuDivider: { height: 1, backgroundColor: '#eee', marginVertical: 2 },
 
   subRow: {
     flexDirection: 'row', flexWrap: 'wrap',

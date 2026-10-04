@@ -37,3 +37,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     fetch: debugFetch,
   },
 });
+
+// Checks an email/password pair WITHOUT touching the logged-in session: uses
+// a throwaway client that neither stores nor refreshes a session, so verifying
+// a current password (e.g. before a password change) can't swap out or
+// disturb the real one.
+export async function verifyPassword(email: string, password: string): Promise<boolean> {
+  const verifier = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  const { error } = await verifier.auth.signInWithPassword({ email, password });
+  return !error;
+}

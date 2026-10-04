@@ -14,6 +14,15 @@ interface ReportCard {
 // Add a card here for each new report page under admin/reports/.
 const REPORTS: ReportCard[] = [
   {
+    key: 'restaurants',
+    icon: '🍽️',
+    title: 'Restaurants',
+    subtitle: 'Every claimed restaurant and its claim status',
+    color: '#8E24AA',
+    bg: '#F3E5F5',
+    href: '/admin/restaurants',
+  },
+  {
     key: 'restaurant-growth',
     icon: '📈',
     title: 'Restaurant Growth',
@@ -66,6 +75,24 @@ const REPORTS: ReportCard[] = [
     color: '#8E24AA',
     bg: '#F3E5F5',
     href: '/admin/reports/menu-health',
+  },
+  {
+    key: 'franchise-matches',
+    icon: '🍔',
+    title: 'Franchise Matches',
+    subtitle: 'Cached restaurants that match the franchise lookup',
+    color: '#1565C0',
+    bg: '#E3F2FD',
+    href: '/admin/reports/franchise-matches',
+  },
+  {
+    key: 'non-franchise',
+    icon: '🏠',
+    title: 'Non-Franchise Restaurants',
+    subtitle: 'Cached restaurants that did not match the franchise lookup',
+    color: '#E65100',
+    bg: '#FFF3E0',
+    href: '/admin/reports/non-franchise',
   },
   {
     key: 'support-tickets',

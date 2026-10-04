@@ -1,6 +1,7 @@
 import {
   View, Text, TouchableOpacity, StyleSheet,
   FlatList, ActivityIndicator, ListRenderItem, TextInput, ScrollView, Linking, Modal,
+  Pressable, useWindowDimensions,
 } from 'react-native';
 import { useState, useEffect, useMemo } from 'react';
 import { Image } from 'expo-image';
@@ -72,6 +73,7 @@ export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isWide = useWindowDimensions().width > 760;
   const restaurants = useRestaurantStore((s) => s.restaurants);
   const restaurant = restaurants.find((r) => r.placeId === id) ?? null;
   const isSaved = useSavedStore((s) => s.restaurantIds.has(id ?? ''));
@@ -218,7 +220,10 @@ export default function RestaurantDetailScreen() {
   const displayData = isLoading ? Array(5).fill({ _skeleton: true }) : filteredRecommendations ?? [];
 
   return (
-    <>
+    <View style={styles.backdrop}>
+    {/* Tapping the dimmed area outside the sheet closes the modal. */}
+    <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
+    <View style={[styles.sheet, isWide && styles.sheetWide]}>
     <FlatList
       data={displayData}
       keyExtractor={(r, idx) => ('_skeleton' in r ? `skeleton-${idx}` : r.menuItem.itemId)}
@@ -237,7 +242,7 @@ export default function RestaurantDetailScreen() {
 
             {/* Heart button */}
             <TouchableOpacity
-              style={[styles.heroHeart, { top: insets.top + 12 }]}
+              style={[styles.heroHeart, { top: insets.top + 58 }]}
               onPress={() => toggleRestaurant(restaurant.placeId, restaurant)}
               hitSlop={8}
             >
@@ -460,20 +465,14 @@ export default function RestaurantDetailScreen() {
       }
     />
 
-    {/* Sticky back buttons — stay fixed on screen regardless of scroll position.
-        Top one pushed below the global top-left logo badge
-        (app/_layout.tsx's FloatingLogo, left:16 + insets.top+8 + 28px tall). */}
+    {/* Sticky close button — stays fixed on screen regardless of scroll position. */}
     <TouchableOpacity
-      style={[styles.backBtn, styles.backBtnSticky, { top: insets.top + 44 }]}
+      style={[styles.closeBtn, { top: insets.top + 12 }]}
       onPress={() => router.back()}
+      accessibilityRole="button"
+      accessibilityLabel="Close"
     >
-      <Text style={styles.backIcon}>‹</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={[styles.backBtn, styles.backBtnSticky, { bottom: insets.bottom + 16 }]}
-      onPress={() => router.back()}
-    >
-      <Text style={styles.backIcon}>‹</Text>
+      <Text style={styles.closeIcon}>✕</Text>
     </TouchableOpacity>
 
     <CouponActivationModal
@@ -572,11 +571,32 @@ export default function RestaurantDetailScreen() {
           });
       }}
     />
-    </>
+    </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center' },
+  sheet: { flex: 1, width: '100%', backgroundColor: '#F6F6F6', overflow: 'hidden' },
+  sheetWide: { maxWidth: 720, marginVertical: 24, borderRadius: 20 },
+  closeBtn: {
+    position: 'absolute',
+    right: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  closeIcon: { fontSize: 16, color: '#141414', fontWeight: '700' },
   list: { flex: 1, backgroundColor: '#F6F6F6' },
   content: { paddingBottom: 48 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#F6F6F6' },

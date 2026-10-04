@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const dbConfig = await loadDbConfig(['maxRadiusMeters', 'maxResultPages']);
+    const dbConfig = await loadDbConfig(['maxRadiusMiles', 'maxResultPages']);
 
     const GOOGLE_KEY = Deno.env.get('GOOGLE_PLACES_KEY');
     if (!GOOGLE_KEY) {
@@ -89,9 +89,19 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Cap radius (configurable via MAX_RADIUS_METERS secret/env var, or the
-    // app_config DB row when APP_CONFIG_SOURCE=db; defaults to 3km)
-    const MAX_RADIUS_METERS = Number(dbConfig.maxRadiusMeters ?? Deno.env.get('MAX_RADIUS_METERS')) || 3000;
+    // Cap radius — configurable via MAX_RADIUS_MILES secret/env var, or the
+    // app_config DB row when APP_CONFIG_SOURCE=db. Stored/edited in miles
+    // (not meters) specifically so it's legible on the admin Config
+    // Management page; converted to meters here since that's what Google's
+    // API and the rest of this function work in. Defaults to 6mi — must stay
+    // at or above the consumer app's own max radius option
+    // (user/src/constants/searchRadius.ts's RADIUS_OPTIONS_MILES), otherwise
+    // picking a larger distance there silently does nothing: the server
+    // never fetched data past this cap in the first place for the client to
+    // filter down to.
+    const METERS_PER_MILE = 1609.34;
+    const MAX_RADIUS_MILES = Number(dbConfig.maxRadiusMiles ?? Deno.env.get('MAX_RADIUS_MILES')) || 6;
+    const MAX_RADIUS_METERS = MAX_RADIUS_MILES * METERS_PER_MILE;
     if (radiusMeters > MAX_RADIUS_METERS) {
       console.log('[fetch-nearby-restaurants] Radius capped: requested', radiusMeters, '→ capped to', MAX_RADIUS_METERS);
       radiusMeters = MAX_RADIUS_METERS;
@@ -105,7 +115,7 @@ Deno.serve(async (req) => {
     // - Attribution displayed in explore.tsx and NearbyMap.tsx
     // Ref: https://developers.google.com/maps/documentation/places/web-service/policies#cache-policy
 
-    // ── Check location-aware cache (5km radius, 7-day TTL) ──────────────────────────────
+    // ── Check location-aware cache (radiusMeters-aware, 7-day TTL) ───────────────────────
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -161,9 +171,6 @@ Deno.serve(async (req) => {
           distanceMeters: Math.round(haversine(latitude, longitude, r.latitude, r.longitude)),
           rating: r.rating,
           cuisineTypes: r.cuisine_types,
-          photoUrl: r.photo_reference
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${r.photo_reference}&key=${GOOGLE_KEY}`
-            : undefined,
           photoReference: r.photo_reference,
           openNow: r.open_now,
           openingHours: r.opening_hours ?? undefined,
@@ -194,7 +201,7 @@ Deno.serve(async (req) => {
           u.searchParams.set('location', `${latitude},${longitude}`);
           // radiusMeters is already bounded by MAX_RADIUS_METERS above — no
           // separate hardcoded clamp here, otherwise raising MAX_RADIUS_METERS
-          // past 5000 would silently do nothing (Google's cap is 50,000m).
+          // further would silently do nothing (Google's own cap is 50,000m).
           u.searchParams.set('radius', String(radiusMeters));
           // `type` is a hard category filter in Nearby Search (unlike Text
           // Search, where it's just a ranking hint) — `type=restaurant` was
@@ -258,9 +265,6 @@ Deno.serve(async (req) => {
           ),
           rating: place.rating ?? 0,
           cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
-          photoUrl: photoReference
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_KEY}`
-            : undefined,
           photoReference, // Keep for caching
           openNow: place.opening_hours?.open_now ?? false,
           openingHours: place.opening_hours ? {
@@ -323,32 +327,37 @@ Deno.serve(async (req) => {
     try {
       const { data: claimedRestaurants, error: claimedErr } = await supabase
         .from('restaurants')
-        .select('google_place_id, name, status, is_paused');
+        .select('google_place_id, name, status, is_paused, restaurant_owners:owner_id(is_active)');
 
       if (claimedErr) {
         console.warn('[fetch-nearby-restaurants] Failed to load claimed restaurants (skipping backfill):', claimedErr);
       } else {
-        // A restaurant marked "closed" by an admin (out of business, permanent)
-        // or "paused" by its owner (temporary, self-service) should never
-        // reach a customer, even if Google's own listing is still live --
-        // filter it out of whatever this search already turned up, on top of
-        // never backfilling it below.
+        // A restaurant marked "closed" by an admin (out of business, permanent),
+        // "paused" by its owner (temporary, self-service), or whose owner has
+        // been deactivated/blocked by an admin should never reach a customer,
+        // even if Google's own listing is still live -- filter it out of
+        // whatever this search already turned up, on top of never backfilling
+        // it below.
+        const isHiddenClaim = (c: any) => {
+          const owner = Array.isArray(c.restaurant_owners) ? c.restaurant_owners[0] : c.restaurant_owners;
+          return c.status === 'closed' || c.is_paused || owner?.is_active === false;
+        };
         const hiddenPlaceIds = new Set(
           (claimedRestaurants ?? [])
-            .filter((c) => c.status === 'closed' || c.is_paused)
+            .filter(isHiddenClaim)
             .map((c) => c.google_place_id)
         );
         if (hiddenPlaceIds.size > 0) {
           const beforeCount = restaurants.length;
           restaurants = restaurants.filter((r) => !hiddenPlaceIds.has(r.placeId));
           if (restaurants.length !== beforeCount) {
-            console.log('[fetch-nearby-restaurants] Filtered out', beforeCount - restaurants.length, 'closed/paused restaurant(s)');
+            console.log('[fetch-nearby-restaurants] Filtered out', beforeCount - restaurants.length, 'closed/paused/deactivated restaurant(s)');
           }
         }
 
         const presentPlaceIds = new Set(restaurants.map((r) => r.placeId));
         const missingClaimed = (claimedRestaurants ?? []).filter(
-          (c) => c.google_place_id && c.status !== 'closed' && !c.is_paused && !presentPlaceIds.has(c.google_place_id)
+          (c) => c.google_place_id && !isHiddenClaim(c) && !presentPlaceIds.has(c.google_place_id)
         );
 
         // Most claimed restaurants are already cached (either from claim time,
@@ -377,9 +386,6 @@ Deno.serve(async (req) => {
                 distanceMeters: distance,
                 rating: row.rating,
                 cuisineTypes: row.cuisine_types,
-                photoUrl: row.photo_reference
-                  ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${row.photo_reference}&key=${GOOGLE_KEY}`
-                  : undefined,
                 photoReference: row.photo_reference,
                 openNow: row.open_now,
                 openingHours: row.opening_hours ?? undefined,
@@ -434,9 +440,6 @@ Deno.serve(async (req) => {
               distanceMeters: distance,
               rating: place.rating ?? 0,
               cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
-              photoUrl: photoReference
-                ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_KEY}`
-                : undefined,
               photoReference,
               openNow: place.opening_hours?.open_now ?? false,
               openingHours: place.opening_hours ? {

@@ -166,3 +166,62 @@ export async function getMenuHealthByRestaurant(): Promise<MenuHealthByRestauran
   if (error) throw error;
   return data || [];
 }
+
+export interface FranchiseRestaurantRow {
+  place_id: string;
+  restaurant_name: string;
+  address: string | null;
+  city: string | null;
+  matched_franchise: string;
+  franchise_category: string | null;
+  cached_at: string;
+}
+
+export interface NonFranchiseRestaurantRow {
+  place_id: string;
+  restaurant_name: string;
+  address: string | null;
+  city: string | null;
+  cuisine_types: string[] | null;
+  cached_at: string;
+}
+
+// PostgREST caps a single response (1000 rows by default), and the cached
+// restaurant list can be larger, so these two reports page through the RPC.
+export async function fetchAllPages<T>(rpcName: string): Promise<T[]> {
+  const PAGE = 1000;
+  const all: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase.rpc(rpcName).range(from, from + PAGE - 1);
+    if (error) throw error;
+    const rows = (data ?? []) as T[];
+    all.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return all;
+}
+
+export function getFranchiseRestaurants(): Promise<FranchiseRestaurantRow[]> {
+  return fetchAllPages<FranchiseRestaurantRow>('admin_report_franchise_restaurants');
+}
+
+export function getNonFranchiseRestaurants(): Promise<NonFranchiseRestaurantRow[]> {
+  return fetchAllPages<NonFranchiseRestaurantRow>('admin_report_non_franchise_restaurants');
+}
+
+export interface DeleteCachedRestaurantsResult {
+  requested: number;
+  deletedRestaurants: number;
+  skippedClaimed: number;
+  deletedSavedRestaurants: number;
+  deletedMenuItems: number;
+  deletedVerifiedMenuItems: number;
+}
+
+// Deletes the given cached restaurants plus the data that depends on them —
+// see migration 064 for exactly what is and isn't removed.
+export async function deleteCachedRestaurants(placeIds: string[]): Promise<DeleteCachedRestaurantsResult> {
+  const { data, error } = await supabase.rpc('admin_delete_cached_restaurants', { p_place_ids: placeIds });
+  if (error) throw error;
+  return data as DeleteCachedRestaurantsResult;
+}

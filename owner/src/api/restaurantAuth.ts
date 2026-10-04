@@ -186,13 +186,19 @@ export async function getRestaurantForOwner() {
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error('Not authenticated');
 
+  // Most recent claim, not "exactly one row": .single() treated zero rows and
+  // several rows identically (both PGRST116 -> null), so an owner with an
+  // unexpected duplicate was shown "No Restaurant Claimed". Real errors still
+  // throw instead of being swallowed.
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
     .eq('owner_id', user.user.id)
-    .single();
+    .order('claimed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') throw error;
+  if (error) throw error;
   return data || null;
 }
 

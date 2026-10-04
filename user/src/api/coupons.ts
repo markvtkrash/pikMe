@@ -15,6 +15,14 @@ export async function getActiveCouponsForRestaurant(restaurantId: string): Promi
   return data || [];
 }
 
+// One call for the Explore "Coupons Only" filter, instead of a per-restaurant
+// lookup — returns the Google place IDs of restaurants with a usable coupon.
+export async function getPlaceIdsWithActiveCoupons(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('get_place_ids_with_active_coupons');
+  if (error) throw error;
+  return (data || []).map((row: { google_place_id: string }) => row.google_place_id);
+}
+
 export interface ActivateCouponResult {
   activatedAt: string;
   expiresAt: string;

@@ -1,28 +1,35 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { getAllRestaurants, AdminRestaurant, RestaurantStatus } from '../../src/api/restaurants';
+import { Alert } from '../../src/utils/alert';
+import { getRestaurantsWithMenuCounts, RestaurantMenuSummary } from '../../src/api/menuAdmin';
 
-const STATUS_COLORS: Record<RestaurantStatus, { bg: string; text: string; label: string }> = {
+const PAGE_SIZE = 50;
+
+type SourceFilter = 'all' | 'claimed' | 'cached';
+
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: '#FFF3E0', text: '#E65100', label: 'Pending' },
   approved: { bg: '#E3F2FD', text: '#1565C0', label: 'Approved' },
   rejected: { bg: '#FFEBEE', text: '#c62828', label: 'Rejected' },
   closed: { bg: '#e53e3e', text: '#fff', label: 'Closed' },
 };
 
-// Entry point for Admin's Menu Management — pick any claimed restaurant here,
-// then update its menu using a photo or pasted text, same underlying
-// extraction as the owner app's Update Menu Items pages. Every row in
-// `restaurants` already has an owner (created only via Claim or Create
-// Restaurant Owner), so this list needs no separate "claimed" filter.
+// Admin's Menu Management: every owner-claimed AND cached restaurant, with how
+// many menu items each has. "View Menu" opens a read-only list of the current
+// items for any of them; "Update Menu" (photo / pasted text) is only offered
+// for claimed restaurants, since those tools need an owner. Items are keyed by
+// restaurant NAME, so a chain with many cached locations is listed once.
 export default function AdminMenuManagementScreen() {
   const router = useRouter();
-  const [restaurants, setRestaurants] = useState<AdminRestaurant[]>([]);
+  const [rows, setRows] = useState<RestaurantMenuSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<SourceFilter>('all');
+  const [page, setPage] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -32,24 +39,38 @@ export default function AdminMenuManagementScreen() {
 
   async function loadRestaurants() {
     try {
-      const data = await getAllRestaurants();
-      setRestaurants(data);
-    } catch (error) {
+      setRows(await getRestaurantsWithMenuCounts());
+    } catch (error: any) {
       console.error('[admin-menu-management] Load error:', error);
+      Alert.alert('Error', error.message || 'Failed to load restaurants');
     } finally {
       setLoading(false);
     }
   }
 
-  const filteredRestaurants = restaurants.filter((r) => {
+  const filtered = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      r.name?.toLowerCase().includes(query) ||
-      r.address?.toLowerCase().includes(query) ||
-      r.restaurant_owners?.business_name?.toLowerCase().includes(query)
-    );
-  });
+    return rows.filter((r) => {
+      if (filter !== 'all' && r.source !== filter) return false;
+      if (!query) return true;
+      return (
+        r.restaurant_name.toLowerCase().includes(query) ||
+        (r.address ?? '').toLowerCase().includes(query) ||
+        (r.owner_business_name ?? '').toLowerCase().includes(query) ||
+        (r.owner_email ?? '').toLowerCase().includes(query)
+      );
+    });
+  }, [rows, searchQuery, filter]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
+  const firstShown = filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
+  const lastShown = Math.min((safePage + 1) * PAGE_SIZE, filtered.length);
+
+  function viewMenu(name: string) {
+    router.push({ pathname: '/admin/menu-view', params: { name } } as any);
+  }
 
   if (loading) {
     return (
@@ -64,53 +85,127 @@ export default function AdminMenuManagementScreen() {
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu Management</Text>
-        <Text style={styles.count}>{restaurants.length}</Text>
+        <Text style={styles.count}>{rows.length}</Text>
       </View>
       <Text style={styles.headerSubtitle}>
-        Pick a restaurant to update its menu using a photo or pasted text — same tool owners use.
+        View the current menu of any restaurant. Claimed restaurants can also be updated from a photo or pasted text.
       </Text>
 
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search by name, address, or owner..."
+          placeholder="Search by name, address, owner, or login email..."
           placeholderTextColor="#999"
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={(text) => { setSearchQuery(text); setPage(0); }}
         />
+        <View style={styles.filterRow}>
+          {(['all', 'claimed', 'cached'] as SourceFilter[]).map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              onPress={() => { setFilter(f); setPage(0); }}
+            >
+              <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
+                {f === 'all' ? 'All' : f === 'claimed' ? 'Claimed' : 'Cached'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      {filteredRestaurants.length === 0 ? (
+      <Text style={styles.rangeText}>
+        {filtered.length === 0 ? '0 results' : `Showing ${firstShown}–${lastShown} of ${filtered.length}`}
+      </Text>
+
+      {filtered.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🍽️</Text>
           <Text style={styles.emptyText}>No restaurants found</Text>
         </View>
       ) : (
         <FlatList
-          data={filteredRestaurants}
-          keyExtractor={(item) => item.id}
+          data={pageRows}
+          keyExtractor={(item) => `${item.source}-${item.restaurant_id ?? item.restaurant_name}`}
           renderItem={({ item }) => {
-            const statusInfo = STATUS_COLORS[item.status];
+            const claimed = item.source === 'claimed';
+            const statusInfo = item.status ? STATUS_COLORS[item.status] : undefined;
             return (
-              <TouchableOpacity
-                style={styles.restaurantRow}
-                onPress={() => router.push(`/admin/menu-management/${item.id}` as any)}
-              >
+              <TouchableOpacity style={styles.restaurantRow} onPress={() => viewMenu(item.restaurant_name)}>
                 <View style={styles.restaurantInfo}>
-                  <Text style={styles.restaurantName}>{item.name}</Text>
-                  <Text style={styles.restaurantAddress}>{item.address}</Text>
-                  <Text style={styles.restaurantOwner}>
-                    Owner: {item.restaurant_owners?.business_name || 'Unknown'}
+                  <View style={styles.nameRow}>
+                    <Text style={styles.restaurantName}>{item.restaurant_name}</Text>
+                    <View style={[styles.sourceBadge, claimed ? styles.sourceClaimed : styles.sourceCached]}>
+                      <Text style={[styles.sourceBadgeText, claimed ? styles.sourceClaimedText : styles.sourceCachedText]}>
+                        {claimed ? 'Claimed' : 'Cached'}
+                      </Text>
+                    </View>
+                    {claimed && statusInfo && (
+                      <View style={[styles.sourceBadge, { backgroundColor: statusInfo.bg }]}>
+                        <Text style={[styles.sourceBadgeText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {!!item.address && <Text style={styles.restaurantAddress}>{item.address}</Text>}
+                  {claimed ? (
+                    <>
+                      <Text style={styles.restaurantOwner}>Owner: {item.owner_business_name || 'Unknown'}</Text>
+                      {!!item.owner_email && <Text style={styles.ownerEmail}>Login: {item.owner_email}</Text>}
+                    </>
+                  ) : (
+                    <>
+                      {item.location_count > 1 && (
+                        <Text style={styles.restaurantOwner}>{item.location_count} cached locations</Text>
+                      )}
+                      {item.shares_menu_with_claimed && (
+                        <Text style={styles.sharedNote}>Menu shared with a claimed location of the same name</Text>
+                      )}
+                    </>
+                  )}
+                  <Text style={styles.itemCounts}>
+                    {item.total_items === 0
+                      ? 'No menu items'
+                      : `${item.total_items} items · ${item.verified_items} verified · ${item.unverified_items} unverified`}
                   </Text>
                 </View>
-                <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-                  <Text style={[styles.statusText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.viewBtn} onPress={() => viewMenu(item.restaurant_name)}>
+                    <Text style={styles.viewBtnText}>👁 View Menu</Text>
+                  </TouchableOpacity>
+                  {claimed && item.restaurant_id && (
+                    <TouchableOpacity
+                      style={styles.updateBtn}
+                      onPress={() => router.push(`/admin/menu-management/${item.restaurant_id}` as any)}
+                    >
+                      <Text style={styles.updateBtnText}>✏️ Update Menu</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <Text style={styles.rowArrow}>›</Text>
               </TouchableOpacity>
             );
           }}
           contentContainerStyle={styles.list}
+          ListFooterComponent={
+            pageCount > 1 ? (
+              <View style={styles.pager}>
+                <TouchableOpacity
+                  style={[styles.pagerBtn, safePage === 0 && styles.btnDisabled]}
+                  onPress={() => setPage(safePage - 1)}
+                  disabled={safePage === 0}
+                >
+                  <Text style={styles.pagerBtnText}>‹ Prev</Text>
+                </TouchableOpacity>
+                <Text style={styles.pagerLabel}>Page {safePage + 1} of {pageCount}</Text>
+                <TouchableOpacity
+                  style={[styles.pagerBtn, safePage >= pageCount - 1 && styles.btnDisabled]}
+                  onPress={() => setPage(safePage + 1)}
+                  disabled={safePage >= pageCount - 1}
+                >
+                  <Text style={styles.pagerBtnText}>Next ›</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null
+          }
         />
       )}
     </View>
@@ -127,18 +222,42 @@ const styles = StyleSheet.create({
   count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   headerSubtitle: { fontSize: 13, color: '#666', backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12, elevation: 2 },
 
-  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
+  searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10 },
   searchInput: { backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222' },
+  filterRow: { flexDirection: 'row', gap: 8 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#f0f0f0' },
+  filterChipActive: { backgroundColor: '#1565C0' },
+  filterChipText: { fontSize: 12, fontWeight: '700', color: '#555' },
+  filterChipTextActive: { color: '#fff' },
+  rangeText: { fontSize: 12, color: '#888', paddingHorizontal: 16, paddingTop: 10 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1 },
-  restaurantInfo: { flex: 1 },
-  restaurantName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
+  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, elevation: 1, flexWrap: 'wrap' },
+  restaurantInfo: { flex: 1, minWidth: 200 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
+  restaurantName: { fontSize: 15, fontWeight: '700', color: '#222' },
+  sourceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  sourceBadgeText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
+  sourceClaimed: { backgroundColor: '#E8F5E9' },
+  sourceClaimedText: { color: '#2e7d32' },
+  sourceCached: { backgroundColor: '#ECEFF1' },
+  sourceCachedText: { color: '#546E7A' },
   restaurantAddress: { fontSize: 12, color: '#666', marginBottom: 4 },
   restaurantOwner: { fontSize: 12, color: '#1565C0', fontWeight: '600' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
-  rowArrow: { fontSize: 24, color: '#ccc', fontWeight: '800' },
+  ownerEmail: { fontSize: 12, color: '#555', fontWeight: '600', marginTop: 2 },
+  sharedNote: { fontSize: 11, color: '#E65100', fontWeight: '600', marginTop: 2 },
+  itemCounts: { fontSize: 12, color: '#888', marginTop: 4, fontWeight: '600' },
+  actions: { gap: 8 },
+  viewBtn: { backgroundColor: '#E3F2FD', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  viewBtnText: { color: '#1565C0', fontWeight: '700', fontSize: 12 },
+  updateBtn: { backgroundColor: '#ECEFF1', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, alignItems: 'center' },
+  updateBtnText: { color: '#222', fontWeight: '700', fontSize: 12 },
+
+  pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, paddingTop: 8 },
+  pagerBtn: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9, elevation: 1 },
+  pagerBtnText: { fontSize: 13, fontWeight: '700', color: '#222' },
+  pagerLabel: { fontSize: 13, color: '#666', fontWeight: '600' },
+  btnDisabled: { opacity: 0.4 },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },

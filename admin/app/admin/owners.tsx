@@ -10,6 +10,7 @@ import {
   adminListOwners, adminSetOwnerActive, adminSetRestaurantStatus,
   adminUpdateOwner, adminReassignOwner, AdminOwnerRow,
 } from '../../src/api/restaurantAuth';
+import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
 
 function generatePassword(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -40,6 +41,8 @@ export default function AdminOwnersScreen() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const [resetTarget, setResetTarget] = useState<ResetOwnerTarget | null>(null);
 
   const [editTarget, setEditTarget] = useState<AdminOwnerRow | null>(null);
   const [editBusinessName, setEditBusinessName] = useState('');
@@ -229,7 +232,7 @@ export default function AdminOwnersScreen() {
     <View style={styles.container}>
       <View style={styles.pageWrapper}>
         <View style={styles.header}>
-          <Text style={styles.title}>Manage Owners</Text>
+          <Text style={styles.title}>Manage Restaurants</Text>
           <Text style={styles.count}>{owners.length}</Text>
         </View>
 
@@ -282,6 +285,14 @@ export default function AdminOwnersScreen() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
+                    style={styles.actionBtn}
+                    onPress={() => setResetTarget({ ownerId: item.owner_id, name: item.business_name, email: item.email })}
+                    disabled={isBusy}
+                  >
+                    <Text style={styles.actionBtnText}>🔑 Reset Password</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
                     style={[styles.actionBtn, item.is_active ? styles.actionBtnWarn : styles.actionBtnOk]}
                     onPress={() => handleToggleActive(item)}
                     disabled={isBusy}
@@ -320,6 +331,8 @@ export default function AdminOwnersScreen() {
           ListEmptyComponent={<Text style={styles.emptyText}>No owners found</Text>}
         />
       </View>
+
+      <ResetOwnerPasswordModal target={resetTarget} onClose={() => setResetTarget(null)} />
 
       {/* Edit modal */}
       <Modal visible={!!editTarget} transparent animationType="fade" onRequestClose={() => setEditTarget(null)}>

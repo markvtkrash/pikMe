@@ -6,13 +6,15 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../src/api/supportTickets';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { getRestaurantForOwner } from '../../src/api/restaurantAuth';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { FAVORITABLE_PAGES_BY_KEY } from '../../src/constants/favoritablePages';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 
 export default function RestaurantDashboardScreen() {
   const router = useRouter();
-  const { owner, restaurant, logout } = useRestaurantOwnerStore();
+  const { owner, restaurant, logout, restaurantError, setRestaurant, setRestaurantError } = useRestaurantOwnerStore();
+  const [retrying, setRetrying] = useState(false);
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
   const { favorites, toggleFavorite } = useFavoritePages();
 
@@ -49,12 +51,41 @@ export default function RestaurantDashboardScreen() {
     }
   }
 
+  async function handleRetryRestaurant() {
+    setRetrying(true);
+    try {
+      setRestaurantError(null);
+      const found = await getRestaurantForOwner();
+      setRestaurant(found);
+    } catch (err: any) {
+      console.error('[dashboard] Retry restaurant lookup failed:', err);
+      setRestaurantError(err?.message || 'Could not load your restaurant');
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   function handleLogout() {
     logout();
     router.replace('/restaurant/auth/login');
   }
 
   if (!owner) return null;
+
+  if (!restaurant && restaurantError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyIcon}>⚠️</Text>
+          <Text style={styles.emptyTitle}>Couldn't load your restaurant</Text>
+          <Text style={styles.emptyBody}>{restaurantError}</Text>
+          <TouchableOpacity style={styles.claimBtn} onPress={handleRetryRestaurant} disabled={retrying}>
+            {retrying ? <ActivityIndicator color="#fff" /> : <Text style={styles.claimBtnText}>Try again</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (!restaurant) {
     return (

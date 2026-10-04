@@ -237,19 +237,6 @@ export default function AdminDashboard() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileRestaurants]}
-          onPress={() => router.push('/admin/restaurants')}
-        >
-          {stats.totalRestaurants > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.totalRestaurants}</Text>
-            </View>
-          )}
-          <Text style={styles.adminTileIcon}>🍽️</Text>
-          <Text style={styles.adminTileTitle}>Manage Restaurants</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
           style={[styles.adminTile, styles.adminTileMenuManagement]}
           onPress={() => router.push('/admin/menu-management')}
         >
@@ -275,8 +262,8 @@ export default function AdminDashboard() {
           style={[styles.adminTile, styles.adminTileOwner]}
           onPress={() => router.push('/admin/owners')}
         >
-          <Text style={styles.adminTileIcon}>👤</Text>
-          <Text style={styles.adminTileTitle}>Manage Owners</Text>
+          <Text style={styles.adminTileIcon}>🏪</Text>
+          <Text style={styles.adminTileTitle}>Manage Restaurants</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -306,6 +293,14 @@ export default function AdminDashboard() {
         >
           <Text style={styles.adminTileIcon}>📊</Text>
           <Text style={styles.adminTileTitle}>Reports</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileConfig]}
+          onPress={() => router.push('/admin/franchises')}
+        >
+          <Text style={styles.adminTileIcon}>🍔</Text>
+          <Text style={styles.adminTileTitle}>Franchise Lookup</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -428,7 +423,6 @@ const styles = StyleSheet.create({
   },
   adminTileClaims: { backgroundColor: '#E3F2FD' },
   adminTileRelocations: { backgroundColor: '#B2DFDB' },
-  adminTileRestaurants: { backgroundColor: '#F3E5F5' },
   adminTileCoupons: { backgroundColor: '#FFF3E0' },
   adminTileMenuManagement: { backgroundColor: '#E0F2F1' },
   adminTileOwner: { backgroundColor: '#FCE4EC' },

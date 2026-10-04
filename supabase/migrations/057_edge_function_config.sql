@@ -14,7 +14,7 @@ INSERT INTO public.app_config (key, value, description, env_var_name) VALUES
   ('quicksilverModel', 'deepseek-v4-flash', 'Quicksilver model name used for text-only calls when aiProvider is "quicksilver"', 'Edge function secret: QUICKSILVER_MODEL'),
   ('quicksilverVisionModel', 'qwen3.6-35b', 'Quicksilver vision model name used by extract-menu-from-image when aiProvider is "quicksilver"', 'Edge function secret: QUICKSILVER_VISION_MODEL'),
   ('menuItemsCount', '15', 'fetch-menu-items-ai: how many AI-generated menu items to request per restaurant', 'Edge function secret: MENU_ITEMS_COUNT'),
-  ('maxRadiusMeters', '3000', 'fetch-nearby-restaurants: hard cap on the requested search radius, in meters', 'Edge function secret: MAX_RADIUS_METERS'),
+  ('maxRadiusMiles', '6', 'fetch-nearby-restaurants: hard cap on the requested search radius, in miles (stored in miles, not meters, so it''s legible here — must match the consumer app''s max radius option)', 'Edge function secret: MAX_RADIUS_MILES'),
   ('maxResultPages', '1', 'fetch-nearby-restaurants: max Google Places result pages to fetch per search (1-3; each extra page is a separate billable call)', 'Edge function secret: MAX_RESULT_PAGES')
 ON CONFLICT (key) DO UPDATE SET
   description = EXCLUDED.description,

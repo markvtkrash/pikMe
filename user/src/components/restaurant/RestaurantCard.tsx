@@ -1,5 +1,4 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Alert } from '../../utils/alert';
 import { useState, useEffect } from 'react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -73,14 +72,6 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   const navigate = () =>
     router.push({ pathname: '/restaurant/[id]', params: { id: restaurant.placeId } });
 
-  const showDebugInfo = () => {
-    Alert.alert(
-      `🧪 ${restaurant.name}`,
-      `Opening Hours: ${JSON.stringify(restaurant.openingHours, null, 2)}\n\nDisplay: ${JSON.stringify(hoursDisplay, null, 2)}`,
-      [{ text: 'Close' }]
-    );
-  };
-
   if (compact) {
     return (
       <TouchableOpacity style={[styles.compact, selected && styles.compactSelected]} onPress={navigate} activeOpacity={0.88}>
@@ -97,7 +88,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   }
 
   return (
-    <TouchableOpacity style={[styles.card, selected && styles.cardSelected]} onPress={navigate} onLongPress={showDebugInfo} activeOpacity={0.92}>
+    <TouchableOpacity style={[styles.card, selected && styles.cardSelected]} onPress={navigate} activeOpacity={0.92}>
       {/* Photo */}
       <View style={styles.imgWrap}>
         <Image source={placeholderImage(restaurant.name)} style={styles.img} contentFit="cover" />

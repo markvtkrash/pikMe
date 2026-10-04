@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSaved } from '../../../src/hooks/useSaved';
 import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
+import { getNutritionFlags } from '../../../src/utils/nutritionFlags';
 import type { MenuItem } from '../../../src/types';
 
 type Tab = 'restaurants' | 'items';
@@ -102,17 +103,24 @@ export default function SavedScreen() {
 }
 
 function SavedMenuItemCard({ item, onUnsave }: { item: MenuItem; onUnsave: () => void }) {
-  const n = item.nutrition;
+  // Qualitative flags only, same as MenuItemCard's Nutrition Info popup — no
+  // exact numbers, and nothing claiming a value is "low" (see
+  // utils/nutritionFlags.ts for why).
+  const flags = getNutritionFlags(item.nutrition);
   return (
     <View style={styles.itemCard}>
       <View style={styles.itemMain}>
         <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
         <Text style={styles.itemRestaurant}>{item.restaurantName}</Text>
-        <View style={styles.itemMacroRow}>
-          <Text style={styles.itemCal}>{n.calories} cal</Text>
-          <Text style={styles.itemMacro}>{Math.round(n.protein_g)}g protein</Text>
-          <Text style={styles.itemMacro}>{Math.round(n.totalCarbs_g)}g carbs</Text>
-        </View>
+        {flags.length > 0 && (
+          <View style={styles.itemFlagRow}>
+            {flags.map((flag) => (
+              <View key={flag} style={styles.itemFlagPill}>
+                <Text style={styles.itemFlagText}>{flag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
       <TouchableOpacity onPress={onUnsave} style={styles.heartBtn} hitSlop={8}>
         <Text style={styles.heartFilled}>❤️</Text>
@@ -177,9 +185,9 @@ const styles = StyleSheet.create({
   itemMain: { flex: 1 },
   itemName: { fontSize: 15, fontWeight: '600', color: '#1a1a1a', marginBottom: 3 },
   itemRestaurant: { fontSize: 12, color: '#888', marginBottom: 6 },
-  itemMacroRow: { flexDirection: 'row', gap: 10 },
-  itemCal: { fontSize: 13, fontWeight: '700', color: '#333' },
-  itemMacro: { fontSize: 12, color: '#666' },
+  itemFlagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  itemFlagPill: { backgroundColor: '#F0F0F0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  itemFlagText: { fontSize: 11, fontWeight: '700', color: '#555' },
   heartBtn: { paddingLeft: 12 },
   heartFilled: { fontSize: 22 },
 

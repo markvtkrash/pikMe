@@ -7,6 +7,7 @@ import { Alert } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { adminSetOwnerActive } from '../../src/api/restaurantAuth';
+import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
 
 type UserRole = 'admin' | 'owner' | 'customer';
 type RoleFilter = 'all' | UserRole;
@@ -41,6 +42,7 @@ export default function AdminUsersScreen() {
   const [activeTab, setActiveTab] = useState<RoleFilter>('all');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<AppUser | null>(null);
+  const [resetTarget, setResetTarget] = useState<ResetOwnerTarget | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -171,6 +173,21 @@ export default function AdminUsersScreen() {
                   </View>
                   {item.role === 'owner' && (
                     <TouchableOpacity
+                      style={[styles.blockBtn, styles.resetBtn, busy && styles.btnDisabled]}
+                      onPress={() =>
+                        setResetTarget({
+                          ownerId: item.user_id,
+                          name: item.business_name || item.email,
+                          email: item.email,
+                        })
+                      }
+                      disabled={busy}
+                    >
+                      <Text style={[styles.blockBtnText, { color: '#222' }]}>🔑 Reset Password</Text>
+                    </TouchableOpacity>
+                  )}
+                  {item.role === 'owner' && (
+                    <TouchableOpacity
                       style={[styles.blockBtn, blocked ? styles.unblockBtn : styles.blockBtnDanger, busy && styles.btnDisabled]}
                       onPress={() => handleToggleActiveRequest(item)}
                       disabled={busy}
@@ -220,6 +237,8 @@ export default function AdminUsersScreen() {
         </View>
       </View>
     </Modal>
+
+    <ResetOwnerPasswordModal target={resetTarget} onClose={() => setResetTarget(null)} />
     </View>
   );
 }
@@ -254,6 +273,7 @@ const styles = StyleSheet.create({
   blockBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
   blockBtnDanger: { borderColor: '#e53e3e', backgroundColor: '#FFEBEE' },
   unblockBtn: { borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
+  resetBtn: { borderColor: '#ccc', backgroundColor: '#ECEFF1' },
   blockBtnText: { fontSize: 11, fontWeight: '700' },
   btnDisabled: { opacity: 0.5 },
 

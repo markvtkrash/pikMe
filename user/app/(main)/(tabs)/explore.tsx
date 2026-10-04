@@ -6,6 +6,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../../src/hooks/useLocation';
 import { useNearbyRestaurants } from '../../../src/hooks/useNearbyRestaurants';
+import { useCouponPlaceIds } from '../../../src/hooks/useCouponPlaceIds';
 import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
 import { SkeletonRestaurantCard } from '../../../src/components/common/SkeletonCard';
 import { RadiusSelector } from '../../../src/components/common/RadiusSelector';
@@ -41,6 +42,8 @@ export default function ExploreScreen() {
   const [activeType, setActiveType] = useState(ALL);
   const [activeCuisine, setActiveCuisine] = useState(ALL);
   const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [couponsOnly, setCouponsOnly] = useState(false);
+  const { data: couponPlaceIds } = useCouponPlaceIds();
 
   // Fetching always covers the max radius (see useNearbyRestaurants); the
   // distance picker just filters that same data client-side, no refetch.
@@ -72,18 +75,20 @@ export default function ExploreScreen() {
         const matchType = activeType === ALL || r.cuisineTypes.includes(activeType);
         const cuisine = CUISINE_FILTERS.find((c) => c.label === activeCuisine);
         const matchCuisine = activeCuisine === ALL || (!!cuisine && matchesCuisine(r, cuisine));
-        return matchSearch && matchType && matchCuisine;
+        const matchCoupon = !couponsOnly || !!couponPlaceIds?.has(r.placeId);
+        return matchSearch && matchType && matchCuisine && matchCoupon;
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters),
-    [withinRadius, search, activeType, activeCuisine]
+    [withinRadius, search, activeType, activeCuisine, couponsOnly, couponPlaceIds]
   );
 
-  const hasActiveFilters = search !== '' || activeType !== ALL || activeCuisine !== ALL;
+  const hasActiveFilters = search !== '' || activeType !== ALL || activeCuisine !== ALL || couponsOnly;
 
   function resetFilters() {
     setSearch('');
     setActiveType(ALL);
     setActiveCuisine(ALL);
+    setCouponsOnly(false);
   }
 
   function chipLabel(type: string) {
@@ -174,6 +179,18 @@ export default function ExploreScreen() {
             </Text>
             <Text style={[styles.moreFiltersChevron, showMoreFilters && styles.moreFiltersTextActive]}>
               {showMoreFilters ? '▾' : '▸'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.couponsPill, couponsOnly && styles.couponsPillActive]}
+            onPress={() => setCouponsOnly((prev) => !prev)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityState={{ selected: couponsOnly }}
+          >
+            <Text style={[styles.couponsText, couponsOnly && styles.moreFiltersTextActive]}>
+              🎉 Coupons Only
             </Text>
           </TouchableOpacity>
 
@@ -270,10 +287,10 @@ export default function ExploreScreen() {
             <View style={styles.emptyBox}>
               <Text style={styles.emptyIcon}>🍽️</Text>
               <Text style={styles.emptyTitle}>
-                {search || activeType !== ALL || activeCuisine !== ALL ? 'No matches' : 'No restaurants found'}
+                {hasActiveFilters ? (couponsOnly ? 'No coupon restaurants nearby' : 'No matches') : 'No restaurants found'}
               </Text>
               <Text style={styles.emptyBody}>
-                {search || activeType !== ALL || activeCuisine !== ALL
+                {hasActiveFilters
                   ? 'Try a different search or filter'
                   : 'Try increasing the distance above'}
               </Text>
@@ -340,6 +357,7 @@ const styles = StyleSheet.create({
 
   moreFiltersRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 16,
@@ -369,6 +387,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#1565C0',
     borderColor: '#1565C0',
   },
+  couponsPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 50,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1.5,
+    borderColor: '#E65100',
+  },
+  couponsPillActive: { backgroundColor: '#E65100' },
+  couponsText: { fontSize: 13, color: '#E65100', fontWeight: '700' },
   moreFiltersText: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
   moreFiltersChevron: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
   moreFiltersTextActive: { color: '#fff' },

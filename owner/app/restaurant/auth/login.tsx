@@ -11,7 +11,7 @@ import { BRAND_NAME } from '../../../src/constants/brand';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
-  const { setOwner, setRestaurant, setSession } = useRestaurantOwnerStore();
+  const { setOwner, setRestaurant, setSession, setRestaurantError } = useRestaurantOwnerStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,21 +37,36 @@ export default function RestaurantLoginScreen() {
       // Set session in Supabase
       await supabase.auth.setSession(result.session);
 
-      // Set store
-      setOwner(result.user);
-      setSession(result.session);
-      console.log('[restaurant-login] Session set in store');
-
       // Force password change on first login (admin-provisioned accounts)
       if (result.mustChangePassword) {
+        setOwner(result.user);
+        setSession(result.session);
         router.replace('/restaurant/auth/change-password');
         return;
       }
 
-      // Get restaurant
-      const restaurant = await getRestaurantForOwner();
+      // Look the restaurant up BEFORE storing the owner: storing the owner is
+      // what lets the route guard move us to the dashboard, and doing it first
+      // meant a failed lookup was hidden behind an empty dashboard.
+      let restaurant = null;
+      let lookupError: string | null = null;
+      try {
+        restaurant = await getRestaurantForOwner();
+      } catch (lookupErr: any) {
+        console.error('[restaurant-login] Restaurant lookup failed:', lookupErr);
+        lookupError = lookupErr?.message || 'Could not load your restaurant';
+      }
+
+      setOwner(result.user);
+      setSession(result.session);
+      setRestaurantError(lookupError);
+      console.log('[restaurant-login] Session set in store');
+
       if (restaurant) {
         setRestaurant(restaurant);
+        router.replace('/restaurant/dashboard');
+      } else if (lookupError) {
+        // The lookup FAILED (not "no restaurant"): the dashboard shows the error and a retry.
         router.replace('/restaurant/dashboard');
       } else {
         // No restaurant claimed yet

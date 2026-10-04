@@ -113,7 +113,6 @@ serve(async (req) => {
 
     const results = (data.results ?? [])
       .map((place: any) => {
-        const photoReference = place.photos?.[0]?.photo_reference ?? null;
         const distanceMeters = Math.round(
           haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
         );
@@ -129,9 +128,6 @@ serve(async (req) => {
           distanceMeters,
           rating: place.rating ?? 0,
           cuisineTypes: (place.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
-          photoUrl: photoReference
-            ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photoreference=${photoReference}&key=${GOOGLE_PLACES_KEY}`
-            : undefined,
           openNow: place.opening_hours?.open_now ?? false,
           hasNutritionData: false,
         };
