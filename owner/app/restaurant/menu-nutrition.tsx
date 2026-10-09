@@ -8,6 +8,8 @@ import {
   updateMenuItemNutrition, matchMenuItemNames, getRestaurantMenuItems, NutritionUpdate,
 } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { parseNutritionText } from '../../src/utils/parseNutritionText';
@@ -30,6 +32,7 @@ interface Row {
 export default function MenuNutritionScreen() {
   const router = useRouter();
   const { owner, restaurant } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   const { favorites, toggleFavorite } = useFavoritePages();
   const [nutritionText, setNutritionText] = useState('');
   const [existingNames, setExistingNames] = useState<string[]>([]);
@@ -51,7 +54,7 @@ export default function MenuNutritionScreen() {
   async function loadExistingNames() {
     if (!restaurant) return;
     try {
-      const items = await getRestaurantMenuItems(restaurant.name);
+      const items = await getRestaurantMenuItems(restaurant.name, restaurant.google_place_id);
       setExistingNames(items.map((i: any) => i.name));
     } catch (error) {
       console.error('[menu-nutrition] Failed to load existing items:', error);
@@ -96,6 +99,7 @@ export default function MenuNutritionScreen() {
   const readyRows = rows.filter((r) => r.resolvedName);
 
   if (!owner || !restaurant) return null;
+  if (isChain) return <ChainMenuNotice />;
 
   async function handleCheckAi() {
     if (!restaurant || unmatchedForAi.length === 0) return;

@@ -38,9 +38,11 @@ export async function fetchMenuItems(restaurantName: string): Promise<MenuItem[]
   return data as MenuItem[];
 }
 
-export async function fetchMenuItemsAi(restaurantName: string): Promise<MenuItem[]> {
+// placeId is passed only when a customer opened this restaurant (not for a bulk list): the server then queues a
+// real menu build for it, while the customer still gets the AI menu straight away.
+export async function fetchMenuItemsAi(restaurantName: string, placeId?: string): Promise<MenuItem[]> {
   const { data, error } = await supabase.functions.invoke('fetch-menu-items-ai', {
-    body: { restaurantName },
+    body: placeId ? { restaurantName, placeId } : { restaurantName },
   });
   if (error) {
     try {

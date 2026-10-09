@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { decidePlaceMode, isValidPlaceId } from './placeMode.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,13 +43,166 @@ interface NormalizedItem {
 // (link extraction now, manual entry later, AI-refresh going forward) —
 // one place that owns the "is this safe to delete" check and the actual
 // delete-then-upsert, so none of the callers have to duplicate it.
+// Only the other edge functions (link / photo / text extraction, nutrition, AI refresh)
+// call this, always with the service role key. Nothing else may: it writes and deletes
+// menu data for any restaurant, and it trusts the callerIsAdmin note those functions pass.
+// Without this check anyone holding the public API key could call it directly.
+function isInternalCall(req: Request): boolean {
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!serviceKey) return false;
+  const authHeader = req.headers.get('Authorization') ?? '';
+  return authHeader === `Bearer ${serviceKey}`;
+}
+
+// ── Place mode (migration 100) ──────────────────────────────────────────────
+// The place comes from the restaurant record the caller verified (restaurantId), never from the request
+// body, so a caller cannot write into another restaurant's place. Every save for a claimed independent restaurant
+// goes to its place (see placeMode.ts); a franchise stays shared by chain name.
+// deno-lint-ignore no-explicit-any
+async function resolvePlaceId(supabase: any, restaurantId: string, restaurantName: string): Promise<string | null> {
+  const { data: r, error } = await supabase.from('restaurants').select('google_place_id').eq('id', restaurantId).maybeSingle();
+  if (error || !r?.google_place_id) return null;
+
+  const { data: isChain, error: chainError } = await supabase.rpc('is_franchise_chain', { p_name: restaurantName });
+  if (chainError) return null; // cannot tell: stay on the shared name-keyed behaviour
+
+  return decidePlaceMode({ placeId: String(r.google_place_id), isChain: isChain === true });
+}
+
+// The place for an admin's save on a restaurant nobody has claimed: the place named in the request (already checked
+// by the caller against the Google cache), unless the restaurant is a franchise.
+// deno-lint-ignore no-explicit-any
+async function resolveAdminPlaceId(supabase: any, placeId: string, restaurantName: string): Promise<string | null> {
+  const { data: isChain, error: chainError } = await supabase.rpc('is_franchise_chain', { p_name: restaurantName });
+  if (chainError) return null; // cannot tell: stay on the shared name-keyed behaviour
+  return decidePlaceMode({ placeId, isChain: isChain === true });
+}
+
+// The same three scopes as the name-keyed path below, applied to ONE place's rows.
+// deno-lint-ignore no-explicit-any
+async function savePlaceMenu(supabase: any, p: {
+  placeId: string; restaurantId?: string; restaurantName: string; items: NormalizedItem[];
+  menuUrl?: string; force?: boolean; replaceScope: 'all' | 'unverified_only' | 'add';
+}): Promise<Response> {
+  const { placeId, restaurantId, restaurantName, items, menuUrl, force, replaceScope } = p;
+  let incoming = items;
+
+  if (replaceScope === 'add') {
+    const { data: existing, error: existingError } = await supabase.from('menu_items').select('name').eq('place_id', placeId);
+    if (existingError) {
+      console.error('[replace-restaurant-menu-items] Failed to check existing items for dedup (place):', existingError);
+      return err('Failed to check existing menu items');
+    }
+    const existingNames = new Set((existing ?? []).map((r: { name: string }) => r.name.trim().toLowerCase()));
+    incoming = incoming.filter((i) => !existingNames.has(i.name.trim().toLowerCase()));
+  } else {
+    const { data: all, error: currentError } = await supabase.from('menu_items').select('item_id, is_verified').eq('place_id', placeId);
+    if (currentError) {
+      console.error('[replace-restaurant-menu-items] Failed to read current items (place):', currentError);
+      return err('Failed to check existing menu items');
+    }
+    const current = replaceScope === 'unverified_only' ? (all ?? []).filter((r: { is_verified: boolean }) => !r.is_verified) : (all ?? []);
+    const currentIds = current.map((r: { item_id: string }) => r.item_id);
+    const verifiedCount = replaceScope === 'all' ? current.filter((r: { is_verified: boolean }) => r.is_verified).length : 0;
+    const incomingIsUnverified = items.length === 0 || items.every((i) => !i.isVerified);
+    const overwritesVerified = replaceScope === 'all' && verifiedCount > 0 && incomingIsUnverified;
+
+    let affectedCoupons: { id: string; coupon_code: string }[] = [];
+    if (currentIds.length > 0) {
+      const { data, error: couponsError } = await supabase
+        .from('coupons')
+        .select('id, coupon_code, menu_item_id')
+        .in('menu_item_id', currentIds)
+        .eq('is_deleted', false)
+        .in('coupon_type', ['item_percent', 'item_fixed']);
+      if (couponsError) {
+        console.error('[replace-restaurant-menu-items] Failed to check coupons (place):', couponsError);
+        return err('Failed to check existing coupons');
+      }
+      affectedCoupons = data ?? [];
+    }
+    if ((affectedCoupons.length > 0 || overwritesVerified) && !force) {
+      return ok({
+        requiresConfirmation: true,
+        affectedCoupons: affectedCoupons.map((c) => ({ id: c.id, couponCode: c.coupon_code })),
+        overwritesVerifiedCount: overwritesVerified ? verifiedCount : 0,
+      });
+    }
+
+    const { error: deleteError } = await supabase.rpc('delete_place_menu_items', {
+      p_place_id: placeId,
+      p_only_unverified: replaceScope === 'unverified_only',
+    });
+    if (deleteError) {
+      console.error('[replace-restaurant-menu-items] Delete failed (place):', deleteError);
+      return err('Failed to clear stale menu items');
+    }
+  }
+
+  if (incoming.length > 0) {
+    const dbPayload = incoming.map((item) => ({
+      itemId: item.itemId,
+      restaurantName: item.restaurantName,
+      name: item.name,
+      servingWeightGrams: item.nutrition.servingWeightGrams,
+      calories: item.nutrition.calories,
+      totalFat_g: item.nutrition.totalFat_g,
+      saturatedFat_g: item.nutrition.saturatedFat_g,
+      sodium_mg: item.nutrition.sodium_mg,
+      totalCarbs_g: item.nutrition.totalCarbs_g,
+      protein_g: item.nutrition.protein_g,
+      imageUrl: item.imageUrl,
+      isVerified: item.isVerified,
+    }));
+    const { error: upsertError } = await supabase.rpc('upsert_place_menu_items', {
+      p_place_id: placeId,
+      p_restaurant_name: restaurantName.trim(),
+      p_items: dbPayload,
+    });
+    if (upsertError) {
+      console.error('[replace-restaurant-menu-items] Upsert failed (place):', upsertError);
+      return err('Cleared old items but failed to save the new ones. Please try again.');
+    }
+    // A verified menu now exists for this place, so it no longer needs a build or an admin's attention.
+    // Best effort: the save already succeeded.
+    if (incoming.some((i) => i.isVerified)) {
+      const { error: resolveError } = await supabase.rpc('resolve_place_menu_build', { p_place_id: placeId });
+      if (resolveError) console.warn('[replace-restaurant-menu-items] could not clear the menu build flag:', resolveError.message);
+    }
+  }
+
+  if (menuUrl && restaurantId) {
+    const { error: updateError } = await supabase
+      .from('restaurants')
+      .update({ menu_link: menuUrl, updated_at: new Date().toISOString() })
+      .eq('id', restaurantId);
+    if (updateError) {
+      console.error('[replace-restaurant-menu-items] Failed to save menu_link (items were still saved):', updateError);
+    }
+  }
+
+  const skippedAsDuplicates = items.length - incoming.length;
+  console.log(
+    '[replace-restaurant-menu-items] (place)',
+    replaceScope === 'add' ? 'Added' : 'Replaced menu for',
+    restaurantName, 'with', incoming.length, 'items',
+    `(scope: ${replaceScope}, skipped ${skippedAsDuplicates} duplicate name(s))`,
+  );
+  return ok({ success: true, itemCount: incoming.length, skippedAsDuplicates, savedBy: 'place' });
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
+  if (!isInternalCall(req)) return err('Unauthorized', 401);
+
   try {
-    const { restaurantId, restaurantName, items, menuUrl, force, scope } = await req.json();
-    if (!restaurantId || !restaurantName?.trim() || !Array.isArray(items)) {
-      return err('restaurantId, restaurantName, and items[] are required', 400);
+    const { restaurantId, placeId: adminPlaceId, restaurantName, items, menuUrl, force, scope, callerIsAdmin } = await req.json();
+    // A save for a restaurant no owner has claimed is named by its Google place ID instead of a restaurantId. Only the
+    // callers that verified an admin (and the place) pass it, with callerIsAdmin, so it is trusted only then.
+    const adminForPlace = !restaurantId && callerIsAdmin === true && isValidPlaceId(adminPlaceId);
+    if ((!restaurantId && !adminForPlace) || !restaurantName?.trim() || !Array.isArray(items)) {
+      return err('restaurantId (or an admin placeId), restaurantName, and items[] are required', 400);
     }
     // 'all' (default) replaces everything for this restaurant — used by
     // manual entry and a full AI refresh. 'unverified_only' is for a partial
@@ -68,6 +222,37 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
+
+    // A chain's menu is built centrally and shared by every branch, so owners may not
+    // change it (migration 080 does the same for the single-item owner actions). Admins
+    // may: the callers that verified an admin pass callerIsAdmin. Fails closed: if the
+    // chain check itself fails, nothing is written.
+    if (callerIsAdmin !== true) {
+      const { data: isChain, error: chainError } = await supabase.rpc('is_franchise_chain', { p_name: restaurantName });
+      if (chainError) {
+        console.error('[replace-restaurant-menu-items] Chain check failed:', chainError);
+        return err('Could not check whether this restaurant is part of a chain. Please try again.');
+      }
+      if (isChain === true) {
+        return new Response(
+          JSON.stringify({ error: 'This restaurant is part of a chain. Its menu is managed centrally and cannot be changed here.', code: 'chain_managed' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+    // A claimed, non-franchise restaurant is always saved against its own place ID (see placeMode.ts). Anything
+    // else (a franchise, or a restaurant that is not claimed) takes the shared name-keyed path below, as before.
+    // An admin's save for an unclaimed restaurant names its place directly: it is saved against that place too, unless
+    // the name is a franchise (a franchise keeps its one shared menu by name).
+    const placeId = adminForPlace
+      ? await resolveAdminPlaceId(supabase, adminPlaceId, restaurantName)
+      : await resolvePlaceId(supabase, restaurantId, restaurantName);
+    if (placeId) {
+      return await savePlaceMenu(supabase, {
+        placeId, restaurantId, restaurantName, items: items as NormalizedItem[], menuUrl, force, replaceScope,
+      });
+    }
 
     // Exact (case-insensitive) match on the FULL name — matching only the
     // first word wrapped in wildcards (the previous approach) matched any
@@ -198,7 +383,7 @@ serve(async (req) => {
       }
     }
 
-    if (menuUrl) {
+    if (menuUrl && restaurantId) {
       const { error: updateError } = await supabase
         .from('restaurants')
         .update({ menu_link: menuUrl, updated_at: new Date().toISOString() })

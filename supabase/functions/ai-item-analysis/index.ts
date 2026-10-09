@@ -10,14 +10,22 @@ const corsHeaders = {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (err) {
     console.error('[ai-item-analysis] Failed to load DB config, falling back to env/defaults:', err);

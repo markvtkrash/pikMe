@@ -14,6 +14,9 @@ export interface RestaurantMenuSummary {
   total_items: number;
   verified_items: number;
   unverified_items: number;
+  // Migration 108: independents are listed one row per location (their place ID); franchises one row per name.
+  place_id?: string | null;
+  is_franchise?: boolean;
 }
 
 export interface AdminMenuItem {
@@ -35,8 +38,12 @@ export function getRestaurantsWithMenuCounts(): Promise<RestaurantMenuSummary[]>
   return fetchAllPages<RestaurantMenuSummary>('admin_list_restaurants_with_menu_counts');
 }
 
-export async function getRestaurantMenu(restaurantName: string): Promise<AdminMenuItem[]> {
-  const { data, error } = await supabase.rpc('admin_get_restaurant_menu', { p_restaurant_name: restaurantName });
+// placeId given = that one location's own menu (independents); omitted = the shared, name-keyed menu (franchises).
+export async function getRestaurantMenu(restaurantName: string, placeId?: string | null): Promise<AdminMenuItem[]> {
+  const { data, error } = await supabase.rpc('admin_get_restaurant_menu', {
+    p_restaurant_name: restaurantName,
+    p_place_id: placeId || null,
+  });
   if (error) throw error;
   return (data ?? []) as AdminMenuItem[];
 }
@@ -60,9 +67,10 @@ export interface EditableMenuItem {
   nutrition_source: string | null;
 }
 
-export async function getRestaurantMenuForEdit(restaurantName: string): Promise<EditableMenuItem[]> {
+export async function getRestaurantMenuForEdit(restaurantName: string, placeId?: string | null): Promise<EditableMenuItem[]> {
   const { data, error } = await supabase.rpc('admin_get_restaurant_menu_for_edit', {
     p_restaurant_name: restaurantName,
+    p_place_id: placeId || null,
   });
   if (error) throw error;
   return (data ?? []) as EditableMenuItem[];
@@ -71,23 +79,28 @@ export async function getRestaurantMenuForEdit(restaurantName: string): Promise<
 export interface MenuSharingInfo {
   cached_locations: number;
   claimed_locations: number;
+  is_franchise: boolean;
 }
 
-// How many locations use this restaurant name (and therefore share its menu).
-export async function getMenuSharingInfo(restaurantName: string): Promise<MenuSharingInfo> {
+// How many locations use this restaurant name (and therefore share its menu). A single place shares with nobody.
+export async function getMenuSharingInfo(restaurantName: string, placeId?: string | null): Promise<MenuSharingInfo> {
   const { data, error } = await supabase.rpc('admin_menu_sharing_info', {
     p_restaurant_name: restaurantName,
+    p_place_id: placeId || null,
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return {
     cached_locations: Number(row?.cached_locations ?? 0),
     claimed_locations: Number(row?.claimed_locations ?? 0),
+    is_franchise: !!row?.is_franchise,
   };
 }
 
 export interface SaveMenuItemInput {
   restaurantName: string;
+  // One location's own menu (independents). Omit for a franchise's shared menu.
+  placeId?: string | null;
   // null/undefined = create a new item, otherwise update this one.
   itemId?: string | null;
   name: string;
@@ -120,6 +133,7 @@ export async function saveMenuItem(input: SaveMenuItemInput): Promise<{ itemId: 
     p_serving_weight_grams: input.serving_weight_grams,
     p_is_verified: input.is_verified,
     p_is_out_of_stock: input.is_out_of_stock,
+    p_place_id: input.placeId || null,
   });
   if (error) throw error;
   return data as { itemId: string; created: boolean };
@@ -140,6 +154,13 @@ export async function previewDeleteMenuItems(itemIds: string[]): Promise<DeleteM
   });
   if (error) throw error;
   return data as DeleteMenuItemsResult;
+}
+
+// Marks several items verified at once (migration 123). Resolves to how many were changed.
+export async function verifyMenuItems(itemIds: string[]): Promise<number> {
+  const { data, error } = await supabase.rpc('admin_verify_menu_items', { p_item_ids: itemIds });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function deleteMenuItems(itemIds: string[]): Promise<DeleteMenuItemsResult> {

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { chooseMenuRows } from '../utils/menuRows';
 import type { Restaurant } from '../types';
 
 // Owner/admin-only functions, split out of the original restaurantAuth.ts
@@ -160,7 +161,9 @@ export async function claimRestaurant(
   googlePlaceId: string,
   restaurantName: string,
   address: string,
-  token: string
+  token: string,
+  // what the owner told customers about the place (migration 129); a place type is required for a new claim
+  categories?: { venueTypes: string[]; services: string[]; cuisines: string[] }
 ) {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/restaurant-claim`, {
     method: 'POST',
@@ -168,7 +171,10 @@ export async function claimRestaurant(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
     },
-    body: JSON.stringify({ googlePlaceId, restaurantName, address }),
+    body: JSON.stringify({
+      googlePlaceId, restaurantName, address,
+      venueTypes: categories?.venueTypes, services: categories?.services, cuisines: categories?.cuisines,
+    }),
   });
 
   const data = await response.json();
@@ -338,7 +344,11 @@ export async function getTopCoupons(restaurantId: string, limit = 10): Promise<T
 // Reads from menu_items — the same cache the consumer app's recommendation
 // engine reads from — so the owner sees exactly what customers see, instead
 // of a separately-drifting restaurant_menu_items copy.
-export async function getRestaurantMenuItems(restaurantName: string) {
+//
+// With the restaurant's place ID, a restaurant that has items of its own (saved against its place) sees only those,
+// as its customers do (migration 067). Otherwise it sees the shared name-keyed items. Items saved for another
+// restaurant with the same name are never shown.
+export async function getRestaurantMenuItems(restaurantName: string, placeId?: string | null) {
   const { data, error } = await supabase
     .from('menu_items')
     .select('*')
@@ -346,7 +356,18 @@ export async function getRestaurantMenuItems(restaurantName: string) {
     .order('cached_at', { ascending: false });
 
   if (error) throw error;
-  return (data || [])
+  const rows = data || [];
+
+  // Customers see an independent restaurant's OWN items only, and a franchise's shared chain menu. Do the same here, so
+  // every owner screen (Edit Menu, Add Coupon, ...) lists what customers can actually see. When the restaurant has no items
+  // of its own, whether it is a franchise decides between an empty menu and the shared one.
+  let isChain: boolean | undefined;
+  if (placeId && !rows.some((row) => row.place_id === placeId)) {
+    const { data: chain, error: chainError } = await supabase.rpc('is_franchise_chain', { p_name: restaurantName.trim() });
+    if (!chainError && typeof chain === 'boolean') isChain = chain;
+  }
+  const chosen = chooseMenuRows(rows, placeId, isChain);
+  return chosen
     .map((row) => ({
       id: row.item_id,
       item_id: row.item_id,
@@ -370,6 +391,14 @@ export async function verifyMenuItem(itemId: string, newName?: string) {
     p_new_name: newName?.trim() || null,
   });
   if (error) throw error;
+}
+
+// Confirms several of the owner's own items at once (migration 123). Resolves to how many were changed; nothing is
+// changed if any item is not theirs.
+export async function verifyMenuItems(itemIds: string[]): Promise<number> {
+  const { data, error } = await supabase.rpc('verify_menu_items', { p_item_ids: itemIds });
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 // Reverts a mistaken verification back to unconfirmed — same single-row

@@ -19,7 +19,13 @@ INSERT INTO public.menu_items (item_id, restaurant_name, name, is_verified, is_o
   ('t_a_oos',   'ZZ Test Chain', 'A Sold Out',        true,  true,  'place_A'),
   ('t_c_oos',   'ZZ Test Chain', 'C Only Item',       true,  true,  'place_C'),
   -- A different restaurant, to prove names don't bleed together.
-  ('t_other_1', 'ZZ Other Place', 'Other Dish',       false, false, NULL);
+  ('t_other_1', 'ZZ Other Place', 'Other Dish',       false, false, NULL),
+  -- An independent restaurant (not on the franchise list) with items stored only by name.
+  ('t_indie_1', 'ZZ Indie Cafe', 'Indie Dish',        false, false, NULL);
+
+-- Since migration 103 the shared name-keyed menu is used only for franchises; independents show only items tied
+-- to their own place. These two names are franchises so the shared-menu rules below still apply to them.
+INSERT INTO public.franchise_chains (name) VALUES ('ZZ Test Chain'), ('ZZ Other Place');
 
 CREATE FUNCTION pg_temp.ids(p_place TEXT, p_name TEXT) RETURNS TEXT[] AS $$
   SELECT COALESCE(array_agg(item_id ORDER BY item_id), '{}')
@@ -64,12 +70,15 @@ BEGIN
     'NULL place id uses the template';
   RAISE NOTICE 'PASS: NULL place id falls back to the template';
 
-  -- 8. Name match is EXACT (same comparison the app always used).
-  ASSERT pg_temp.ids('place_B', 'zz test chain') = '{}',
-    'name match must be exact (case-sensitive)';
-  ASSERT pg_temp.ids('place_B', 'ZZ Test Chain ') = '{}',
-    'name match must be exact (no trimming)';
-  RAISE NOTICE 'PASS: template name match is exact';
+  -- 8. A franchise is matched by its normalized name (migration 086), so case and spacing variants find
+  --    the same shared menu; an independent is never matched by name alone (migration 103).
+  ASSERT pg_temp.ids('place_B', 'zz test chain') = ARRAY['t_tmpl_1','t_tmpl_2'],
+    'a franchise name matches ignoring case';
+  ASSERT pg_temp.ids('place_B', 'ZZ Test Chain ') = ARRAY['t_tmpl_1','t_tmpl_2'],
+    'a franchise name matches ignoring spacing';
+  ASSERT pg_temp.ids('place_B', 'ZZ Indie Cafe') = '{}',
+    'an independent shows nothing just because items share its name';
+  RAISE NOTICE 'PASS: franchises match by normalized name, independents never by name alone';
 
   -- 9. Different restaurants stay separate.
   ASSERT pg_temp.ids('place_B', 'ZZ Other Place') = ARRAY['t_other_1'],

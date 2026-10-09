@@ -13,8 +13,9 @@ interface FranchiseRow {
 }
 
 // Read-only lookup of the known franchise/chain names the consumer app
-// matches restaurants against (franchise_chains, migration 062). Entries can't
-// be added, edited or deactivated from here.
+// matches restaurants against (franchise_chains, migration 062). New chains are
+// added from the Franchise Menu Management page; entries can't be edited or
+// deactivated yet.
 export default function AdminFranchiseLookupScreen() {
   const [rows, setRows] = useState<FranchiseRow[]>([]);
   const [loading, setLoading] = useState(true);

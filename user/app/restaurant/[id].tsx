@@ -21,6 +21,9 @@ import { CouponActivationModal } from '../../src/components/coupon/CouponActivat
 import { CouponConfirmModal } from '../../src/components/coupon/CouponConfirmModal';
 import { NutritionDisclaimerModal } from '../../src/components/restaurant/NutritionDisclaimerModal';
 import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../src/utils/couponDisplay';
+import { reachableCouponCount } from '../../src/utils/couponVisibility';
+import { useCustomerConfig } from '../../src/hooks/useCustomerConfig';
+import { describeCategories } from '../../src/utils/categories';
 import { supabase } from '../../src/api/supabase';
 import { useUIStore } from '../../src/store/uiStore';
 import type { Recommendation, Coupon } from '../../src/types';
@@ -83,6 +86,7 @@ export default function RestaurantDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [couponsOnly, setCouponsOnly] = useState(false);
+  const { data: customerConfig } = useCustomerConfig();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponsLoading, setCouponsLoading] = useState(true);
   const [couponsModalVisible, setCouponsModalVisible] = useState(false);
@@ -92,7 +96,7 @@ export default function RestaurantDetailScreen() {
   const [showNutritionDisclaimer, setShowNutritionDisclaimer] = useState(!hasSeenNutritionDisclaimer);
 
   // Item-specific coupon ids for this restaurant — any of these that
-  // personalized ranking would otherwise cut off past the top-20 still need
+  // personalized ranking would otherwise cut off past the cap (30 with confirmed items, else 20) still need
   // to show up (appended at the end), so a real deal never silently
   // disappears from the page.
   const couponItemIds = useMemo(
@@ -182,14 +186,18 @@ export default function RestaurantDetailScreen() {
     );
   }
 
-  const cuisineDisplay = restaurant.cuisineTypes
+  // What the place is and what it serves, from the categories; Google's types as before when the server sent none.
+  const cuisineDisplay = describeCategories(restaurant, customerConfig?.categories ?? [], 4) ?? restaurant.cuisineTypes
     .slice(0, 4)
     .map((t) => t.replace(/_restaurant$/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()))
     .join(' · ');
 
   const genericCoupons = coupons.filter((c) => !c.menu_item_id);
-  const itemCouponCount = coupons.filter((c) => c.menu_item_id).length;
-  const totalCouponCount = genericCoupons.length + itemCouponCount;
+  // Only coupons the customer can reach: an item coupon counts when its item is on the menu they see (an unconfirmed item
+  // that is hidden does not), so the button never shows a count that "Coupons only" cannot match.
+  const shownItemIds = new Set((recommendations ?? []).map((r) => r.menuItem.itemId));
+  const totalCouponCount = reachableCouponCount(coupons, shownItemIds);
+  const itemCouponCount = totalCouponCount - genericCoupons.length;
 
   // Any-item coupons have no menu item to attach to, so they're only ever
   // viewable/activatable through this button's modal — tapping it filters
@@ -335,7 +343,7 @@ export default function RestaurantDetailScreen() {
               {/* Coupons button — moved out of the category row and given
                   its own line, with a count badge, instead of the inline
                   chips-heavy section this used to be. */}
-              {!couponsLoading && totalCouponCount > 0 && (
+              {!couponsLoading && !isLoading && totalCouponCount > 0 && (
                 <TouchableOpacity
                   style={[styles.couponsButton, couponsOnly && styles.couponsButtonActive]}
                   onPress={handleCouponsButtonPress}

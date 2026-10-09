@@ -29,6 +29,7 @@ export function useNearbyRestaurants(location: Coords | null) {
     queryKey: ['nearbyRestaurants', snappedLat, snappedLng, maxRadiusMiles],
     queryFn: async () => {
       try {
+        // (A kind of restaurant an admin has switched off is already left out by the server: see fetch-nearby-restaurants.)
         const restaurants = await fetchNearbyRestaurants(
           location!.latitude,
           location!.longitude,

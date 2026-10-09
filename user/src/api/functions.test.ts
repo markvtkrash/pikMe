@@ -106,6 +106,22 @@ describe('fetchMenuItemsAi', () => {
     await expect(fetchMenuItemsAi('Chipotle')).resolves.toBe(items);
   });
 
+  it('sends only the name for a bulk list, so those restaurants are not queued for a build', async () => {
+    invoke.mockResolvedValue({ data: [], error: null });
+
+    await fetchMenuItemsAi('Chipotle');
+
+    expect(invoke).toHaveBeenCalledWith('fetch-menu-items-ai', { body: { restaurantName: 'Chipotle' } });
+  });
+
+  it('sends the place too when the customer opened the restaurant, so a real menu build is queued', async () => {
+    invoke.mockResolvedValue({ data: [], error: null });
+
+    await fetchMenuItemsAi('Chipotle', 'ChIJabcdefghij');
+
+    expect(invoke).toHaveBeenCalledWith('fetch-menu-items-ai', { body: { restaurantName: 'Chipotle', placeId: 'ChIJabcdefghij' } });
+  });
+
   it('throws the extracted message from the error body', async () => {
     invoke.mockResolvedValue({ data: null, error: errorWithBody({ error: 'LLM unavailable' }) });
 

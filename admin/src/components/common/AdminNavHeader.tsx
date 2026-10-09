@@ -1,38 +1,20 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, Modal, Pressable, ScrollView } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet, Image, Modal, Pressable, ScrollView, useWindowDimensions,
+} from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { supabase } from '../../api/supabase';
+import { NAV_ITEMS, QUICK_NAV, isNavActive, isNavItemActive, showQuickNav } from '../../utils/adminNav';
 
-// Every admin page, in the same order as the dashboard tiles. Add new pages
-// here and they show up in the header menu on every screen.
-const NAV_ITEMS: { label: string; icon: string; href: string; match: string }[] = [
-  { label: 'Dashboard', icon: '🏠', href: '/admin', match: '/admin' },
-  { label: 'Pending Claims', icon: '📋', href: '/admin/claims', match: '/admin/claims' },
-  { label: 'Relocations', icon: '📍', href: '/admin/relocations', match: '/admin/relocations' },
-  { label: 'Restaurants', icon: '🍽️', href: '/admin/restaurants', match: '/admin/restaurants' },
-  { label: 'Menu Management', icon: '🧾', href: '/admin/menu-management', match: '/admin/menu-management' },
-  { label: 'Coupons', icon: '🎟️', href: '/admin/coupons', match: '/admin/coupons' },
-  { label: 'Manage Restaurants', icon: '🏪', href: '/admin/owners', match: '/admin/owners' },
-  { label: 'Users', icon: '👥', href: '/admin/users', match: '/admin/users' },
-  { label: 'Create Owner', icon: '➕', href: '/admin/create-owner', match: '/admin/create-owner' },
-  { label: 'Reports', icon: '📊', href: '/admin/reports', match: '/admin/reports' },
-  { label: 'Franchise Lookup', icon: '🍔', href: '/admin/franchises', match: '/admin/franchises' },
-  { label: 'App Config', icon: '⚙️', href: '/admin/config', match: '/admin/config' },
-  { label: 'Support Tickets', icon: '🎧', href: '/admin/tickets?status=open', match: '/admin/tickets' },
-];
-
-function isActive(pathname: string, match: string) {
-  if (match === '/admin') return pathname === '/admin';
-  return pathname === match || pathname.startsWith(`${match}/`);
-}
-
-// Header-left for every admin screen: logo, a Dashboard button, and — on a
-// report page — a link back up to the Reports list.
+// Header-left for every admin screen: logo, a Dashboard button, direct links to the
+// most-used pages (wide screens only), and — on a report page — a link back up to
+// the Reports list.
 export function AdminHeaderLeft() {
   const router = useRouter();
   const pathname = usePathname();
   const onDashboard = pathname === '/admin';
   const onReportPage = pathname.startsWith('/admin/reports/');
+  const { width } = useWindowDimensions();
 
   return (
     <View style={styles.leftRow}>
@@ -42,6 +24,19 @@ export function AdminHeaderLeft() {
           <Text style={styles.headerBtnText}>🏠 Dashboard</Text>
         </TouchableOpacity>
       )}
+      {showQuickNav(width) &&
+        QUICK_NAV.map((link) => {
+          const active = isNavActive(pathname, link.href);
+          return (
+            <TouchableOpacity
+              key={link.href}
+              onPress={() => router.push(link.href as any)}
+              style={[styles.headerBtn, active && styles.headerBtnActive]}
+            >
+              <Text style={[styles.headerBtnText, active && styles.headerBtnTextActive]}>{link.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       {onReportPage && (
         <TouchableOpacity onPress={() => router.push('/admin/reports')} style={styles.headerBtn}>
           <Text style={styles.headerBtnText}>‹ Reports</Text>
@@ -81,7 +76,7 @@ export function AdminHeaderRight() {
           <Pressable style={styles.menuCard} onPress={() => {}}>
             <ScrollView showsVerticalScrollIndicator={false}>
               {NAV_ITEMS.map((item) => {
-                const active = isActive(pathname, item.match);
+                const active = isNavItemActive(pathname, item);
                 return (
                   <TouchableOpacity
                     key={item.href}
@@ -112,6 +107,8 @@ const styles = StyleSheet.create({
   logo: { width: 24, height: 24, borderRadius: 12 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
   headerBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  headerBtnActive: { backgroundColor: '#fff' },
+  headerBtnTextActive: { color: '#1565C0', fontWeight: '800' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'flex-end', paddingTop: 56, paddingRight: 12 },
   menuCard: {

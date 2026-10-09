@@ -3,9 +3,10 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, Modal,
 } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { isBooleanValue, nextBooleanValue, switchQuestion } from '../../src/utils/configValues';
 
 interface ConfigRow {
   key: string;
@@ -72,6 +73,28 @@ export default function AdminConfigScreen() {
     } catch (error: any) {
       console.error('[admin-config] Save error:', error);
       Alert.alert('Error', error.message || 'Failed to save value');
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  // A true/false value is switched with one button (after a short question), and saved at once.
+  async function handleToggle(row: ConfigRow) {
+    if (savingKey) return;
+    if (!(await confirmDialog('Switch setting?', switchQuestion(row.key, row.value), { confirmText: 'Switch' }))) return;
+    const nextValue = nextBooleanValue(row.value);
+    setSavingKey(row.key);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .update({ value: nextValue, updated_at: new Date().toISOString() })
+        .eq('key', row.key);
+      if (error) throw error;
+      setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, value: nextValue } : r)));
+      setDrafts((prev) => ({ ...prev, [row.key]: nextValue }));
+    } catch (error: any) {
+      console.error('[admin-config] Toggle error:', error);
+      Alert.alert('Error', error.message || 'Failed to change the value');
     } finally {
       setSavingKey(null);
     }
@@ -208,19 +231,38 @@ export default function AdminConfigScreen() {
                   {!!item.description && <Text style={styles.rowDescription}>{item.description}</Text>}
                   {!!item.env_var_name && <Text style={styles.rowEnvVar}>.env: {item.env_var_name}</Text>}
                 </View>
-                <TextInput
-                  style={styles.valueInput}
-                  value={draft}
-                  onChangeText={(text) => setDrafts((prev) => ({ ...prev, [item.key]: text }))}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity
-                  style={[styles.saveBtn, (!dirty || busy) && styles.btnDisabled]}
-                  onPress={() => handleSave(item)}
-                  disabled={!dirty || busy}
-                >
-                  {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
-                </TouchableOpacity>
+                {isBooleanValue(item.value) ? (
+                  <TouchableOpacity
+                    style={[styles.toggleBtn, item.value === 'true' ? styles.toggleOn : styles.toggleOff, busy && styles.btnDisabled]}
+                    onPress={() => handleToggle(item)}
+                    disabled={busy}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: item.value === 'true' }}
+                    accessibilityLabel={`${item.key}: ${item.value}. Tap to switch.`}
+                  >
+                    {busy ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.toggleText}>{item.value === 'true' ? '✓ true' : '✕ false'}</Text>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <>
+                    <TextInput
+                      style={styles.valueInput}
+                      value={draft}
+                      onChangeText={(text) => setDrafts((prev) => ({ ...prev, [item.key]: text }))}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={[styles.saveBtn, (!dirty || busy) && styles.btnDisabled]}
+                      onPress={() => handleSave(item)}
+                      disabled={!dirty || busy}
+                    >
+                      {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                    </TouchableOpacity>
+                  </>
+                )}
                 <TouchableOpacity
                   style={[styles.deleteBtn, busy && styles.btnDisabled]}
                   onPress={() => handleDeleteRequest(item)}
@@ -284,6 +326,10 @@ const styles = StyleSheet.create({
   rowEnvVar: { fontSize: 10, color: '#1565C0', fontWeight: '600', marginTop: 2 },
   valueInput: { flex: 1, minWidth: 80, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222' },
 
+  toggleBtn: { flex: 1, minWidth: 110, borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
+  toggleOn: { backgroundColor: '#2E7D32' },
+  toggleOff: { backgroundColor: '#78909C' },
+  toggleText: { color: '#fff', fontWeight: '800', fontSize: 13 },
   saveBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   deleteBtn: { backgroundColor: '#e53e3e', borderRadius: 8, width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },

@@ -1,4 +1,5 @@
 import type { MenuReplaceResult } from '../api/restaurantAuth';
+import { confirmDialog } from './alert';
 
 // Shared by every action that can replace a restaurant's cached menu items
 // (manual refresh, saving a menu link, and later manual entry). If the
@@ -7,7 +8,9 @@ import type { MenuReplaceResult } from '../api/restaurantAuth';
 // force=true if they choose to proceed — never silently.
 export async function confirmAndRetryIfNeeded(
   result: MenuReplaceResult,
-  retryWithForce: () => Promise<MenuReplaceResult>
+  retryWithForce: () => Promise<MenuReplaceResult>,
+  // true when the owner is saving an empty menu: the wording says the items will be removed, not replaced
+  clearing = false
 ): Promise<MenuReplaceResult> {
   if (!result.requiresConfirmation) return result;
 
@@ -15,7 +18,11 @@ export async function confirmAndRetryIfNeeded(
   const verifiedCount = result.overwritesVerifiedCount || 0;
   const parts: string[] = [];
 
-  if (verifiedCount > 0) {
+  if (verifiedCount > 0 && clearing) {
+    parts.push(
+      `${verifiedCount} verified menu item${verifiedCount === 1 ? '' : 's'} will be removed and your menu will be empty.`
+    );
+  } else if (verifiedCount > 0) {
     parts.push(
       `${verifiedCount} verified menu item${verifiedCount === 1 ? '' : 's'} (from a real menu link or ` +
       `manual entry) will be replaced with AI-guessed items, which may not be accurate.`
@@ -30,9 +37,7 @@ export async function confirmAndRetryIfNeeded(
 
   const message = `${parts.join(' ')} Continue anyway?`;
 
-  // Matches the existing confirm() convention already used in expired.tsx
-  // for this web-focused app.
-  const confirmed = confirm(message);
+  const confirmed = await confirmDialog(clearing ? 'Remove menu items?' : 'Replace menu items?', message, { confirmText: 'Continue', destructive: clearing });
   if (!confirmed) return result;
 
   return retryWithForce();

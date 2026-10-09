@@ -78,7 +78,7 @@ export default function SupportScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Support</Text>
+          <Text style={styles.title}>Support Ticket</Text>
           <Text style={styles.subtitle}>Have an issue? Send us a message.</Text>
         </View>
       </View>

@@ -23,12 +23,25 @@ describe('filterVisibleMenuItems', () => {
     expect(filterVisibleMenuItems([], { showUnconfirmed: true, isFranchise: true })).toEqual([]);
   });
 
-  it('hides everything for a non-chain restaurant that only has unverified items', () => {
+  it('shows every item for a non-chain restaurant where nothing is confirmed yet', () => {
     const result = filterVisibleMenuItems([unverified, { itemId: 'u2', isVerified: false }], {
       showUnconfirmed: false,
       isFranchise: false,
     });
-    expect(result).toEqual([]);
+    expect(result.map((i) => i.itemId)).toEqual(['u1', 'u2']);
+  });
+
+  it('drops the unconfirmed items as soon as one item is confirmed', () => {
+    const result = filterVisibleMenuItems(
+      [unverified, { itemId: 'u2', isVerified: false }, { itemId: 'v9', isVerified: true }],
+      { showUnconfirmed: false, isFranchise: false }
+    );
+    expect(result.map((i) => i.itemId)).toEqual(['v9']);
+  });
+
+  it('shows all items when the setting is on, even with confirmed ones present', () => {
+    const result = filterVisibleMenuItems([unverified, verified], { showUnconfirmed: true, isFranchise: false });
+    expect(result.map((i) => i.itemId)).toEqual(['u1', 'v1']);
   });
 
   it('shows everything for a franchise that only has unverified items', () => {
@@ -55,8 +68,10 @@ describe('filterVisibleMenuItems', () => {
   });
 
   it('treats a missing isVerified like unverified at runtime', () => {
-    // Rows from before the column existed could come back without it.
+    // Rows from before the column existed could come back without it: dropped once something is confirmed,
+    // shown (with the unconfirmed banner) while nothing is.
     const legacy = { itemId: 'old' } as any;
-    expect(filterVisibleMenuItems([legacy], { showUnconfirmed: false, isFranchise: false })).toEqual([]);
+    expect(filterVisibleMenuItems([legacy, verified], { showUnconfirmed: false, isFranchise: false })).toEqual([verified]);
+    expect(filterVisibleMenuItems([legacy], { showUnconfirmed: false, isFranchise: false })).toEqual([legacy]);
   });
 });

@@ -6,15 +6,19 @@ import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { extractMenuFromText } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 
 export default function MenuTextScreen() {
   const router = useRouter();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   const [menuText, setMenuText] = useState('');
   const [extracting, setExtracting] = useState(false);
 
   if (!owner || !restaurant) return null;
+  if (isChain) return <ChainMenuNotice />;
 
   async function handleExtract() {
     if (!restaurant || !session?.access_token) {
@@ -57,7 +61,7 @@ export default function MenuTextScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Update Menu Items From Text</Text>
+          <Text style={styles.title}>Import Menu from Text</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
       </View>
@@ -92,7 +96,7 @@ export default function MenuTextScreen() {
             {extracting ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.extractBtnText}>Extract Menu From Text</Text>
+              <Text style={styles.extractBtnText}>Import Menu from Text</Text>
             )}
           </TouchableOpacity>
         </View>

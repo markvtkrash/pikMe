@@ -4,7 +4,6 @@ jest.mock('expo-constants', () => ({
     extra: {
       supabaseUrl: 'http://localhost:54321',
       supabaseAnonKey: 'test-key',
-      googleMapsApiKey: 'test-maps-key',
     },
   },
 }));

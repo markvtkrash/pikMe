@@ -175,6 +175,66 @@ describe('scoreAndRankItems', () => {
     }
   });
 
+  const manyItems = (count: number, isVerified: boolean, prefix: string) =>
+    Array.from({ length: count }, (_, i) =>
+      makeItem({
+        itemId: `${prefix}-${i}`,
+        name: `${prefix} ${i}`,
+        isVerified,
+        nutrition: { ...makeItem().nutrition, calories: 300 + i * 10 },
+      })
+    );
+
+  it('lists up to 30 confirmed items, best match first, with sequential ranks', () => {
+    const results = scoreAndRankItems(makeProfile(), manyItems(40, true, 'v'), makeRestaurant());
+
+    expect(results).toHaveLength(30);
+    expect(results.every((r) => r.menuItem.isVerified)).toBe(true);
+    expect(results.map((r) => r.rank)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1));
+    for (let i = 1; i < results.length; i++) {
+      expect(results[i - 1].score).toBeGreaterThanOrEqual(results[i].score);
+    }
+  });
+
+  it('shows every confirmed item of a restaurant that has 25 (more than the old cap of 20)', () => {
+    const results = scoreAndRankItems(makeProfile(), manyItems(25, true, 'v'), makeRestaurant());
+    expect(results).toHaveLength(25);
+  });
+
+  it('keeps the smaller cap of 20 for a list with no confirmed item at all', () => {
+    const results = scoreAndRankItems(makeProfile(), manyItems(35, false, 'u'), makeRestaurant());
+    expect(results).toHaveLength(20);
+  });
+
+  it('allows up to 30 when a few confirmed items are mixed with unconfirmed ones', () => {
+    const items = [...manyItems(3, true, 'v'), ...manyItems(40, false, 'u')];
+    const results = scoreAndRankItems(makeProfile(), items, makeRestaurant());
+    expect(results).toHaveLength(30);
+    // every confirmed item is ahead of every unconfirmed one
+    const firstUnverified = results.findIndex((r) => !r.menuItem.isVerified);
+    expect(results.slice(0, firstUnverified).every((r) => r.menuItem.isVerified)).toBe(true);
+    expect(firstUnverified).toBe(3);
+  });
+
+  it('still adds a coupon item that falls outside the cap, after it', () => {
+    const items = manyItems(40, true, 'v');
+    // the lowest-scoring item (most calories) would not make the top 30
+    const couponId = 'v-39';
+    const results = scoreAndRankItems(makeProfile(), items, makeRestaurant(), new Set([couponId]));
+    const baseline = scoreAndRankItems(makeProfile(), items, makeRestaurant());
+    expect(baseline.map((r) => r.menuItem.itemId)).not.toContain(couponId);
+    expect(results).toHaveLength(31);
+    expect(results[30].menuItem.itemId).toBe(couponId);
+  });
+
+  it('still removes items that break the customer\'s allergens, diet or calorie limit, even with 30+ confirmed', () => {
+    const profile = makeProfile({ dietaryRestrictions: ['vegan'] });
+    const items = [...manyItems(35, true, 'v'), makeItem({ itemId: 'bacon', name: 'Bacon Cheeseburger', isVerified: true })];
+    const results = scoreAndRankItems(profile, items, makeRestaurant());
+    expect(results.map((r) => r.menuItem.itemId)).not.toContain('bacon');
+    expect(results).toHaveLength(30);
+  });
+
   it('returns an empty array when every item fails a hard filter', () => {
     const profile = makeProfile({ dietaryRestrictions: ['vegan'] });
     const restaurant = makeRestaurant();

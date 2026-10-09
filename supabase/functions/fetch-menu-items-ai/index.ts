@@ -1,5 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  buildMenuGuessPrompt, formatCuisine, formatLocation, parseGuessReply, parseMenuGuessMaxTokens, pickModel,
+} from './promptUtils.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,14 +26,22 @@ function err(message: string, status = 500) {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[fetch-menu-items-ai] Failed to load DB config, falling back to env/defaults:', loadErr);
@@ -72,13 +83,19 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { restaurantName } = await req.json();
+    // placeId is sent only when a customer actually opened this restaurant (not for a bulk list): it is
+    // what puts the restaurant in the menu build queue (migration 101).
+    const { restaurantName, placeId } = await req.json();
     if (!restaurantName?.trim()) return err('restaurantName is required', 400);
 
-    const dbConfig = await loadDbConfig(['aiProvider', 'quicksilverModel', 'claudeModel', 'menuItemsCount']);
+    const dbConfig = await loadDbConfig(['aiProvider', 'quicksilverModel', 'claudeModel', 'menuItemsCount', 'menuGuessMaxTokens', 'menuGuessModel']);
+    const MAX_TOKENS = parseMenuGuessMaxTokens(dbConfig.menuGuessMaxTokens, Deno.env.get('MENU_GUESS_MAX_TOKENS'));
     const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
-    const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
-    const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+    // A model chosen just for this guess (the menuGuessModel setting) wins over the app-wide model of the active
+    // provider; blank or invalid means "use the app-wide model", as before.
+    const GUESS_MODEL = pickModel(dbConfig.menuGuessModel, Deno.env.get('MENU_GUESS_MODEL'));
+    const QUICKSILVER_MODEL = GUESS_MODEL ?? dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+    const CLAUDE_MODEL = GUESS_MODEL ?? dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
     const MENU_ITEMS_COUNT = parseInt(dbConfig.menuItemsCount ?? Deno.env.get('MENU_ITEMS_COUNT') ?? '15', 10);
 
     // Note: Menu items are AI-generated (not from Google)
@@ -98,42 +115,68 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // ── Queue a real menu build for this restaurant ─────────────────────────────
+    // Best effort: whatever happens here, the customer still gets the AI menu below. The database only accepts
+    // places that exist in the Google cache, so a made-up ID is ignored. It runs on the server, not in the app.
+    if (typeof placeId === 'string' && placeId.length > 0) {
+      try {
+        const { data: queued, error: queueError } = await supabase.rpc('enqueue_menu_build', {
+          p_place_id: placeId,
+          p_restaurant_name: restaurantName.trim(),
+        });
+        if (queueError) console.warn('[fetch-menu-items-ai] could not queue a menu build:', queueError.message);
+        else console.log('[fetch-menu-items-ai] menu build queue:', queued);
+      } catch (queueErr) {
+        console.warn('[fetch-menu-items-ai] could not queue a menu build:', queueErr instanceof Error ? queueErr.message : 'error');
+      }
+    }
+
+    // ── An independent restaurant's guess belongs to ITS place, never to every restaurant with the name ──
+    // (A franchise, or a call with no place, keeps the old name-keyed behaviour below.)
+    let ownPlaceId: string | null = null;
+    if (typeof placeId === 'string' && /^[A-Za-z0-9_-]{10,200}$/.test(placeId)) {
+      const { data: isChain, error: chainError } = await supabase.rpc('is_franchise_chain', { p_name: restaurantName.trim() });
+      if (!chainError && isChain === false) ownPlaceId = placeId;
+    }
+
     // ── Check 30-day cache ──────────────────────────────────────────────────────
     const cacheFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: cached } = await supabase
-      .from('menu_items')
-      .select('*')
-      .ilike('restaurant_name', restaurantName.trim())
-      .eq('is_verified', false)
-      .gt('cached_at', cacheFrom)
-      .limit(50);
+    const cachedQuery = ownPlaceId
+      ? supabase.from('menu_items').select('*').eq('place_id', ownPlaceId).like('item_id', 'ai_*')
+      : supabase.from('menu_items').select('*').ilike('restaurant_name', restaurantName.trim()).eq('is_verified', false);
+    const { data: cached } = await cachedQuery.gt('cached_at', cacheFrom).limit(50);
 
     if (cached && cached.length > 0) {
       return ok(cached.map(mapDbRow));
     }
 
+    // ── Where is this restaurant? ───────────────────────────────────────────────
+    // Only needed now that the AI really has to be called (not on a cache hit), and only for an independent:
+    // read the address and category from our own cached Google place, never from the request. No address (not cached, or
+    // blank) just means the old name-only prompt.
+    let location: string | null = null;
+    let cuisine: string | null = null;
+    if (ownPlaceId) {
+      try {
+        const { data: place } = await supabase
+          .from('cached_restaurants')
+          .select('address, city, cuisine_types')
+          .eq('place_id', ownPlaceId)
+          .maybeSingle();
+        location = formatLocation(place?.address, place?.city);
+        cuisine = formatCuisine(place?.cuisine_types);
+      } catch (placeErr) {
+        console.warn('[fetch-menu-items-ai] could not read the place address:', placeErr instanceof Error ? placeErr.message : 'error');
+      }
+    }
+
     // ── Call LLM API ────────────────────────────────────────────────────────
-    const prompt = `You are a personalized food recommendation assistant. Select the top ${MENU_ITEMS_COUNT} menu items from "${restaurantName}" that best match typical health-conscious preferences (nutritious, balanced, popular). Return ONLY a JSON array with no markdown, code fences, or explanation.
-
-These are the top ${MENU_ITEMS_COUNT} menu items for you to explore based on nutritional balance and popularity.
-
-Each item must have these exact fields with numeric values (no strings):
-- name (string)
-- calories (number)
-- protein_g (number)
-- totalCarbs_g (number)
-- totalFat_g (number)
-- saturatedFat_g (number)
-- sodium_mg (number)
-- dietaryFiber_g (number)
-- sugars_g (number)
-
-Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g":0,"totalFat_g":8,"saturatedFat_g":2,"sodium_mg":800,"dietaryFiber_g":0,"sugars_g":0}]`;
+    const prompt = buildMenuGuessPrompt(restaurantName, MENU_ITEMS_COUNT, location, cuisine);
 
     console.log('[fetch-menu-items-ai] ========== START ==========');
     console.log('[fetch-menu-items-ai] Fetching menu for:', restaurantName);
     console.log('[fetch-menu-items-ai] Items requested:', MENU_ITEMS_COUNT);
-    console.log('[fetch-menu-items-ai] Provider:', AI_PROVIDER);
+    console.log('[fetch-menu-items-ai] Provider:', AI_PROVIDER, 'model:', AI_PROVIDER === 'quicksilver' ? QUICKSILVER_MODEL : CLAUDE_MODEL, GUESS_MODEL ? '(menuGuessModel)' : '(app-wide model)');
     console.log('[fetch-menu-items-ai] [ai-request]', prompt);
 
     let rawText: string;
@@ -156,7 +199,7 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
           body: JSON.stringify({
             model: QUICKSILVER_MODEL,
             messages: [{ role: 'user', content: prompt }],
-            max_tokens: 1536,
+            max_tokens: MAX_TOKENS,
           }),
           signal: controller.signal,
         });
@@ -194,7 +237,7 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
         },
         body: JSON.stringify({
           model: CLAUDE_MODEL,
-          max_tokens: 1024,
+          max_tokens: MAX_TOKENS,
           messages: [{ role: 'user', content: prompt }],
         }),
       });
@@ -218,21 +261,22 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
       .replace(/```\s*$/i, '')
       .trim();
 
-    let rawItems: unknown[];
-    try {
-      console.log('[fetch-menu-items-ai] Response length:', cleaned.length);
-      console.log('[fetch-menu-items-ai] Parsed text (first 300 chars):', cleaned.slice(0, 300));
-      console.log('[fetch-menu-items-ai] Parsed text (last 200 chars):', cleaned.slice(-200));
+    console.log('[fetch-menu-items-ai] Response length:', cleaned.length);
+    console.log('[fetch-menu-items-ai] Parsed text (first 300 chars):', cleaned.slice(0, 300));
+    console.log('[fetch-menu-items-ai] Parsed text (last 200 chars):', cleaned.slice(-200));
 
-      rawItems = JSON.parse(cleaned);
-      if (!Array.isArray(rawItems)) throw new Error('Response is not an array');
-      console.log('[fetch-menu-items-ai] Successfully parsed', rawItems.length, 'items');
-    } catch (e) {
-      console.error('[fetch-menu-items-ai] JSON parse failed:', e);
-      console.error('[fetch-menu-items-ai] Full raw response length:', rawText.length);
+    // A reply cut off at the length cap still gives the complete items before the cut.
+    const parsed = parseGuessReply(rawText);
+    if (!parsed) {
+      console.error('[fetch-menu-items-ai] JSON parse failed. Full raw response length:', rawText.length);
       console.error('[fetch-menu-items-ai] Full raw response:', rawText);
-      console.error('[fetch-menu-items-ai] Full cleaned response:', cleaned);
-      return err(`Could not parse JSON. Length: ${cleaned.length}. Error: ${e instanceof Error ? e.message : String(e)}`);
+      return err(`The AI reply could not be read. Length: ${cleaned.length}. If it was cut off, raise the menuGuessMaxTokens setting.`);
+    }
+    const rawItems = parsed.items;
+    if (parsed.recovered) {
+      console.warn('[fetch-menu-items-ai] The reply was cut off; kept', rawItems.length, 'complete items. Raise menuGuessMaxTokens (now', MAX_TOKENS, ').');
+    } else {
+      console.log('[fetch-menu-items-ai] Successfully parsed', rawItems.length, 'items');
     }
 
     const items = await Promise.all(
@@ -274,7 +318,17 @@ Example: [{"name":"Grilled Chicken","calories":350,"protein_g":45,"totalCarbs_g"
         imageUrl: null,
         isVerified: false,
       }));
-      await supabase.rpc('upsert_menu_items', { p_items: dbPayload });
+      if (ownPlaceId) {
+        // tied to this restaurant's place (ids stay ai_...), so it is replaced when a real menu is built
+        const { error: placeSaveError } = await supabase.rpc('upsert_place_menu_items', {
+          p_place_id: ownPlaceId,
+          p_restaurant_name: restaurantName.trim(),
+          p_items: dbPayload,
+        });
+        if (placeSaveError) console.warn('[fetch-menu-items-ai] could not save the guess for the place:', placeSaveError.message);
+      } else {
+        await supabase.rpc('upsert_menu_items', { p_items: dbPayload });
+      }
     }
 
     console.log('[fetch-menu-items-ai] Generated', items.length, 'items');

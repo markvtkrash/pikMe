@@ -54,7 +54,7 @@ export default function PreviewAsCustomerScreen() {
     try {
       const [couponsData, itemsData] = await Promise.all([
         getRestaurantCoupons(restaurant.id),
-        getRestaurantMenuItems(restaurant.name),
+        getRestaurantMenuItems(restaurant.name, restaurant.google_place_id),
       ]);
       setCoupons(couponsData as Coupon[]);
       setMenuItems(itemsData as MenuItem[]);

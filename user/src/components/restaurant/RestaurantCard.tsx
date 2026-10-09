@@ -7,6 +7,8 @@ import { formatDistance } from '../../utils/geo';
 import { getHoursDisplay } from '../../utils/hours';
 import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
+import { useCustomerConfig } from '../../hooks/useCustomerConfig';
+import { describeCategories } from '../../utils/categories';
 import { getActiveCouponsByPlaceId } from '../../api/coupons';
 
 // Generic restaurant/food photos — the app doesn't call Google's Place
@@ -62,7 +64,9 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
       .catch(() => setCouponCount(0));
   }, [restaurant.placeId]);
 
-  const cuisineLabel = restaurant.cuisineTypes
+  const { data: customerConfig } = useCustomerConfig();
+  // What the place is and what it serves, from the categories; the earlier text from Google's types when the server sent none.
+  const cuisineLabel = describeCategories(restaurant, customerConfig?.categories ?? [], 2) ?? restaurant.cuisineTypes
     .slice(0, 2)
     .map((t) =>
       t.replace(/_restaurant$/, '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())

@@ -31,7 +31,7 @@ export default function MenuVerificationStatusReport() {
       return;
     }
     try {
-      const data = await getRestaurantMenuItems(restaurant.name);
+      const data = await getRestaurantMenuItems(restaurant.name, restaurant.google_place_id);
       setItems(data as MenuItem[]);
     } catch (error) {
       console.error('[menu-verification-status-report] Failed to load:', error);

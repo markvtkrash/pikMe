@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, getRestaurantMenuItems, updateCoupon, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
@@ -82,7 +82,7 @@ export default function CouponStatusScreen() {
     try {
       const [couponsData, itemsData] = await Promise.all([
         getRestaurantCoupons(restaurant.id),
-        getRestaurantMenuItems(restaurant.name),
+        getRestaurantMenuItems(restaurant.name, restaurant.google_place_id),
       ]);
       setCoupons(couponsData as Coupon[]);
       setCurrentItems(itemsData as MenuItem[]);
@@ -156,8 +156,8 @@ export default function CouponStatusScreen() {
     }
   }
 
-  function handleDelete(couponId: string, couponCode: string) {
-    if (!confirm(`Delete ${couponCode}? This cannot be undone.`)) return;
+  async function handleDelete(couponId: string, couponCode: string) {
+    if (!(await confirmDialog('Delete coupon?', `Delete ${couponCode}? This cannot be undone.`, { confirmText: 'Delete', destructive: true }))) return;
     performDelete(couponId);
   }
 

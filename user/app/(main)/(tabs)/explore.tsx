@@ -7,6 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocation } from '../../../src/hooks/useLocation';
 import { useNearbyRestaurants } from '../../../src/hooks/useNearbyRestaurants';
 import { useCouponPlaceIds } from '../../../src/hooks/useCouponPlaceIds';
+import { useCustomerConfig } from '../../../src/hooks/useCustomerConfig';
+import {
+  anyCategoryFilter, isCurated, matchesCategoryFilters, NO_CATEGORY_FILTERS, type CategoryFilters,
+} from '../../../src/utils/categories';
+import { FilterSheet } from '../../../src/components/common/FilterSheet';
+import { activeChips, filtersButtonLabel, removeChip, splitChips, type ActiveChip } from '../../../src/utils/filterChips';
 import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
 import { SkeletonRestaurantCard } from '../../../src/components/common/SkeletonCard';
 import { RadiusSelector } from '../../../src/components/common/RadiusSelector';
@@ -41,9 +47,15 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState('');
   const [activeType, setActiveType] = useState(ALL);
   const [activeCuisine, setActiveCuisine] = useState(ALL);
-  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  // the filter sheet (what kind of place, how you get the food, cuisine); the page itself keeps search, Coupons Only and the chosen chips
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [couponsOnly, setCouponsOnly] = useState(false);
   const { data: couponPlaceIds } = useCouponPlaceIds();
+  // The categories an admin manages (what a place is, how you get the food, what it serves). When the server sends them, the
+  // filters below use them; otherwise the earlier filters on Google's raw types are used.
+  const { data: customerConfig } = useCustomerConfig();
+  const categories = customerConfig?.categories ?? [];
+  const [filters, setFilters] = useState<CategoryFilters>(NO_CATEGORY_FILTERS);
 
   // Fetching always covers the max radius (see useNearbyRestaurants); the
   // distance picker just filters that same data client-side, no refetch.
@@ -51,6 +63,8 @@ export default function ExploreScreen() {
     () => (restaurants as Restaurant[]).filter((r) => r.distanceMeters <= searchRadiusMeters),
     [restaurants, searchRadiusMeters]
   );
+
+  const curated = useMemo(() => isCurated(withinRadius, categories), [withinRadius, categories]);
 
   const typeOptions = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -76,19 +90,46 @@ export default function ExploreScreen() {
         const cuisine = CUISINE_FILTERS.find((c) => c.label === activeCuisine);
         const matchCuisine = activeCuisine === ALL || (!!cuisine && matchesCuisine(r, cuisine));
         const matchCoupon = !couponsOnly || !!couponPlaceIds?.has(r.placeId);
-        return matchSearch && matchType && matchCuisine && matchCoupon;
+        const matchCategories = !curated || matchesCategoryFilters(r, filters);
+        return matchSearch && matchType && matchCuisine && matchCoupon && matchCategories;
       })
       .sort((a, b) => a.distanceMeters - b.distanceMeters),
-    [withinRadius, search, activeType, activeCuisine, couponsOnly, couponPlaceIds]
+    [withinRadius, search, activeType, activeCuisine, couponsOnly, couponPlaceIds, curated, filters]
   );
 
-  const hasActiveFilters = search !== '' || activeType !== ALL || activeCuisine !== ALL || couponsOnly;
+  const hasActiveFilters = search !== '' || activeType !== ALL || activeCuisine !== ALL || couponsOnly || (curated && anyCategoryFilter(filters));
 
   function resetFilters() {
     setSearch('');
     setActiveType(ALL);
     setActiveCuisine(ALL);
+    setFilters(NO_CATEGORY_FILTERS);
     setCouponsOnly(false);
+  }
+
+  // The chosen filters as small removable chips on the page, and the count on the Filters button.
+  const chips = useMemo(
+    () => activeChips(
+      filters,
+      categories,
+      curated ? null : { type: activeType === ALL ? null : activeType, cuisine: activeCuisine === ALL ? null : activeCuisine, typeLabel: chipLabel },
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filters, categories, curated, activeType, activeCuisine]
+  );
+  const { shown: shownChips, more: moreChips } = splitChips(chips, 4);
+
+  function removeActiveChip(chip: ActiveChip) {
+    if (chip.kind === 'legacyType') setActiveType(ALL);
+    else if (chip.kind === 'legacyCuisine') setActiveCuisine(ALL);
+    else setFilters((f) => removeChip(f, chip));
+  }
+
+  // "Clear all" in the sheet clears the filters in it; search and Coupons Only are left as they are.
+  function clearSheetFilters() {
+    setFilters(NO_CATEGORY_FILTERS);
+    setActiveType(ALL);
+    setActiveCuisine(ALL);
   }
 
   function chipLabel(type: string) {
@@ -170,15 +211,14 @@ export default function ExploreScreen() {
         {/* More Filters toggle */}
         <View style={styles.moreFiltersRow}>
           <TouchableOpacity
-            style={[styles.moreFiltersPill, showMoreFilters && styles.moreFiltersPillActive]}
-            onPress={() => setShowMoreFilters((prev) => !prev)}
+            style={[styles.moreFiltersPill, chips.length > 0 && styles.moreFiltersPillActive]}
+            onPress={() => setSheetOpen(true)}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={filtersButtonLabel(chips.length)}
           >
-            <Text style={[styles.moreFiltersText, showMoreFilters && styles.moreFiltersTextActive]}>
-              ⚙️ {showMoreFilters ? 'Hide Filters' : 'More Filters'}
-            </Text>
-            <Text style={[styles.moreFiltersChevron, showMoreFilters && styles.moreFiltersTextActive]}>
-              {showMoreFilters ? '▾' : '▸'}
+            <Text style={[styles.moreFiltersText, chips.length > 0 && styles.moreFiltersTextActive]}>
+              ⚙️ {filtersButtonLabel(chips.length)}
             </Text>
           </TouchableOpacity>
 
@@ -207,46 +247,20 @@ export default function ExploreScreen() {
 
         <RadiusSelector />
 
-        {showMoreFilters && (
-          <>
-            {/* Type chips (cafe, bar, etc.) — wrapping row, not horizontal
-                scroll: horizontal ScrollView doesn't reliably respond to
-                desktop mouse-wheel/trackpad scroll on web, which was cutting
-                off longer labels like "Meal Delivery" and "Bakery" at the
-                edge of the viewport. */}
-            {typeOptions.length > 1 && (
-              <View style={styles.chips}>
-                {typeOptions.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.chip, activeType === type && styles.chipActive]}
-                    onPress={() => { setActiveType(type); setActiveCuisine(ALL); }}
-                  >
-                    <Text style={[styles.chipText, activeType === type && styles.chipTextActive]}>
-                      {chipLabel(type)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        {/* What is switched on, as small chips: tap one to remove it */}
+        {chips.length > 0 && (
+          <View style={styles.activeChips}>
+            {shownChips.map((chip) => (
+              <TouchableOpacity key={chip.id} style={styles.activeChip} onPress={() => removeActiveChip(chip)} accessibilityRole="button" accessibilityLabel={`Remove ${chip.label}`}>
+                <Text style={styles.activeChipText}>{chip.label}  ✕</Text>
+              </TouchableOpacity>
+            ))}
+            {moreChips > 0 && (
+              <TouchableOpacity style={styles.activeChipMore} onPress={() => setSheetOpen(true)} accessibilityRole="button">
+                <Text style={styles.activeChipMoreText}>+{moreChips} more</Text>
+              </TouchableOpacity>
             )}
-
-            {/* Cuisine chips (Italian, Mexican, Indian, etc.) */}
-            {cuisineOptions.length > 1 && (
-              <View style={styles.chips}>
-                {cuisineOptions.map((cuisine) => (
-                  <TouchableOpacity
-                    key={cuisine}
-                    style={[styles.chip, activeCuisine === cuisine && styles.chipActive]}
-                    onPress={() => { setActiveCuisine(cuisine); setActiveType(ALL); }}
-                  >
-                    <Text style={[styles.chipText, activeCuisine === cuisine && styles.chipTextActive]}>
-                      {cuisine === ALL ? 'All Cuisines' : cuisine}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </>
+          </View>
         )}
       </View>
 
@@ -308,6 +322,27 @@ export default function ExploreScreen() {
           }
         />
       )}
+
+      <FilterSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        restaurants={withinRadius}
+        categories={categories}
+        curated={curated}
+        filters={filters}
+        onChange={setFilters}
+        onClear={clearSheetFilters}
+        resultCount={filtered.length}
+        legacy={{
+          typeOptions,
+          activeType,
+          onType: (t) => { setActiveType(t); setActiveCuisine(ALL); },
+          typeLabel: chipLabel,
+          cuisineOptions,
+          activeCuisine,
+          onCuisine: (c) => { setActiveCuisine(c); setActiveType(ALL); },
+        }}
+      />
     </View>
   );
 }
@@ -401,6 +436,11 @@ const styles = StyleSheet.create({
   moreFiltersChevron: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
   moreFiltersTextActive: { color: '#fff' },
 
+  activeChips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 10, gap: 6 },
+  activeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#141414' },
+  activeChipText: { fontSize: 12, color: '#fff', fontWeight: '700' },
+  activeChipMore: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: '#ccc' },
+  activeChipMoreText: { fontSize: 12, color: '#555', fontWeight: '700' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   chip: {
     paddingVertical: 7,

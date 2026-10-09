@@ -41,7 +41,7 @@ serve(async (req) => {
       });
     }
 
-    const { googlePlaceId, restaurantName, address } = await req.json();
+    const { googlePlaceId, restaurantName, address, venueTypes, services, cuisines } = await req.json();
 
     if (!googlePlaceId || !restaurantName || !address) {
       return new Response(
@@ -49,6 +49,16 @@ serve(async (req) => {
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
+
+    // What the place is (at least one), and optionally how you get the food and what it serves. The database checks the keys
+    // against the categories an admin manages (migration 129); this only checks the shape and the one required group.
+    const asKeyList = (v: unknown): string[] | null | undefined =>
+      v === undefined || v === null ? null
+      : Array.isArray(v) && v.every((x) => typeof x === "string") ? (v as string[]).map((x) => x.trim()).filter(Boolean)
+      : undefined;
+    const venueList = asKeyList(venueTypes);
+    const serviceList = asKeyList(services);
+    const cuisineList = asKeyList(cuisines);
 
     // Verify the place exists on Google Places API (optional, for safety).
     // website_url is intentionally NOT sourced from Google here — it's set
@@ -111,6 +121,20 @@ serve(async (req) => {
       );
     }
 
+    // A new claim needs at least one place type (a restaurant this owner already owns was answered above).
+    if (!venueList || venueList.length === 0) {
+      return new Response(
+        JSON.stringify({ error: "Choose at least one place type for your restaurant" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    if (serviceList === undefined || cuisineList === undefined) {
+      return new Response(
+        JSON.stringify({ error: "The ways to order and cuisines must be lists" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     // Claim the restaurant (status: pending for admin approval)
     const { data: claimed, error: claimError } = await supabase
       .from("restaurants")
@@ -120,6 +144,9 @@ serve(async (req) => {
         name: restaurantName,
         address: address,
         status: 'pending',
+        venue_types: venueList,
+        services: serviceList,
+        cuisines: cuisineList,
       })
       .select()
       .single();

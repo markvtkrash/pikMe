@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, TextInput, ScrollView,
 } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 
@@ -108,21 +108,20 @@ export default function AdminDashboard() {
   }
 
   async function handlePurge(couponId: string) {
-    confirm('Permanently delete this coupon? This cannot be undone.') && (async () => {
-      try {
-        const { error } = await supabase
-          .from('coupons')
-          .delete()
-          .eq('id', couponId);
+    if (!(await confirmDialog('Delete coupon?', 'Permanently delete this coupon? This cannot be undone.', { confirmText: 'Delete', destructive: true }))) return;
+    try {
+      const { error } = await supabase
+        .from('coupons')
+        .delete()
+        .eq('id', couponId);
 
-        if (error) throw error;
-        console.log('[admin-dashboard] Coupon purged');
-        loadAllCoupons();
-        Alert.alert('Success', 'Coupon permanently deleted');
-      } catch (error: any) {
-        Alert.alert('Error', error.message);
-      }
-    })();
+      if (error) throw error;
+      console.log('[admin-dashboard] Coupon purged');
+      loadAllCoupons();
+      Alert.alert('Success', 'Coupon permanently deleted');
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
   }
 
   if (loading) {

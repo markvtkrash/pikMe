@@ -292,14 +292,13 @@ export default function AdminCreateOwnerScreen() {
         />
         {!!errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-        <Text style={styles.label}>Business Name <Text style={styles.required}>*</Text></Text>
+        <Text style={styles.label}>Business Name</Text>
+        {/* Comes from the Google listing chosen above, so it is shown but not editable. */}
         <TextInput
-          style={[styles.input, !!errors.businessName && styles.inputError]}
-          placeholder="Business name"
-          placeholderTextColor="#999"
+          style={[styles.input, styles.inputReadOnly]}
           value={businessName}
-          onChangeText={(t) => { setBusinessName(t); if (errors.businessName) setErrors((e) => ({ ...e, businessName: undefined })); }}
-          editable={!submitting}
+          editable={false}
+          selectTextOnFocus={false}
         />
         {!!errors.businessName && <Text style={styles.errorText}>{errors.businessName}</Text>}
 
@@ -544,6 +543,7 @@ const styles = StyleSheet.create({
     fontSize: 14, color: '#222', borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 12,
   },
   inputError: { borderColor: '#e53e3e', borderWidth: 1.5 },
+  inputReadOnly: { backgroundColor: '#f0f0f0', color: '#666' },
   errorText: { fontSize: 12, fontWeight: '600', color: '#e53e3e', marginTop: -6, marginBottom: 12 },
   errorBanner: {
     backgroundColor: '#FFEBEE', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#e53e3e',

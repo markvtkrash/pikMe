@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Restaurant } from '../types';
+import type { RestaurantDeleteCounts } from '../utils/restaurantDelete';
 
 // Owner/admin-only functions, split out of the original restaurantAuth.ts
 // (which mixed these in with customer-facing coupon functions — those now
@@ -161,6 +162,10 @@ export interface AdminOwnerRow {
   restaurant_name: string | null;
   restaurant_status: string | null;
   claimed_at: string | null;
+  // The restaurant's Google place ID (null when the owner has no restaurant).
+  google_place_id: string | null;
+  // The restaurant's street address (null when the owner has no restaurant; absent before migration 090).
+  restaurant_address?: string | null;
 }
 
 export async function adminListOwners(): Promise<AdminOwnerRow[]> {
@@ -207,6 +212,17 @@ export async function adminUpdateOwner(params: {
   const data = await response.json();
   if (!response.ok) throw new Error(data.error || 'Failed to update owner');
   return data;
+}
+
+// Permanently deletes a CLOSED restaurant and its data (migration 091). With dryRun true nothing
+// is deleted and the counts of what would be removed come back, for the confirm window.
+export async function adminDeleteRestaurant(restaurantId: string, dryRun = false): Promise<RestaurantDeleteCounts> {
+  const { data, error } = await supabase.rpc('admin_delete_restaurant', {
+    p_restaurant_id: restaurantId,
+    p_dry_run: dryRun,
+  });
+  if (error) throw error;
+  return data as RestaurantDeleteCounts;
 }
 
 export async function adminReassignOwner(params: {
@@ -420,8 +436,16 @@ export interface MenuReplaceResult {
   items?: unknown[];
 }
 
+// Who the menu is for: a claimed restaurant's id, or (admins only) the Google place ID of a restaurant nobody has
+// claimed, which is then saved against that place.
+export type MenuTarget = string | { placeId: string };
+
+function targetBody(target: MenuTarget): { restaurantId: string } | { placeId: string } {
+  return typeof target === 'string' ? { restaurantId: target } : { placeId: target.placeId };
+}
+
 export async function extractMenuFromImage(
-  restaurantId: string,
+  target: MenuTarget,
   restaurantName: string,
   imageBase64: string,
   authToken: string,
@@ -434,7 +458,7 @@ export async function extractMenuFromImage(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ restaurantId, restaurantName, imageBase64, force, items: extractedItems }),
+    body: JSON.stringify({ ...targetBody(target), restaurantName, imageBase64, force, items: extractedItems }),
   });
 
   const data = await response.json();
@@ -443,7 +467,7 @@ export async function extractMenuFromImage(
 }
 
 export async function extractMenuFromText(
-  restaurantId: string,
+  target: MenuTarget,
   restaurantName: string,
   menuText: string,
   authToken: string,
@@ -456,7 +480,7 @@ export async function extractMenuFromText(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${authToken}`,
     },
-    body: JSON.stringify({ restaurantId, restaurantName, menuText, force, items: extractedItems }),
+    body: JSON.stringify({ ...targetBody(target), restaurantName, menuText, force, items: extractedItems }),
   });
 
   const data = await response.json();

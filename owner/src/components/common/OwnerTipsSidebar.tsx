@@ -22,16 +22,17 @@ const FOOD_IMAGES = [
 // (offset by half the list) so the two sides aren't just mirrors of each
 // other. Each is tappable — takes the owner straight to that feature.
 const TIPS: Tip[] = [
-  { icon: '🤖', title: 'AI Assisted Menu Pull', body: "Automatically finds real items from your website when you've set one on your Profile — falls back to an AI guess only when it can't.", href: '/restaurant/menu-items' },
+  // (the AI Assisted Menu Pull tip is hidden for now, with its link — to be revisited)
   { icon: '✍️', title: 'Edit Menu', body: 'No website? Type your real dish names directly — we only estimate nutrition, never invent the dish itself.', href: '/restaurant/manual-menu' },
-  { icon: '📷', title: 'Update Menu Items Using a Photo', body: 'Snap a photo of your printed menu and we read the real dish names straight from it — adds to your menu without replacing anything.', href: '/restaurant/menu-photo' },
-  { icon: '📋', title: 'Update Menu Items From Text', body: 'Paste menu text copied from a PDF, email, or site — one dish per line works great, even a single short name.', href: '/restaurant/menu-text' },
+  { icon: '📷', title: 'Import Menu from Photo', body: 'Snap a photo of your printed menu and we read the real dish names straight from it — adds to your menu without replacing anything.', href: '/restaurant/menu-photo' },
+  { icon: '📋', title: 'Import Menu from Text', body: 'Paste menu text copied from a PDF, email, or site — one dish per line works great, even a single short name.', href: '/restaurant/menu-text' },
+  { icon: '🔗', title: 'Import Menu from Online Link', body: 'Have your menu on your website? Enter the page address and we read its text and add any new dishes to your menu. A menu that is only a picture cannot be read this way: use Import Menu from Photo instead.', href: '/restaurant/menu-online-link' },
   { icon: '✓', title: 'Verify Items', body: "Tapping Verify opens an editable popup so you can fix a slightly-wrong AI-guessed name at the same time you confirm it's real.", href: '/restaurant/menu-items' },
   { icon: '🎟️', title: 'Manage Coupons', body: 'Filter by Active, Inactive, Expired, or Orphaned — select more than one checkbox at once to see them together.', href: '/restaurant/coupon-status' },
   { icon: '↻', title: 'Reassign Orphaned Coupons', body: 'If a coupon\'s menu item gets removed, reassign it to a current item instead of losing the coupon entirely.', href: '/restaurant/coupon-status' },
-  { icon: '🏪', title: 'Restaurant Profile', body: 'Set your real website and menu page URL here — it powers AI Assisted Menu Pull and keeps your menu-sourcing tools pointed at the right pages.', href: '/restaurant/profile' },
+  { icon: '🏪', title: 'Restaurant Profile', body: 'See your address and keep your website link up to date. The page we read your menu from is set on the Menu Management page.', href: '/restaurant/profile' },
   { icon: '👤', title: 'Usage Limit per Consumer', body: 'Set how many times the SAME customer can redeem a coupon, separate from the total redemption cap across everyone.', href: '/restaurant/menu' },
-  { icon: '💬', title: 'Support', body: "Something not working right? Reach out from the Support tab — we'll follow up directly.", href: '/restaurant/support' },
+  { icon: '💬', title: 'Support Ticket', body: "Something not working right? Submit a Support Ticket and we'll follow up directly.", href: '/restaurant/support' },
 ];
 
 // Only render once there's genuinely enough room for the 900px page content

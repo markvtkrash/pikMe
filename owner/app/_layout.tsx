@@ -11,6 +11,7 @@ import { getRestaurantForOwner } from '../src/api/restaurantAuth';
 import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
 import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
+import { AnnouncementModal } from '../src/components/common/AnnouncementModal';
 
 const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
@@ -230,6 +231,7 @@ export default function RootLayout() {
         <AuthGate>
           <Slot />
         </AuthGate>
+        <AnnouncementModal />
         <AlertModalHost />
       </ErrorBoundary>
     </QueryClientProvider>

@@ -5,8 +5,11 @@ import {
 } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { getRestaurantMenuItems, refreshRestaurantMenu, verifyMenuItem, unverifyMenuItem, deleteMenuItem } from '../../src/api/restaurantAuth';
+import { refreshRestaurantMenu, verifyMenuItem, unverifyMenuItem, deleteMenuItem } from '../../src/api/restaurantAuth';
+import { getMenuItemsForOwnerView } from '../../src/api/chainMenu';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuBanner } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 
 interface MenuItem {
@@ -26,6 +29,7 @@ interface MenuItem {
 export default function MenuItemsScreen() {
   const router = useRouter();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,7 +52,8 @@ export default function MenuItemsScreen() {
       return;
     }
     try {
-      const items = await getRestaurantMenuItems(restaurant.name);
+      // A chain owner sees the chain menu customers see (read-only); everyone else sees their own items.
+      const items = await getMenuItemsForOwnerView(restaurant);
       setMenuItems(items);
     } catch (error) {
       console.error('[menu-items] Failed to load items:', error);
@@ -190,7 +195,11 @@ export default function MenuItemsScreen() {
           </View>
         </View>
 
+        {isChain && <ChainMenuBanner />}
+
         {/* Pull new items with AI — additive only, never touches verified items */}
+        {!isChain && (
+        <>
         <View style={styles.refreshBox}>
           <Text style={styles.refreshBoxTitle}>🔍 Pull New Items with AI</Text>
           <Text style={styles.refreshBoxHint}>
@@ -225,6 +234,8 @@ export default function MenuItemsScreen() {
         >
           <Text style={styles.editMenuBtnText}>✏️ Edit Menu</Text>
         </TouchableOpacity>
+        </>
+        )}
 
         {menuItems.length > 0 && (
           <View style={styles.searchContainer}>
@@ -260,12 +271,14 @@ export default function MenuItemsScreen() {
                     {item.calories ? `${Math.round(item.calories)} cal` : 'N/A'} •{' '}
                     {item.protein_g ? `${item.protein_g}g protein` : 'N/A'}
                   </Text>
-                  {item.is_verified ? (
+                  {!isChain && (item.is_verified ? (
                     <Text style={styles.verifiedTag}>✓ Verified</Text>
                   ) : (
                     <Text style={styles.unconfirmedHint}>Unconfirmed — is this actually on your menu?</Text>
-                  )}
+                  ))}
                 </View>
+                {!isChain && (
+                <>
                 <View style={styles.itemAction}>
                   {item.is_verified ? (
                     <TouchableOpacity
@@ -304,6 +317,8 @@ export default function MenuItemsScreen() {
                     <Text style={styles.deleteBtnText}>✕</Text>
                   )}
                 </TouchableOpacity>
+                </>
+                )}
               </View>
             )}
           />

@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { anyKindHidden, filterByKind, parseKindFlags, SHOW_ALL, type KindFlags } from './kindFilter.ts';
+import { DEFAULT_CATALOG, resolveCategories, type Catalog, type CategoryDef, type OwnerCategories } from './categories.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -21,21 +23,140 @@ const GENERIC_TYPES = new Set([
 ]);
 
 // Cached per warm isolate (not per-request) so switching APP_CONFIG_SOURCE=db
-// on doesn't add a DB round-trip to every single invocation — refreshed only
-// on the next cold start, same "load once" model used by the client apps.
+// on doesn't add a DB round-trip to every single invocation — refreshed every
+// few minutes (see DB_CONFIG_TTL_MS), so a changed setting applies without a redeploy.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[fetch-nearby-restaurants] Failed to load DB config, falling back to env/defaults:', loadErr);
     return {};
+  }
+}
+
+// ── Restaurant categories (migration 129) ───────────────────────────────────
+// Each restaurant gets what it is (venueTypes), how you get the food (services) and what it serves (cuisines), each as its own
+// list of category keys. Google's place types are sorted into the three groups through the mapping table (kept for a few
+// minutes; DEFAULT_CATALOG is the fallback when it cannot be read), and an owner's saved choice replaces Google's guess per
+// group. The existing cuisineTypes field is left exactly as it was, so older apps keep working.
+let catalogCache: { catalog: Catalog; at: number } | null = null;
+const CATALOG_TTL_MS = 5 * 60 * 1000;
+
+// deno-lint-ignore no-explicit-any
+async function loadCatalog(supabase: any): Promise<Catalog> {
+  if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) return catalogCache.catalog;
+  try {
+    const { data: cats, error: catsErr } = await supabase
+      .from('restaurant_categories')
+      .select('key, grp, sort_order, label')
+      .eq('is_active', true)
+      .order('grp')
+      .order('sort_order')
+      .order('label');
+    if (catsErr) throw catsErr;
+    const { data: map, error: mapErr } = await supabase.from('restaurant_category_map').select('google_type, category_key');
+    if (mapErr) throw mapErr;
+    if (!cats || cats.length === 0) throw new Error('no categories');
+    const catalog: Catalog = {
+      categories: cats.map((c: { key: string; grp: string }) => ({ key: c.key, grp: c.grp }) as CategoryDef),
+      map: map ?? [],
+    };
+    catalogCache = { catalog, at: Date.now() };
+    return catalog;
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not read the restaurant categories, using the built-in list:', e instanceof Error ? e.message : e);
+    return DEFAULT_CATALOG;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function addCategories(supabase: any, restaurants: any[]): Promise<any[]> {
+  if (restaurants.length === 0) return restaurants;
+  const catalog = await loadCatalog(supabase);
+  const owners = new Map<string, OwnerCategories>();
+  try {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('google_place_id, venue_types, services, cuisines')
+      .in('google_place_id', restaurants.map((r) => r.placeId));
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (row.venue_types || row.services || row.cuisines) {
+        owners.set(row.google_place_id, { venue_types: row.venue_types, services: row.services, cuisines: row.cuisines });
+      }
+    }
+  } catch (e) {
+    console.warn("[fetch-nearby-restaurants] could not read the owners' categories (using Google's guess):", e instanceof Error ? e.message : e);
+  }
+  return restaurants.map((r) => ({ ...r, ...resolveCategories(r.cuisineTypes, owners.get(r.placeId), catalog) }));
+}
+
+// ── Which kinds of restaurants customers see (migration 126) ───────────────
+// The two admin switches are read straight from app_config (not through APP_CONFIG_SOURCE, which only covers settings that
+// also have an environment variable) and kept for a minute, so a switch takes effect quickly. Any problem reading them
+// means "show everything". Only CUSTOMERS are filtered: an admin or an owner (who may need to find a franchise to claim or
+// move it) always gets the full list.
+let kindFlagsCache: { flags: KindFlags; at: number } | null = null;
+const KIND_FLAGS_TTL_MS = 60 * 1000;
+
+// deno-lint-ignore no-explicit-any
+async function loadKindFlags(supabase: any): Promise<KindFlags> {
+  if (kindFlagsCache && Date.now() - kindFlagsCache.at < KIND_FLAGS_TTL_MS) return kindFlagsCache.flags;
+  try {
+    const { data, error } = await supabase
+      .from('app_config')
+      .select('key, value')
+      .in('key', ['showFranchiseRestaurants', 'showIndependentRestaurants']);
+    if (error) throw error;
+    kindFlagsCache = { flags: parseKindFlags(data), at: Date.now() };
+    return kindFlagsCache.flags;
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not read the restaurant kind flags, showing everything:', e instanceof Error ? e.message : e);
+    return SHOW_ALL;
+  }
+}
+
+// deno-lint-ignore no-explicit-any
+async function isStaffCaller(supabase: any, userId: string): Promise<boolean> {
+  const { data: admin } = await supabase.from('user_roles').select('role').eq('user_id', userId).eq('role', 'admin').limit(1);
+  if (admin && admin.length > 0) return true;
+  const { data: owner } = await supabase.from('restaurant_owners').select('id').eq('id', userId).limit(1);
+  return !!(owner && owner.length > 0);
+}
+
+// deno-lint-ignore no-explicit-any
+async function applyKindFlags(supabase: any, userId: string, restaurants: any[]): Promise<any[]> {
+  try {
+    const flags = await loadKindFlags(supabase);
+    if (!anyKindHidden(flags) || restaurants.length === 0) return restaurants;
+    if (await isStaffCaller(supabase, userId)) return restaurants;
+    const names = Array.from(new Set(restaurants.map((r) => String(r.name ?? '').trim()).filter(Boolean)));
+    const { data, error } = await supabase.rpc('franchise_names_among', { p_names: names });
+    if (error) throw error;
+    const franchiseNames = new Set<string>((data ?? []).map((row: { name: string }) => row.name));
+    const kept = filterByKind(restaurants, franchiseNames, flags);
+    if (kept.length !== restaurants.length) {
+      console.log('[fetch-nearby-restaurants] Hid', restaurants.length - kept.length, 'restaurant(s) of a switched-off kind');
+    }
+    return kept;
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not apply the restaurant kind flags, showing everything:', e instanceof Error ? e.message : e);
+    return restaurants;
   }
 }
 
@@ -480,6 +601,12 @@ Deno.serve(async (req) => {
     } catch (fallbackErr) {
       console.warn('[fetch-nearby-restaurants] Claimed-restaurant backfill failed (non-fatal):', fallbackErr);
     }
+
+    // Customers do not see a kind of restaurant an admin has switched off (franchise / independent).
+    restaurants = await applyKindFlags(supabase, userData.user.id, restaurants);
+
+    // What each restaurant is, how you get the food and what it serves (owner's choice, else Google's guess).
+    restaurants = await addCategories(supabase, restaurants);
 
     console.log('[fetch-nearby-restaurants] Returning', restaurants.length, 'restaurants');
     return new Response(JSON.stringify(restaurants), {

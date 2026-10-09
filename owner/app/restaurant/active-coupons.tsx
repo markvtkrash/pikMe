@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, updateCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
@@ -54,7 +54,7 @@ export default function ActiveCouponsScreen() {
   }
 
   async function handleDeactivate(couponId: string, couponCode: string) {
-    if (!confirm(`Deactivate ${couponCode}? Customers won't be able to use it until you reactivate it.`)) return;
+    if (!(await confirmDialog('Deactivate coupon?', `Deactivate ${couponCode}? Customers won't be able to use it until you reactivate it.`, { confirmText: 'Deactivate' }))) return;
     setDeactivatingId(couponId);
     try {
       await updateCoupon(couponId, { isActive: false });

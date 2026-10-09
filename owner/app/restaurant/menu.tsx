@@ -55,7 +55,7 @@ export default function RestaurantMenuScreen() {
     if (!restaurant) return;
     try {
       const [items, allCoupons] = await Promise.all([
-        getRestaurantMenuItems(restaurant.name),
+        getRestaurantMenuItems(restaurant.name, restaurant.google_place_id),
         getRestaurantCoupons(restaurant.id),
       ]);
       setMenuItems(items);

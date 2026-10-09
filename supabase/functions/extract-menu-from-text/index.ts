@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
+import { parseMaxTokens, pickModel } from './textExtractUtils.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -27,14 +28,22 @@ function err(message: string, status = 500) {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[extract-menu-from-text] Failed to load DB config, falling back to env/defaults:', loadErr);
@@ -83,11 +92,16 @@ interface ExtractResult {
 }
 
 async function extractItemsFromText(menuText: string, restaurantName: string): Promise<ExtractResult> {
-  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel', 'textExtractMaxTokens', 'menuFromTextModel']);
+  const MAX_TOKENS = parseMaxTokens(dbConfig.textExtractMaxTokens, Deno.env.get('TEXT_EXTRACT_MAX_TOKENS'));
   const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
-  const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
-  const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
-  console.log('[extract-menu-from-text] Using provider:', AI_PROVIDER, 'model:', AI_PROVIDER === 'quicksilver' ? QUICKSILVER_MODEL : CLAUDE_MODEL);
+  // A model chosen just for pasted menu text (the menuFromTextModel setting) wins over the app-wide model of the active
+  // provider; blank or invalid means "use the app-wide model", as before.
+  const TEXT_MODEL = pickModel(dbConfig.menuFromTextModel, Deno.env.get('MENU_FROM_TEXT_MODEL'));
+  const CLAUDE_MODEL = TEXT_MODEL ?? dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
+  const QUICKSILVER_MODEL = TEXT_MODEL ?? dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  console.log('[extract-menu-from-text] Using provider:', AI_PROVIDER, 'model:', AI_PROVIDER === 'quicksilver' ? QUICKSILVER_MODEL : CLAUDE_MODEL,
+    TEXT_MODEL ? '(menuFromTextModel)' : '(app-wide model)');
 
   const prompt = `A restaurant owner for "${restaurantName}" typed or pasted the following text, listing real dish name(s) from their own menu. It may be as short as a single dish name with no prices, descriptions, or formatting — that's still valid; a real menu item name by itself is exactly what you should extract, don't require extra context, structure, or corroborating detail before trusting it as real.
 
@@ -134,7 +148,7 @@ ${menuText}
         body: JSON.stringify({
           model: QUICKSILVER_MODEL,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 2048,
+          max_tokens: MAX_TOKENS,
         }),
         signal: controller.signal,
       });
@@ -160,7 +174,7 @@ ${menuText}
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -243,9 +257,11 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('Unauthorized', 401);
 
-    const { restaurantId, restaurantName, menuText, force, items: providedItems } = await req.json();
-    if (!restaurantId || !restaurantName?.trim() || !menuText?.trim()) {
-      return err('restaurantId, restaurantName, and menuText are required', 400);
+    const { restaurantId, placeId, restaurantName, menuText, force, items: providedItems } = await req.json();
+    // An admin can also add a menu for a restaurant no owner has claimed, by its Google place ID (no restaurantId).
+    const forPlace = !restaurantId && typeof placeId === 'string' && placeId.trim() !== '';
+    if ((!restaurantId && !forPlace) || !restaurantName?.trim() || !menuText?.trim()) {
+      return err('restaurantId (or placeId), restaurantName, and menuText are required', 400);
     }
     // Just enough to reject empty/junk input (a stray character, whitespace)
     // without rejecting genuinely short real dish names — "idly", "dosa",
@@ -266,14 +282,12 @@ serve(async (req) => {
     if (userError || !userData.user) return err('Unauthorized', 401);
 
     const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: restaurant, error: restaurantError } = await serviceSupabase
-      .from('restaurants')
-      .select('owner_id')
-      .eq('id', restaurantId)
-      .single();
-    if (restaurantError || !restaurant) return err('Restaurant not found', 404);
-
-    if (restaurant.owner_id !== userData.user.id) {
+    // The restaurant name used from here on: the one the caller sent, or, for a place with no owner, the name
+    // recorded for that place (so an admin cannot save a menu under a different name).
+    let effectiveName: string = restaurantName;
+    let callerIsAdmin = false;
+    if (forPlace) {
+      // Only an admin may add a menu for a restaurant nobody has claimed.
       const { data: adminRole } = await serviceSupabase
         .from('user_roles')
         .select('role')
@@ -281,6 +295,33 @@ serve(async (req) => {
         .eq('role', 'admin')
         .maybeSingle();
       if (!adminRole) return err('Forbidden', 403);
+      callerIsAdmin = true;
+      const { data: place } = await serviceSupabase
+        .from('cached_restaurants')
+        .select('name')
+        .eq('place_id', placeId)
+        .maybeSingle();
+      if (!place) return err('Restaurant not found', 404);
+      effectiveName = place.name;
+    } else {
+      const { data: restaurant, error: restaurantError } = await serviceSupabase
+        .from('restaurants')
+        .select('owner_id')
+        .eq('id', restaurantId)
+        .single();
+      if (restaurantError || !restaurant) return err('Restaurant not found', 404);
+
+      // Admins may edit a chain restaurant's menu; owners may not (the replace function checks).
+      if (restaurant.owner_id !== userData.user.id) {
+        const { data: adminRole } = await serviceSupabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        if (!adminRole) return err('Forbidden', 403);
+        callerIsAdmin = true;
+      }
     }
 
     // If the client already has extracted items from a prior call on this
@@ -295,7 +336,7 @@ serve(async (req) => {
       items = providedItems;
     } else {
       const trimmedText = String(menuText).trim().slice(0, MAX_TEXT_LENGTH);
-      const extracted = await extractItemsFromText(trimmedText, restaurantName);
+      const extracted = await extractItemsFromText(trimmedText, effectiveName);
       if (extracted.items.length === 0) {
         return err(extracted.error || 'Could not extract a menu from that text.', 400);
       }
@@ -314,7 +355,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force, scope: 'add' }),
+      body: JSON.stringify(
+        forPlace
+          ? { placeId, restaurantName: effectiveName, items, force: !!force, scope: 'add', callerIsAdmin }
+          : { restaurantId, restaurantName, items, force: !!force, scope: 'add', callerIsAdmin },
+      ),
     });
     const replaceData = await replaceRes.json();
     if (!replaceRes.ok) {

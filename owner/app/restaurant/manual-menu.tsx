@@ -3,14 +3,19 @@ import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
   ActivityIndicator, ScrollView, Modal, Platform,
 } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect, useNavigation } from 'expo-router';
-import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, unverifyMenuItem, setMenuItemOutOfStock } from '../../src/api/restaurantAuth';
+import { getRestaurantMenuItems, submitManualMenuItems, verifyMenuItem, verifyMenuItems, unverifyMenuItem, setMenuItemOutOfStock } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { useUnsavedChangesStore } from '../../src/store/unsavedChangesStore';
 import { supabase } from '../../src/api/supabase';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 import { getMaxManualMenuItems } from '../../src/constants/menuLimits';
+import {
+  confirmableSelection, confirmSelectedQuestion, toggleUnconfirmedSelection, unconfirmedIndices,
+} from '../../src/utils/menuSelection';
 
 interface ManualItem {
   name: string;
@@ -26,6 +31,7 @@ export default function ManualMenuScreen() {
   const router = useRouter();
   const navigation = useNavigation();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   // Read once per render rather than as a module-level constant — its
   // value can come from an async DB fetch resolved before this screen ever
   // mounts (see appConfig.ts), so it can't be computed at module-load time.
@@ -53,6 +59,7 @@ export default function ManualMenuScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [bulkRemoveConfirm, setBulkRemoveConfirm] = useState(false);
+  const [bulkConfirming, setBulkConfirming] = useState(false);
   const [sortMode, setSortMode] = useState<'none' | 'name' | 'status'>('none');
 
   // Pre-fill with whatever is currently cached for this restaurant (from any
@@ -80,8 +87,8 @@ export default function ManualMenuScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
       if (!hasUnsavedChanges) return;
       e.preventDefault();
-      const proceed = confirm('You have unsaved menu changes. Leave without saving?');
-      if (proceed) navigation.dispatch(e.data.action);
+      confirmDialog('Unsaved changes', 'You have unsaved menu changes. Leave without saving?', { confirmText: 'Leave', cancelText: 'Stay', destructive: true })
+        .then((proceed) => { if (proceed) navigation.dispatch(e.data.action); });
     });
     return unsubscribe;
   }, [navigation, hasUnsavedChanges]);
@@ -135,8 +142,8 @@ export default function ManualMenuScreen() {
   // Direct, synchronous check on this page's own Back button — belt-and-
   // suspenders alongside the beforeRemove listener above, since we'd rather
   // double-guard than risk router.back() slipping past it on web.
-  function handleBack() {
-    if (hasUnsavedChanges && !confirm('You have unsaved menu changes. Leave without saving?')) {
+  async function handleBack() {
+    if (hasUnsavedChanges && !(await confirmDialog('Unsaved changes', 'You have unsaved menu changes. Leave without saving?', { confirmText: 'Leave', cancelText: 'Stay', destructive: true }))) {
       return;
     }
     router.back();
@@ -148,13 +155,19 @@ export default function ManualMenuScreen() {
       return;
     }
     try {
-      const loaded = await getRestaurantMenuItems(restaurant.name);
+      const loaded = await getRestaurantMenuItems(restaurant.name, restaurant.google_place_id);
       if (loaded.length > 0) {
         setItems(loaded.map((i: any) => ({
           name: i.name, isVerified: i.is_verified, itemId: i.item_id, isOutOfStock: !!i.is_out_of_stock,
         })));
         savedNamesRef.current = loaded.map((i) => i.name.trim()).filter(Boolean);
       } else {
+        // an empty menu (for example just saved empty): show blank rows, not whatever list was on screen before
+        setItems([
+          { name: '', isVerified: null, itemId: null, isOutOfStock: false },
+          { name: '', isVerified: null, itemId: null, isOutOfStock: false },
+          { name: '', isVerified: null, itemId: null, isOutOfStock: false },
+        ]);
         savedNamesRef.current = [];
       }
     } catch (error) {
@@ -165,6 +178,7 @@ export default function ManualMenuScreen() {
   }
 
   if (!owner || !restaurant) return null;
+  if (isChain) return <ChainMenuNotice />;
 
   if (loading) {
     return (
@@ -223,6 +237,33 @@ export default function ManualMenuScreen() {
     setSelectedIndices((prev) =>
       prev.size === items.length ? new Set() : new Set(items.map((_, i) => i))
     );
+  }
+
+  // "Select Unconfirmed": ticks every saved item that is not confirmed yet (press again to untick them).
+  function selectUnconfirmed() {
+    setSelectedIndices((prev) => toggleUnconfirmedSelection(prev, items));
+  }
+
+  // "Confirm Selected": marks the ticked, saved, unconfirmed items as confirmed in one step (saved right away, like the
+  // single Confirm button), after asking first.
+  async function handleConfirmSelected() {
+    const { indices, itemIds } = confirmableSelection(items, selectedIndices);
+    if (itemIds.length === 0) return;
+    if (!(await confirmDialog('Confirm items?', confirmSelectedQuestion(itemIds.length), { confirmText: 'Confirm' }))) return;
+    setBulkConfirming(true);
+    try {
+      await verifyMenuItems(itemIds);
+      const done = new Set(indices);
+      setItems((prev) => prev.map((it, i) => (done.has(i) ? { ...it, isVerified: true } : it)));
+      setSelectedIndices(new Set());
+      setSelectionMode(false);
+      Alert.alert('Confirmed', `${itemIds.length} item${itemIds.length === 1 ? '' : 's'} confirmed.`);
+    } catch (error: any) {
+      console.error('[manual-menu] Bulk confirm error:', error);
+      Alert.alert('Error', error.message || 'Failed to confirm the items');
+    } finally {
+      setBulkConfirming(false);
+    }
   }
 
   function confirmBulkRemove() {
@@ -304,10 +345,7 @@ export default function ManualMenuScreen() {
       return;
     }
     const cleanNames = items.map((it) => it.name.trim()).filter(Boolean);
-    if (cleanNames.length === 0) {
-      Alert.alert('Error', 'Type at least one real menu item name');
-      return;
-    }
+    // An empty list is allowed: it clears the menu (customers then see no menu until one is added)
     setSaving(true);
     try {
       let result = await submitManualMenuItems(
@@ -316,8 +354,10 @@ export default function ManualMenuScreen() {
         cleanNames,
         session.access_token
       );
-      result = await confirmAndRetryIfNeeded(result, () =>
-        submitManualMenuItems(restaurant.id, restaurant.name, cleanNames, session.access_token, true)
+      result = await confirmAndRetryIfNeeded(
+        result,
+        () => submitManualMenuItems(restaurant.id, restaurant.name, cleanNames, session.access_token, true),
+        cleanNames.length === 0
       );
 
       if (result.requiresConfirmation) {
@@ -329,7 +369,9 @@ export default function ManualMenuScreen() {
       savedNamesRef.current = cleanNames;
       Alert.alert(
         'Success',
-        `Saved ${result.itemCount} real menu items — customers will now see these instead of AI-guessed ones.`
+        cleanNames.length === 0
+          ? 'Your menu is now empty. Customers will see no menu items until you add some.'
+          : `Saved ${result.itemCount} real menu items — customers will now see these instead of AI-guessed ones.`
       );
     } catch (error: any) {
       console.error('[manual-menu] Save error:', error);
@@ -395,6 +437,20 @@ export default function ManualMenuScreen() {
                 {selectedIndices.size === items.length ? 'Deselect All' : 'Select All'}
               </Text>
             </TouchableOpacity>
+            {unconfirmedIndices(items).length > 0 && (
+              <TouchableOpacity style={styles.selectAllBtn} onPress={selectUnconfirmed} disabled={saving || bulkConfirming}>
+                <Text style={styles.selectAllBtnText}>Select Unconfirmed ({unconfirmedIndices(items).length})</Text>
+              </TouchableOpacity>
+            )}
+            {confirmableSelection(items, selectedIndices).itemIds.length > 0 && (
+              <TouchableOpacity style={styles.bulkConfirmBtn} onPress={handleConfirmSelected} disabled={saving || bulkConfirming}>
+                {bulkConfirming ? (
+                  <ActivityIndicator size="small" color="#2E7D32" />
+                ) : (
+                  <Text style={styles.bulkConfirmBtnText}>✓ Confirm Selected ({confirmableSelection(items, selectedIndices).itemIds.length})</Text>
+                )}
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[styles.bulkDeleteBtn, selectedIndices.size === 0 && styles.saveBtnDisabled]}
               onPress={() => setBulkRemoveConfirm(true)}
@@ -800,7 +856,7 @@ const styles = StyleSheet.create({
   selectToggleText: { fontSize: 14, fontWeight: '700', color: '#e53e3e' },
   selectToggleTextCancel: { color: '#555' },
   limitReachedText: { fontSize: 13, fontWeight: '600', color: '#E65100' },
-  bulkActionsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  bulkActionsRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 12 },
   selectAllBtn: {
     backgroundColor: '#f0f0f0', borderWidth: 1.5, borderColor: '#ccc',
     borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,
@@ -811,6 +867,11 @@ const styles = StyleSheet.create({
     borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,
   },
   bulkDeleteBtnText: { fontSize: 13, fontWeight: '800', color: '#e53e3e' },
+  bulkConfirmBtn: {
+    backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#2E7D32',
+    borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10,
+  },
+  bulkConfirmBtnText: { fontSize: 13, fontWeight: '800', color: '#2E7D32' },
   checkbox: {
     width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ccc',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,

@@ -10,6 +10,8 @@ import { getRestaurantForOwner } from '../../src/api/restaurantAuth';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { FAVORITABLE_PAGES_BY_KEY } from '../../src/constants/favoritablePages';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
+import { MenuBuildBanner } from '../../src/components/common/MenuBuildBanner';
+import { CategoriesBanner } from '../../src/components/common/CategoriesBanner';
 
 export default function RestaurantDashboardScreen() {
   const router = useRouter();
@@ -136,6 +138,12 @@ export default function RestaurantDashboardScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* The automatic menu build failed for this restaurant: tell the owner how to add the menu */}
+      {restaurant.status === 'approved' && <MenuBuildBanner />}
+
+      {/* Not told customers yet what the place is: a short nudge to the profile page */}
+      <CategoriesBanner />
+
       {/* Favorites */}
       <View style={styles.favoritesSection}>
         <Text style={styles.favoritesSectionTitle}>⭐ Favorites</Text>
@@ -217,6 +225,22 @@ export default function RestaurantDashboardScreen() {
           <Text style={styles.quickLinkIcon}>📊</Text>
           <Text style={[styles.quickLinkText, { color: '#1565C0' }]}>Reports</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.quickLink, styles.quickLinkTeal]}
+          onPress={() => router.push('/restaurant/preview')}
+        >
+          <Text style={styles.quickLinkIcon}>🛠️</Text>
+          <Text style={[styles.quickLinkText, { color: '#00796B' }]}>Tools</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.quickLink, styles.quickLinkOrange]}
+          onPress={() => router.push('/restaurant/profile')}
+        >
+          <Text style={styles.quickLinkIcon}>🏪</Text>
+          <Text style={[styles.quickLinkText, { color: '#E65100' }]}>Profile</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -269,18 +293,20 @@ const styles = StyleSheet.create({
   favoriteCardText: { fontSize: 12, fontWeight: '700', color: '#333', textAlign: 'center' },
 
   quickLinksGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
-    paddingHorizontal: 16, marginTop: 16,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    paddingHorizontal: 16, marginTop: 12,
   },
   quickLink: {
-    flexBasis: '30%', flexGrow: 1, minWidth: 100,
-    alignItems: 'center', gap: 6, paddingVertical: 14, paddingHorizontal: 8,
-    borderRadius: 12, borderLeftWidth: 4,
+    flexBasis: '18%', flexGrow: 1, minWidth: 92,
+    alignItems: 'center', gap: 3, paddingVertical: 9, paddingHorizontal: 6,
+    borderRadius: 10, borderLeftWidth: 3,
   },
   quickLinkBlue: { backgroundColor: '#E3F2FD', borderLeftColor: '#1565C0' },
   quickLinkPurple: { backgroundColor: '#F3E5F5', borderLeftColor: '#8E24AA' },
-  quickLinkIcon: { fontSize: 22 },
-  quickLinkText: { fontSize: 12.5, fontWeight: '800', textAlign: 'center' },
+  quickLinkTeal: { backgroundColor: '#E0F2F1', borderLeftColor: '#00796B' },
+  quickLinkOrange: { backgroundColor: '#FFF3E0', borderLeftColor: '#E65100' },
+  quickLinkIcon: { fontSize: 18 },
+  quickLinkText: { fontSize: 11.5, fontWeight: '800', textAlign: 'center' },
 
   warningBox: { backgroundColor: '#FFF3E0', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#E65100', flexDirection: 'row', alignItems: 'center', gap: 10 },
   warningIcon: { fontSize: 20 },

@@ -1,4 +1,5 @@
 import type { MenuReplaceResult } from '../api/restaurantAuth';
+import { confirmDialog } from './alert';
 
 // Mirrors owner app's src/utils/menuReplaceConfirm.ts. Shared by every action
 // that can replace a restaurant's cached menu items (here: photo/text
@@ -31,9 +32,7 @@ export async function confirmAndRetryIfNeeded(
 
   const message = `${parts.join(' ')} Continue anyway?`;
 
-  // Matches the existing confirm() convention already used in this
-  // web-focused app (e.g. coupon-status.tsx's delete confirmation).
-  const confirmed = confirm(message);
+  const confirmed = await confirmDialog('Replace menu items?', message, { confirmText: 'Continue' });
   if (!confirmed) return result;
 
   return retryWithForce();

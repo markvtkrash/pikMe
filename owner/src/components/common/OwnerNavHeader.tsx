@@ -5,6 +5,7 @@ import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
 import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
 import { BRAND_NAME } from '../../constants/brand';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { MenuImportAlertBar } from './MenuImportAlertBar';
 
 function pathIs(pathname: string, target: string) {
   return pathname === target || pathname.startsWith(target + '/');
@@ -41,16 +42,18 @@ const NAV_ITEMS: NavItem[] = [
       pathIs(p, '/restaurant/manual-menu') ||
       pathIs(p, '/restaurant/menu-photo') ||
       pathIs(p, '/restaurant/menu-text') ||
+      pathIs(p, '/restaurant/menu-online-link') ||
       pathIs(p, '/restaurant/menu-nutrition'),
-    // AI Pull, Edit Menu, Add Photo, Add Text, and Add Nutrition Info are
-    // all entry points reached FROM the Menu Management page (buttons on
-    // that page) — its children, not sibling top-level sections of their own.
+    // Edit Menu, Import Menu from Photo, Import Menu from Text and Import Menu from Online Link are entry points reached FROM the Menu
+    // Management page (buttons on that page) — its children, not sibling
+    // top-level sections of their own.
     children: [
-      { label: 'AI Assisted Menu Pull', href: '/restaurant/menu-items' },
+      // AI Assisted Menu Pull (menu-items.tsx) and Add Nutrition Info (menu-nutrition.tsx) temporarily hidden —
+      // to be revisited. Routes and backend are untouched.
       { label: 'Edit Menu', href: '/restaurant/manual-menu' },
-      { label: 'Update Menu Items Using a Photo', href: '/restaurant/menu-photo' },
-      { label: 'Update Menu Items From Text', href: '/restaurant/menu-text' },
-      { label: 'Add Nutrition Info', href: '/restaurant/menu-nutrition' },
+      { label: 'Import Menu from Photo', href: '/restaurant/menu-photo' },
+      { label: 'Import Menu from Text', href: '/restaurant/menu-text' },
+      { label: 'Import Menu from Online Link', href: '/restaurant/menu-online-link' },
       // Upload Menu (menu-link.tsx) temporarily hidden — needs more fixes
       // before exposing it again. Route and backend are untouched.
     ],
@@ -108,7 +111,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     key: 'support',
-    label: '💬 Support',
+    label: '💬 Support Ticket',
     href: '/restaurant/support',
     isActive: (p) => pathIs(p, '/restaurant/support'),
   },
@@ -133,8 +136,8 @@ export function OwnerNavHeader() {
 
   const activeItem = NAV_ITEMS.find((item) => item.isActive(pathname));
 
-  function handleLogout() {
-    if (!confirmNavigationAllowed()) return;
+  async function handleLogout() {
+    if (!(await confirmNavigationAllowed())) return;
     logout();
     router.replace('/restaurant/auth/login');
   }
@@ -143,13 +146,15 @@ export function OwnerNavHeader() {
   // current one, so a screen's own "leaving with unsaved changes" listener
   // (React Navigation's beforeRemove) never fires for these — this shared
   // check is what actually catches it.
-  function handleNavigate(href: string) {
-    if (!confirmNavigationAllowed()) return;
+  async function handleNavigate(href: string) {
+    if (!(await confirmNavigationAllowed())) return;
     router.push(href as any);
   }
 
   return (
     <View style={styles.wrapper}>
+      {/* The bell alert sits at the very top of every owner page when a menu import came up empty */}
+      <MenuImportAlertBar onOpenPhotoImport={() => handleNavigate('/restaurant/menu-photo')} />
       <View style={styles.brandRow}>
         <Image source={require('../../../assets/logo.png')} style={styles.brandLogo} />
         <View style={styles.brandTextGroup}>

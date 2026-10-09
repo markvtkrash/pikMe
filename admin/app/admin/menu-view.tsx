@@ -14,7 +14,7 @@ function fmt(value: number | null, unit = '') {
 // restaurant name — migration 065). Reached from Menu Management.
 export default function AdminMenuViewScreen() {
   const router = useRouter();
-  const { name } = useLocalSearchParams<{ name: string }>();
+  const { name, placeId, address } = useLocalSearchParams<{ name: string; placeId?: string; address?: string }>();
   const [items, setItems] = useState<AdminMenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,7 +23,7 @@ export default function AdminMenuViewScreen() {
   useFocusEffect(
     useCallback(() => {
       loadMenu();
-    }, [name])
+    }, [name, placeId])
   );
 
   async function loadMenu() {
@@ -33,7 +33,7 @@ export default function AdminMenuViewScreen() {
     }
     setLoading(true);
     try {
-      setItems(await getRestaurantMenu(name));
+      setItems(await getRestaurantMenu(name, placeId));
     } catch (error: any) {
       console.error('[admin-menu-view] Load error:', error);
       Alert.alert('Error', error.message || 'Failed to load menu');
@@ -77,7 +77,9 @@ export default function AdminMenuViewScreen() {
                 <Text style={styles.backBtnText}>← Back to Menu Management</Text>
               </TouchableOpacity>
               <Text style={styles.title}>{name}</Text>
-              <Text style={styles.subtitle}>Current menu items (read-only)</Text>
+              <Text style={styles.subtitle}>
+                Current menu items (read-only){placeId && address ? ` · ${address}` : ''}
+              </Text>
 
               <View style={styles.statsRow}>
                 <View style={styles.statBox}>

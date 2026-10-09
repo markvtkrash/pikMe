@@ -19,6 +19,16 @@ export default {
       backgroundColor: '#ffffff',
     },
     assetBundlePatterns: ['**/*'],
+    // Over-the-air updates (expo-updates): a JavaScript-only fix can reach phones without a store release, as long as the
+    // phone's native build has the same runtime version (here: the same app version). Publish with
+    // `eas update --channel production`; a store build is only needed when native code or the app version changes.
+    // The app checks for an update each time it starts and applies it the next time it opens.
+    runtimeVersion: { policy: 'appVersion' },
+    updates: {
+      url: 'https://u.expo.dev/5a1bbf4f-cdd8-4475-8651-278984841323',
+      fallbackToCacheTimeout: 0,
+      checkAutomatically: 'ON_LOAD',
+    },
     ios: {
       bundleIdentifier: 'com.pikme.app',
       buildNumber: '1',
@@ -58,7 +68,6 @@ export default {
       // dropped here — this app has no owner/admin surface anymore.
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY,
       eas: {
         // TODO: this projectId is inherited from the original combined app.
         // Point this at a dedicated EAS project before the first real build

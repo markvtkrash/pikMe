@@ -26,7 +26,13 @@ describe('getRestaurantMenu', () => {
   it('asks for the menu by restaurant name and returns the rows', async () => {
     rpc.mockResolvedValue({ data: [{ item_id: 'a' }], error: null });
     await expect(getRestaurantMenu('Taco Bell')).resolves.toEqual([{ item_id: 'a' }]);
-    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu', { p_restaurant_name: 'Taco Bell' });
+    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu', { p_restaurant_name: 'Taco Bell', p_place_id: null });
+  });
+
+  it('asks for one location\'s own menu when a place is given', async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+    await getRestaurantMenu('Cactus Grill', 'ChIJabcdefghij');
+    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu', { p_restaurant_name: 'Cactus Grill', p_place_id: 'ChIJabcdefghij' });
   });
 
   it('returns [] for null data and throws on error', async () => {
@@ -80,7 +86,13 @@ describe('getRestaurantMenuForEdit', () => {
   it('requests the editable menu by name', async () => {
     rpc.mockResolvedValue({ data: [{ item_id: 'a', dietary_fiber_g: 3 }], error: null });
     await expect(getRestaurantMenuForEdit('Taco Bell')).resolves.toEqual([{ item_id: 'a', dietary_fiber_g: 3 }]);
-    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu_for_edit', { p_restaurant_name: 'Taco Bell' });
+    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu_for_edit', { p_restaurant_name: 'Taco Bell', p_place_id: null });
+  });
+
+  it('requests one location\'s items when a place is given', async () => {
+    rpc.mockResolvedValue({ data: [], error: null });
+    await getRestaurantMenuForEdit('Cactus Grill', 'ChIJabcdefghij');
+    expect(rpc).toHaveBeenCalledWith('admin_get_restaurant_menu_for_edit', { p_restaurant_name: 'Cactus Grill', p_place_id: 'ChIJabcdefghij' });
   });
 
   it('returns [] for null data and throws on error', async () => {
@@ -93,21 +105,28 @@ describe('getRestaurantMenuForEdit', () => {
 
 describe('getMenuSharingInfo', () => {
   it('reads the first row and coerces counts to numbers', async () => {
-    rpc.mockResolvedValue({ data: [{ cached_locations: '12', claimed_locations: 1 }], error: null });
-    await expect(getMenuSharingInfo('Taco Bell')).resolves.toEqual({ cached_locations: 12, claimed_locations: 1 });
-    expect(rpc).toHaveBeenCalledWith('admin_menu_sharing_info', { p_restaurant_name: 'Taco Bell' });
+    rpc.mockResolvedValue({ data: [{ cached_locations: '12', claimed_locations: 1, is_franchise: true }], error: null });
+    await expect(getMenuSharingInfo('Taco Bell')).resolves.toEqual({ cached_locations: 12, claimed_locations: 1, is_franchise: true });
+    expect(rpc).toHaveBeenCalledWith('admin_menu_sharing_info', { p_restaurant_name: 'Taco Bell', p_place_id: null });
+  });
+
+  it('passes the place when one is given', async () => {
+    rpc.mockResolvedValue({ data: [{ cached_locations: 0, claimed_locations: 0, is_franchise: false }], error: null });
+    await getMenuSharingInfo('Cactus Grill', 'ChIJabcdefghij');
+    expect(rpc).toHaveBeenCalledWith('admin_menu_sharing_info', { p_restaurant_name: 'Cactus Grill', p_place_id: 'ChIJabcdefghij' });
   });
 
   it('accepts a single object instead of an array', async () => {
     rpc.mockResolvedValue({ data: { cached_locations: 2, claimed_locations: 0 }, error: null });
-    await expect(getMenuSharingInfo('X')).resolves.toEqual({ cached_locations: 2, claimed_locations: 0 });
+    await expect(getMenuSharingInfo('X')).resolves.toEqual({ cached_locations: 2, claimed_locations: 0, is_franchise: false });
   });
 
   it('falls back to zeros when nothing is returned', async () => {
+    const zeros = { cached_locations: 0, claimed_locations: 0, is_franchise: false };
     rpc.mockResolvedValue({ data: [], error: null });
-    await expect(getMenuSharingInfo('X')).resolves.toEqual({ cached_locations: 0, claimed_locations: 0 });
+    await expect(getMenuSharingInfo('X')).resolves.toEqual(zeros);
     rpc.mockResolvedValue({ data: null, error: null });
-    await expect(getMenuSharingInfo('X')).resolves.toEqual({ cached_locations: 0, claimed_locations: 0 });
+    await expect(getMenuSharingInfo('X')).resolves.toEqual(zeros);
   });
 
   it('throws on error', async () => {
@@ -153,7 +172,17 @@ describe('saveMenuItem', () => {
       p_serving_weight_grams: 78,
       p_is_verified: false,
       p_is_out_of_stock: false,
+      p_place_id: null,
     });
+  });
+
+  it('saves into one location when a place is given', async () => {
+    rpc.mockResolvedValue({ data: { itemId: 'x', created: true }, error: null });
+    await saveMenuItem({ ...input, restaurantName: 'Cactus Grill', placeId: 'ChIJabcdefghij' });
+    expect(rpc).toHaveBeenCalledWith(
+      'admin_save_menu_item',
+      expect.objectContaining({ p_restaurant_name: 'Cactus Grill', p_place_id: 'ChIJabcdefghij' })
+    );
   });
 
   it('updates: passes the existing item id', async () => {

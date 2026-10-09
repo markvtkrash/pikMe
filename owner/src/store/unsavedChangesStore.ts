@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { confirmDialog } from '../utils/alert';
 
 interface UnsavedChangesState {
   hasUnsavedChanges: boolean;
@@ -21,10 +22,10 @@ export const useUnsavedChangesStore = create<UnsavedChangesState>((set) => ({
 }));
 
 // Call before any in-app navigation that might leave a screen with unsaved
-// state (nav links, tab switches, etc). Returns true if it's fine to
+// state (nav links, tab switches, etc). Resolves true if it's fine to
 // proceed — either nothing is unsaved, or the user confirmed leaving anyway.
-export function confirmNavigationAllowed(): boolean {
+export async function confirmNavigationAllowed(): Promise<boolean> {
   const { hasUnsavedChanges, message } = useUnsavedChangesStore.getState();
   if (!hasUnsavedChanges) return true;
-  return confirm(message);
+  return confirmDialog('Unsaved changes', message, { confirmText: 'Leave', cancelText: 'Stay', destructive: true });
 }

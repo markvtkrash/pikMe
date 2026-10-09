@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
   ActivityIndicator, } from 'react-native';
@@ -6,48 +6,83 @@ import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { supabase } from '../../src/api/supabase';
+import { normalizeUrl } from '../../src/utils/urlInput';
+import { CategoryPicker } from '../../src/components/common/CategoryPicker';
+import { getGoogleGuess, getRestaurantCategories, getStoredGoogleTypes, saveRestaurantCategories } from '../../src/api/categories';
+import {
+  CategoryChoice, choiceForEditing, cleanChoice, EMPTY_CHOICE, needsCategories, RestaurantCategory, sameChoice, suggestDineIn,
+  validateChoice,
+} from '../../src/utils/categories';
 
-// Lets an owner set/edit the two URLs the menu-sourcing features key off of:
-// the homepage (used as a domain-lock anchor for Upload Menu, and as a
-// fallback candidate for Refresh with AI's real-website extraction) and the
-// specific menu page (tried first by Refresh with AI, since a menu is often
-// not on the homepage). Both are owner-provided, not independently verified
-// — see the comment in extract-menu-from-link for what that does and doesn't
-// guard against.
+// What an owner sees about their restaurant: the address (read-only; it follows the restaurant's Google listing, and
+// "My Restaurant Moved" changes it) and the website, the one thing they can edit here. The page the menu is read from
+// is set on the Menu Management page, not here.
 export default function RestaurantProfileScreen() {
   const router = useRouter();
   const { owner, restaurant, setRestaurant } = useRestaurantOwnerStore();
   const [website, setWebsite] = useState(restaurant?.website_url || '');
-  const [menuPage, setMenuPage] = useState(restaurant?.menu_link || '');
   const [saving, setSaving] = useState(false);
+  // What the place is, how customers get the food, and what it serves: the saved choice, else Google's guess for what is not set.
+  const [categories, setCategories] = useState<RestaurantCategory[]>([]);
+  const [choice, setChoice] = useState<CategoryChoice>(EMPTY_CHOICE);
+  const [loadedChoice, setLoadedChoice] = useState<CategoryChoice>(EMPTY_CHOICE);
+  const [categoriesReady, setCategoriesReady] = useState(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!restaurant) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await getRestaurantCategories();
+        const googleTypes = await getStoredGoogleTypes(restaurant.google_place_id);
+        const guess = await getGoogleGuess(googleTypes);
+        if (cancelled) return;
+        let initial = cleanChoice(choiceForEditing(restaurant, guess), list);
+        // Only when the owner has not set their ways to order yet: suggest Dine-in for a Restaurant or Bar (they can untick it)
+        if (!Array.isArray(restaurant.services)) initial = suggestDineIn(initial, list);
+        setCategories(list);
+        setChoice(initial);
+        setLoadedChoice(initial);
+        setCategoriesReady(true);
+      } catch (e: any) {
+        console.warn('[profile] Could not load the categories:', e?.message);
+        if (!cancelled) setCategoriesError('The place choices could not be loaded.');
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restaurant?.id]);
 
   if (!owner || !restaurant) return null;
-
-  function normalizeUrl(value: string): string | null {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    try {
-      const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-      return new URL(withProtocol).toString();
-    } catch {
-      return trimmed; // let the save fail with a clear DB/validation error rather than silently drop it
-    }
-  }
 
   async function handleSave() {
     setSaving(true);
     try {
       const website_url = normalizeUrl(website);
-      const menu_link = normalizeUrl(menuPage);
 
+      // Only the website is saved here. The menu page is saved from Menu Management, so saving this page never
+      // asks for the menu to be read again.
       const { error } = await supabase
         .from('restaurants')
-        .update({ website_url, menu_link, updated_at: new Date().toISOString() })
+        .update({ website_url, updated_at: new Date().toISOString() })
         .eq('id', restaurant!.id);
 
       if (error) throw error;
 
-      setRestaurant({ ...restaurant!, website_url, menu_link });
+      // The place choices are saved when they changed, or when the owner has not chosen yet (confirming Google's guess counts).
+      let saved: { venue_types: string[]; services: string[]; cuisines: string[] } | null = null;
+      if (categoriesReady && (needsCategories(restaurant) || !sameChoice(choice, loadedChoice))) {
+        const problem = validateChoice(choice);
+        if (problem) {
+          Alert.alert('One more thing', problem);
+          return;
+        }
+        saved = await saveRestaurantCategories(restaurant!.id, choice);
+        setLoadedChoice(choice);
+      }
+
+      setRestaurant({ ...restaurant!, website_url, ...(saved ?? {}) });
       Alert.alert('Success', 'Restaurant profile updated.');
     } catch (error: any) {
       console.error('[profile] Save error:', error);
@@ -72,11 +107,17 @@ export default function RestaurantProfileScreen() {
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏠 Website</Text>
+          <Text style={styles.cardTitle}>📍 Address</Text>
+          <Text style={styles.addressText}>{restaurant.address || 'No address on file'}</Text>
           <Text style={styles.cardHint}>
-            Your restaurant's homepage. Used to confirm a menu link belongs to you, and as a fallback
-            source for automatic menu refresh.
+            This comes from your Google listing and can't be edited here. If your restaurant has moved,{' '}
+            <Text style={styles.link} onPress={() => router.push('/restaurant/relocate' as any)}>tell us it moved</Text>.
           </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🏠 Website</Text>
+          <Text style={styles.cardHint}>Your restaurant's homepage.</Text>
           <TextInput
             style={styles.input}
             placeholder="https://yourrestaurant.com"
@@ -90,27 +131,16 @@ export default function RestaurantProfileScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Menu Page URL</Text>
-          <Text style={styles.cardHint}>
-            The exact page your menu is on, if it's different from your homepage (e.g. yoursite.com/menu).
-            Automatic menu refresh tries this page first, since menus often aren't on the homepage itself.
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://yourrestaurant.com/menu"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            keyboardType="url"
-            value={menuPage}
-            onChangeText={setMenuPage}
-            editable={!saving}
-          />
+          <Text style={styles.cardTitle}>🏷️ About your place</Text>
+          <Text style={styles.cardHint}>How customers find you in the filters. Pre-filled from Google; change what is not right.</Text>
+          {categoriesError ? (
+            <Text style={styles.cardHint}>{categoriesError}</Text>
+          ) : !categoriesReady ? (
+            <ActivityIndicator color="#1565C0" size="small" />
+          ) : (
+            <CategoryPicker categories={categories} value={choice} onChange={setChoice} disabled={saving} />
+          )}
         </View>
-
-        <Text style={styles.trustNote}>
-          ℹ️ These aren't independently verified — they're only used to keep your own menu-sourcing
-          features pointed at the right pages.
-        </Text>
 
         <TouchableOpacity
           style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
@@ -138,16 +168,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666' },
 
-  content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  content: { padding: 12 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
+  cardTitle: { fontSize: 15, fontWeight: '800', color: '#222', marginBottom: 4 },
+  cardHint: { fontSize: 12, color: '#888', lineHeight: 16, marginBottom: 8 },
   input: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222',
+    paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#222',
   },
 
-  trustNote: { fontSize: 12, color: '#8D6E63', lineHeight: 17, marginBottom: 16 },
+  addressText: { fontSize: 15, color: '#222', lineHeight: 21, marginBottom: 8 },
+  link: { color: '#1565C0', fontWeight: '700' },
 
   saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },

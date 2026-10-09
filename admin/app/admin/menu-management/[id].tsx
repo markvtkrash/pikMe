@@ -9,9 +9,14 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '../../../src/api/supabase';
 import { extractMenuFromImage, extractMenuFromText } from '../../../src/api/restaurantAuth';
 import { confirmAndRetryIfNeeded } from '../../../src/utils/menuReplaceConfirm';
+import PlaceMenuLinkBox from '../../../src/components/common/PlaceMenuLinkBox';
 
 interface RestaurantInfo {
-  id: string;
+  // A claimed restaurant has an id; one no owner has claimed is named by its Google place ID instead.
+  id?: string;
+  placeId?: string;
+  // a claimed restaurant's own place ID (the link box works by place ID)
+  googlePlaceId?: string;
   name: string;
   address: string;
 }
@@ -27,7 +32,9 @@ const MAX_DIMENSION = 1600;
 // via user_roles) as well as the restaurant's own owner.
 export default function AdminMenuManagementRestaurantScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // /admin/menu-management/<restaurant id> for a claimed restaurant, or
+  // /admin/menu-management/by-place?placeId=<Google place ID> for one nobody has claimed (saved by its place ID).
+  const { id, placeId } = useLocalSearchParams<{ id: string; placeId?: string }>();
   const [restaurant, setRestaurant] = useState<RestaurantInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,18 +52,45 @@ export default function AdminMenuManagementRestaurantScreen() {
 
   useEffect(() => {
     loadRestaurant();
-  }, [id]);
+  }, [id, placeId]);
 
   async function loadRestaurant() {
-    if (!id) return;
+    if (!id && !placeId) return;
     try {
+      if (placeId) {
+        const { data, error } = await supabase
+          .from('cached_restaurants')
+          .select('place_id, name, address')
+          .eq('place_id', placeId)
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          setRestaurant({ placeId: data.place_id, name: data.name, address: data.address ?? '' });
+          return;
+        }
+        // Not in the Google cache: it may be a claimed restaurant (an owner's menu link recorded under its place ID),
+        // which is managed by its own id.
+        const { data: claimed, error: claimedError } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('google_place_id', placeId)
+          .limit(1)
+          .maybeSingle();
+        if (claimedError) throw claimedError;
+        if (claimed?.id) {
+          router.replace({ pathname: '/admin/menu-management/[id]', params: { id: claimed.id } } as any);
+          return;
+        }
+        console.warn('[admin-menu-management] No restaurant found for place', placeId);
+        return;
+      }
       const { data, error } = await supabase
         .from('restaurants')
-        .select('id, name, address')
+        .select('id, name, address, google_place_id')
         .eq('id', id)
         .single();
       if (error) throw error;
-      setRestaurant(data as RestaurantInfo);
+      setRestaurant({ id: data.id, name: data.name, address: data.address ?? '', googlePlaceId: data.google_place_id ?? undefined });
     } catch (error) {
       console.error('[admin-menu-management] Failed to load restaurant:', error);
     } finally {
@@ -111,9 +145,10 @@ export default function AdminMenuManagementRestaurantScreen() {
     setExtractingPhoto(true);
     try {
       const token = await getAccessToken();
-      let result = await extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, token);
+      const target = restaurant.id ?? { placeId: restaurant.placeId as string };
+      let result = await extractMenuFromImage(target, restaurant.name, imageDataUrl, token);
       result = await confirmAndRetryIfNeeded(result, () =>
-        extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, token, true, result.items)
+        extractMenuFromImage(target, restaurant.name, imageDataUrl, token, true, result.items)
       );
       if (result.requiresConfirmation) return; // admin cancelled at the confirm prompt
 
@@ -135,9 +170,10 @@ export default function AdminMenuManagementRestaurantScreen() {
     setExtractingText(true);
     try {
       const token = await getAccessToken();
-      let result = await extractMenuFromText(restaurant.id, restaurant.name, menuText, token);
+      const target = restaurant.id ?? { placeId: restaurant.placeId as string };
+      let result = await extractMenuFromText(target, restaurant.name, menuText, token);
       result = await confirmAndRetryIfNeeded(result, () =>
-        extractMenuFromText(restaurant.id, restaurant.name, menuText, token, true, result.items)
+        extractMenuFromText(target, restaurant.name, menuText, token, true, result.items)
       );
       if (result.requiresConfirmation) return; // admin cancelled at the confirm prompt
 
@@ -181,6 +217,11 @@ export default function AdminMenuManagementRestaurantScreen() {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Menu link (by the restaurant's place ID, for claimed and unclaimed restaurants alike) */}
+        {!!(restaurant.placeId || restaurant.googlePlaceId) && (
+          <PlaceMenuLinkBox placeId={(restaurant.placeId || restaurant.googlePlaceId) as string} />
+        )}
+
         {/* Photo */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📷 Update Menu Items Using a Photo</Text>

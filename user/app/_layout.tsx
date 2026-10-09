@@ -13,6 +13,8 @@ import { useSavedStore } from '../src/store/savedStore';
 import { useFaceIdStore } from '../src/store/faceIdStore';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
+import { UpdateGate } from '../src/components/common/UpdateGate';
+import { AnnouncementModal } from '../src/components/common/AnnouncementModal';
 import { Alert } from '../src/utils/alert';
 import { BRAND_NAME } from '../src/constants/brandTheme';
 
@@ -271,15 +273,27 @@ const lockStyles = StyleSheet.create({
 function FloatingLogo() {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[floatingLogoStyles.container, { top: insets.top + 8 }]} pointerEvents="none">
+    <View
+      style={[floatingLogoStyles.container, { top: insets.top + 8 }]}
+      pointerEvents="none"
+      accessible
+      accessibilityLabel={BRAND_NAME}
+    >
       <Image source={require('../assets/logo.png')} style={floatingLogoStyles.logo} />
+      {/* The app name beside the logo: bold brand blue on a soft white pill, so it stays readable over photos and maps. */}
+      <Text style={floatingLogoStyles.name} numberOfLines={1}>{BRAND_NAME}</Text>
     </View>
   );
 }
 
 const floatingLogoStyles = StyleSheet.create({
-  container: { position: 'absolute', left: 16, zIndex: 999 },
+  container: {
+    position: 'absolute', left: 12, zIndex: 999, flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 18, paddingLeft: 4, paddingRight: 12, paddingVertical: 3,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 3,
+  },
   logo: { width: 28, height: 28, borderRadius: 14 },
+  name: { fontSize: 17, fontWeight: '800', color: '#1565C0', letterSpacing: 0.3 },
 });
 
 export default function RootLayout() {
@@ -287,6 +301,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
+          <UpdateGate>
           <AuthGate>
             {/* Stack (not Slot) so the restaurant detail can present as a
                 transparent modal over the screen that opened it, keeping
@@ -298,7 +313,9 @@ export default function RootLayout() {
               />
             </Stack>
           </AuthGate>
+          </UpdateGate>
           <FloatingLogo />
+          <AnnouncementModal />
           <AlertModalHost />
         </ErrorBoundary>
       </QueryClientProvider>

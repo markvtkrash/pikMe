@@ -21,6 +21,7 @@ import {
   refreshRestaurantMenu,
   adminResetOwnerPassword,
   adminGenerateOwnerPassword,
+  adminDeleteRestaurant,
 } from './restaurantAuth';
 
 const getUser = supabase.auth.getUser as jest.Mock;
@@ -363,5 +364,29 @@ describe('adminGenerateOwnerPassword', () => {
 
     mockFetch(500, {});
     await expect(adminGenerateOwnerPassword('tok')).rejects.toThrow('Failed to generate a password');
+  });
+});
+
+describe('adminDeleteRestaurant', () => {
+  beforeEach(() => rpc.mockReset());
+
+  it('asks for a dry run when told to, deleting nothing, and returns the counts', async () => {
+    rpc.mockResolvedValue({ data: { dryRun: true, restaurant: 'Joe', coupons: 2 }, error: null });
+    const counts = await adminDeleteRestaurant('r1', true);
+    expect(rpc).toHaveBeenCalledWith('admin_delete_restaurant', { p_restaurant_id: 'r1', p_dry_run: true });
+    expect(counts.coupons).toBe(2);
+  });
+
+  it('deletes for real by default', async () => {
+    rpc.mockResolvedValue({ data: { dryRun: false }, error: null });
+    await adminDeleteRestaurant('r1');
+    expect(rpc).toHaveBeenCalledWith('admin_delete_restaurant', { p_restaurant_id: 'r1', p_dry_run: false });
+  });
+
+  it('throws the database error, for example when the restaurant is not closed', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'Close the restaurant before deleting it (current status: approved)' } });
+    await expect(adminDeleteRestaurant('r1')).rejects.toEqual({
+      message: 'Close the restaurant before deleting it (current status: approved)',
+    });
   });
 });

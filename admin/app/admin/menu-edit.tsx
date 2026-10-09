@@ -4,15 +4,19 @@ import {
   Modal, Switch,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import {
-  getRestaurantMenuForEdit, getMenuSharingInfo, saveMenuItem, previewDeleteMenuItems, deleteMenuItems,
+  getRestaurantMenuForEdit, getMenuSharingInfo, saveMenuItem, previewDeleteMenuItems, deleteMenuItems, verifyMenuItems,
   EditableMenuItem, MenuSharingInfo, DeleteMenuItemsResult,
 } from '../../src/api/menuAdmin';
 import {
   emptyMenuItemForm, formFromItem, validateMenuItemForm,
   MenuItemFormValues, MenuItemFormField,
 } from '../../src/utils/menuItemForm';
+
+import {
+  toggleUnverifiedSelection, unverifiedIds, verifiableSelection, verifySelectedQuestion,
+} from '../../src/utils/menuEditSelection';
 
 const PAGE_SIZE = 50;
 
@@ -109,12 +113,12 @@ function nutritionSummary(i: EditableMenuItem) {
 }
 
 // Admin Manual Edit: add, update and mass-delete the items of one restaurant's
-// menu (menu_items, matched by restaurant name — migration 070). Because items
-// are keyed by name, a change applies to every location sharing that name; the
-// banner says how many.
+// menu (menu_items). An independent is edited by place (migration 108), so a
+// change touches that location only. A franchise is keyed by name, so a change
+// applies to every location sharing it; the banner says so.
 export default function AdminMenuEditScreen() {
   const router = useRouter();
-  const { name } = useLocalSearchParams<{ name: string }>();
+  const { name, placeId, address } = useLocalSearchParams<{ name: string; placeId?: string; address?: string }>();
 
   const [items, setItems] = useState<EditableMenuItem[]>([]);
   const [sharing, setSharing] = useState<MenuSharingInfo | null>(null);
@@ -137,11 +141,12 @@ export default function AdminMenuEditScreen() {
   const [preview, setPreview] = useState<DeleteMenuItemsResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadAll();
-    }, [name])
+    }, [name, placeId])
   );
 
   async function loadAll() {
@@ -151,7 +156,10 @@ export default function AdminMenuEditScreen() {
     }
     setLoading(true);
     try {
-      const [menu, info] = await Promise.all([getRestaurantMenuForEdit(name), getMenuSharingInfo(name)]);
+      const [menu, info] = await Promise.all([
+        getRestaurantMenuForEdit(name, placeId),
+        getMenuSharingInfo(name, placeId),
+      ]);
       setItems(menu);
       setSharing(info);
     } catch (error: any) {
@@ -192,6 +200,29 @@ export default function AdminMenuEditScreen() {
     });
   }
 
+  // "Select unverified": ticks every unverified item matching the search, on every page (press again to untick them).
+  function selectUnverified() {
+    setSelected((prev) => toggleUnverifiedSelection(prev, filtered));
+  }
+
+  // "Verify": marks the ticked unverified items as verified in one step, after asking first.
+  async function handleVerifySelected() {
+    const ids = verifiableSelection(items, selected);
+    if (ids.length === 0) return;
+    if (!(await confirmDialog('Verify items?', verifySelectedQuestion(ids.length), { confirmText: 'Verify' }))) return;
+    setVerifying(true);
+    try {
+      await verifyMenuItems(ids);
+      setSelected(new Set());
+      Alert.alert('Verified', `${ids.length} item${ids.length === 1 ? '' : 's'} marked as verified.`);
+      await loadAll();
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to verify the items');
+    } finally {
+      setVerifying(false);
+    }
+  }
+
   async function handleAdd() {
     const result = validateMenuItemForm(addForm);
     if (!result.ok) {
@@ -201,7 +232,7 @@ export default function AdminMenuEditScreen() {
     setAddErrors({});
     setAddSaving(true);
     try {
-      await saveMenuItem({ restaurantName: name!, itemId: null, ...result.value });
+      await saveMenuItem({ restaurantName: name!, placeId, itemId: null, ...result.value });
       setAddForm(emptyMenuItemForm());
       setAddOpen(false);
       await loadAll();
@@ -228,7 +259,7 @@ export default function AdminMenuEditScreen() {
     setEditErrors({});
     setEditSaving(true);
     try {
-      await saveMenuItem({ restaurantName: name!, itemId: editingId, ...result.value });
+      await saveMenuItem({ restaurantName: name!, placeId, itemId: editingId, ...result.value });
       setEditingId(null);
       await loadAll();
     } catch (error: any) {
@@ -296,11 +327,18 @@ export default function AdminMenuEditScreen() {
               <Text style={styles.title}>{name}</Text>
               <Text style={styles.subtitle}>Manual Edit — add, update or delete menu items</Text>
 
-              {sharedCount > 1 ? (
+              {placeId ? (
+                <View style={styles.infoBanner}>
+                  <Text style={styles.infoText}>
+                    This menu belongs to this location only{address ? ` (${address})` : ''}.
+                  </Text>
+                </View>
+              ) : sharedCount > 1 || sharing?.is_franchise ? (
                 <View style={styles.warnBanner}>
                   <Text style={styles.warnText}>
-                    ⚠️ This menu is shared by {sharedCount} locations named “{name}”. Any change here applies to all
-                    of them.
+                    ⚠️ This menu is shared by every location of this franchise
+                    {sharedCount > 1 ? ` (${sharedCount} locations named “${name}”)` : ''}. Any change here applies to
+                    all of them.
                   </Text>
                 </View>
               ) : (
@@ -347,8 +385,26 @@ export default function AdminMenuEditScreen() {
                 >
                   <Text style={styles.selectAllText}>{allOnPageSelected ? 'Deselect page' : 'Select all on this page'}</Text>
                 </TouchableOpacity>
+                {unverifiedIds(filtered).length > 0 && (
+                  <TouchableOpacity style={styles.selectAllBtn} onPress={selectUnverified}>
+                    <Text style={styles.selectAllText}>Select unverified ({unverifiedIds(filtered).length})</Text>
+                  </TouchableOpacity>
+                )}
                 {selected.size > 0 && (
                   <>
+                    {verifiableSelection(items, selected).length > 0 && (
+                      <TouchableOpacity
+                        style={[styles.verifyBtn, verifying && styles.verifyBtnDisabled]}
+                        onPress={handleVerifySelected}
+                        disabled={verifying}
+                      >
+                        {verifying ? (
+                          <ActivityIndicator size="small" color="#2E7D32" />
+                        ) : (
+                          <Text style={styles.verifyBtnText}>✓ Verify {verifiableSelection(items, selected).length}</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity onPress={() => setSelected(new Set())}>
                       <Text style={styles.clearText}>Clear ({selected.size})</Text>
                     </TouchableOpacity>
@@ -528,6 +584,9 @@ const styles = StyleSheet.create({
   clearText: { fontSize: 12, fontWeight: '700', color: '#666' },
   deleteBtn: { backgroundColor: '#e53e3e', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 9 },
   deleteBtnText: { color: '#fff', fontWeight: '800', fontSize: 12 },
+  verifyBtn: { backgroundColor: '#E8F5E9', borderWidth: 1.5, borderColor: '#2E7D32', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8 },
+  verifyBtnDisabled: { opacity: 0.5 },
+  verifyBtnText: { color: '#2E7D32', fontWeight: '800', fontSize: 12 },
   rangeText: { fontSize: 12, color: '#888', marginBottom: 8 },
 
   row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, borderWidth: 1.5, borderColor: 'transparent' },

@@ -144,49 +144,6 @@ async function deterministicLinkId(restaurantName: string, itemName: string): Pr
   return 'link_' + hex.slice(0, 24);
 }
 
-// ── JS-rendering fallback (ScrapingBee) ──────────────────────────────────────
-// Plain fetch() never runs a page's JavaScript, so JS-rendered sites come
-// back nearly empty (confirmed on real examples). Only called when the
-// plain-fetch attempt below finds nothing, so normal server-rendered pages
-// never touch this and cost stays near zero. Requires the optional
-// SCRAPINGBEE_API_KEY secret — silently skipped if that isn't configured.
-function maskKey(k: string): string {
-  if (k.length <= 10) return '*'.repeat(k.length);
-  return `${k.slice(0, 6)}...${k.slice(-4)} (len ${k.length})`;
-}
-
-// TEMP DEBUG — remove once SCRAPINGBEE_API_KEY is confirmed reaching the
-// container correctly. Logs the request shape with the key masked (not the
-// raw value) so this is safe to leave in briefly, but still delete once
-// diagnosed rather than leaving it long-term.
-async function fetchRenderedHtml(url: URL): Promise<string | null> {
-  const apiKey = Deno.env.get('SCRAPINGBEE_API_KEY');
-  console.log('[refresh-restaurant-menu] [scrapingbee-debug] SCRAPINGBEE_API_KEY present:', !!apiKey, apiKey ? maskKey(apiKey) : '(unset)');
-  if (!apiKey) return null;
-  try {
-    const beeUrl = new URL('https://app.scrapingbee.com/api/v1/');
-    beeUrl.searchParams.set('api_key', apiKey);
-    beeUrl.searchParams.set('url', url.toString());
-    beeUrl.searchParams.set('render_js', 'true');
-    const templateUrl = beeUrl.toString().replace(apiKey, 'YOUR_API_KEY_HERE');
-    console.log(
-      '[refresh-restaurant-menu] [scrapingbee-debug] curl equivalent (paste your real key in place of YOUR_API_KEY_HERE — ' +
-      `container's key is ${maskKey(apiKey)}, compare against what you tested locally):\n` +
-      `curl "${templateUrl}"`
-    );
-    const res = await fetch(beeUrl.toString(), { signal: AbortSignal.timeout(30000) });
-    console.log('[refresh-restaurant-menu] [scrapingbee-debug] Response status:', res.status, 'headers:', JSON.stringify(Object.fromEntries(res.headers.entries())));
-    if (!res.ok) {
-      console.warn('[refresh-restaurant-menu] ScrapingBee request failed:', res.status, (await res.text()).slice(0, 300));
-      return null;
-    }
-    return await res.text();
-  } catch (e) {
-    console.warn('[refresh-restaurant-menu] ScrapingBee fetch error:', e);
-    return null;
-  }
-}
-
 interface ExtractResult {
   items: unknown[];
   error?: string;
@@ -196,14 +153,22 @@ interface ExtractResult {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[refresh-restaurant-menu] Failed to load DB config, falling back to env/defaults:', loadErr);
@@ -347,9 +312,7 @@ ${pageText}
   return { items };
 }
 
-// Plain fetch first (free); only falls back to ScrapingBee's JS-rendered
-// fetch if that finds nothing, so cost stays near zero for the (common)
-// case of server-rendered pages. Never throws for "didn't find a menu here"
+// A plain fetch of the page (server-rendered pages only). Never throws for "didn't find a menu here"
 // — the caller just tries the next candidate URL.
 async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<ExtractResult> {
   if (url.pathname.toLowerCase().endsWith('.pdf')) {
@@ -373,7 +336,7 @@ async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<Ext
       }
     }
   } catch (e) {
-    console.warn('[refresh-restaurant-menu] Plain fetch failed, trying JS-rendered fetch:', e);
+    console.warn('[refresh-restaurant-menu] Plain fetch failed:', e);
   }
 
   console.log('[refresh-restaurant-menu] Scraped', pageText.length, 'chars of text from', url.toString());
@@ -381,28 +344,14 @@ async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<Ext
   if (pageText.length >= 40) {
     const plainResult = await extractItemsFromText(pageText, restaurantName);
     if (plainResult.items.length > 0) return plainResult;
-    console.log('[refresh-restaurant-menu] Plain fetch from', url.toString(), 'found nothing, trying JS-rendered fetch...');
-  } else {
-    console.log('[refresh-restaurant-menu] Plain fetch from', url.toString(), 'got too little text, trying JS-rendered fetch...');
   }
-
-  const renderedHtml = await fetchRenderedHtml(url);
-  if (!renderedHtml) {
-    return { items: [], error: 'No real items found (JS-rendering fallback unavailable or also found nothing)' };
-  }
-  const renderedText = htmlToText(renderedHtml).slice(0, 12000);
-  console.log('[refresh-restaurant-menu] JS-rendered fetch got', renderedText.length, 'chars from', url.toString());
-  if (renderedText.length < 40) {
-    return { items: [], error: 'No readable text even after JS rendering' };
-  }
-  return await extractItemsFromText(renderedText, restaurantName);
+  return { items: [], error: 'No real items found on that page' };
 }
 
 // Owner-triggered "Refresh with AI". When the restaurant has a known menu
 // page or website (set by the owner on their Restaurant Profile page), this
 // first tries to actually extract real items from it — same hardened
-// pipeline as the explicit "Upload Menu" flow (plain fetch, then a
-// JS-rendered fetch via ScrapingBee if that finds nothing), just triggered
+// pipeline as the explicit "Upload Menu" flow (a plain fetch), just triggered
 // automatically instead of requiring the owner to paste a URL. Only falls
 // back to pure AI-guessed items (fetch-menu-items-ai, no real data
 // grounding at all) if neither is set, or extraction from both finds
@@ -457,6 +406,25 @@ serve(async (req) => {
       .single();
     if (restaurantError || !restaurant || restaurant.owner_id !== userData.user.id) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Chain menus are managed centrally: owners can't pull or replace them, so stop before
+    // spending an AI call.
+    const { data: isChainRestaurant, error: chainCheckError } = await serviceSupabase.rpc("is_franchise_chain", {
+      p_name: restaurantName,
+    });
+    if (chainCheckError) {
+      console.error("[refresh-restaurant-menu] Chain check failed:", chainCheckError);
+      return new Response(JSON.stringify({ error: "Could not check whether this restaurant is part of a chain. Please try again." }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    if (isChainRestaurant === true) {
+      return new Response(JSON.stringify({ error: "This restaurant is part of a chain. Its menu is managed centrally and cannot be changed here.", code: "chain_managed" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
       });

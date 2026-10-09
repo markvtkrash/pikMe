@@ -305,10 +305,19 @@ export default function AdminDashboard() {
 
         <TouchableOpacity
           style={[styles.adminTile, styles.adminTileConfig]}
-          onPress={() => router.push('/admin/config')}
+          onPress={() => router.push('/admin/chain-menus')}
         >
-          <Text style={styles.adminTileIcon}>⚙️</Text>
-          <Text style={styles.adminTileTitle}>App Config</Text>
+          <Text style={styles.adminTileIcon}>🔗</Text>
+          <Text style={styles.adminTileTitle}>Franchise Menu Management</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.adminTile, styles.adminTileConfig]}
+          onPress={() => router.push('/admin/tools')}
+        >
+          <Text style={styles.adminTileIcon}>🧰</Text>
+          <Text style={styles.adminTileTitle}>Tools</Text>
+          <Text style={styles.adminTileDetail}>Scheduled builds · App config</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

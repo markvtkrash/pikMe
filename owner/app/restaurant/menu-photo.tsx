@@ -7,7 +7,10 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { extractMenuFromImage } from '../../src/api/restaurantAuth';
+import { menuUploadMessage } from '../../src/utils/menuUploadMessage';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 
 // Resized/compressed client-side before it ever leaves the device — a raw
@@ -18,12 +21,16 @@ const MAX_DIMENSION = 1600;
 export default function MenuPhotoScreen() {
   const router = useRouter();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  // Shown on this page after a successful extraction (instead of leaving the page).
+  const [resultMessage, setResultMessage] = useState<string | null>(null);
 
   if (!owner || !restaurant) return null;
+  if (isChain) return <ChainMenuNotice />;
 
   async function pickPhoto() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -48,6 +55,7 @@ export default function MenuPhotoScreen() {
       if (!manipulated.base64) throw new Error('Could not process that image');
       setPreviewUri(manipulated.uri);
       setImageDataUrl(`data:image/jpeg;base64,${manipulated.base64}`);
+      setResultMessage(null);
     } catch (error: any) {
       console.error('[menu-photo] Image processing error:', error);
       Alert.alert('Error', error.message || 'Failed to process that image');
@@ -59,6 +67,7 @@ export default function MenuPhotoScreen() {
   async function handleExtract() {
     if (!restaurant || !session?.access_token || !imageDataUrl) return;
     setExtracting(true);
+    setResultMessage(null);
     try {
       let result = await extractMenuFromImage(restaurant.id, restaurant.name, imageDataUrl, session.access_token);
       result = await confirmAndRetryIfNeeded(result, () =>
@@ -68,13 +77,10 @@ export default function MenuPhotoScreen() {
         // Owner cancelled at the confirm prompt — nothing was changed.
         return;
       }
-      Alert.alert(
-        'Success',
-        `Added ${result.itemCount} real menu items read from your photo to your menu. Edit or remove any of them from Edit Menu.`
-      );
+      // Stay on this page and say how many items were added.
+      setResultMessage(menuUploadMessage(result.itemCount, 'photo'));
       setPreviewUri(null);
       setImageDataUrl(null);
-      router.push('/restaurant/menu-items');
     } catch (error: any) {
       console.error('[menu-photo] Extract error:', error);
       Alert.alert('Error', error.message || 'Failed to read that menu photo');
@@ -91,12 +97,17 @@ export default function MenuPhotoScreen() {
           <Text style={styles.backBtnText}>← Back</Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>Update Menu Items Using a Photo</Text>
+          <Text style={styles.title}>Import Menu from Photo</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
       </View>
 
       <ScrollView style={styles.content}>
+        {!!resultMessage && (
+          <View style={styles.successBanner}>
+            <Text style={styles.successBannerText}>✅ {resultMessage}</Text>
+          </View>
+        )}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>📷 Scan a Menu Photo</Text>
           <Text style={styles.cardHint}>
@@ -127,7 +138,7 @@ export default function MenuPhotoScreen() {
             {extracting ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.extractBtnText}>Extract Menu From Photo</Text>
+              <Text style={styles.extractBtnText}>Import Menu from Photo</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -147,6 +158,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   content: { padding: 16 },
+  successBanner: { backgroundColor: '#E3F2FD', borderLeftWidth: 4, borderLeftColor: '#1565C0', borderRadius: 10, padding: 14, marginBottom: 12 },
+  successBannerText: { fontSize: 14, fontWeight: '700', color: '#0D47A1', lineHeight: 20 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
   cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },

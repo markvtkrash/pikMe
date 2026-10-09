@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { signUpRestaurantOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
+import { DataSourcesNotice } from '../../../src/components/common/DataSourcesNotice';
 
 export default function RestaurantSignupScreen() {
   const router = useRouter();
@@ -87,6 +88,8 @@ export default function RestaurantSignupScreen() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
         {successMsg ? <Text style={styles.successText}>{successMsg}</Text> : null}
+
+        <DataSourcesNotice />
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, getRestaurantMenuItems, updateCoupon, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
@@ -48,7 +48,7 @@ export default function OrphanedCouponsScreen() {
     try {
       const [coupons, items] = await Promise.all([
         getRestaurantCoupons(restaurant.id),
-        getRestaurantMenuItems(restaurant.name),
+        getRestaurantMenuItems(restaurant.name, restaurant.google_place_id),
       ]);
       setCurrentItems(items);
 
@@ -80,8 +80,8 @@ export default function OrphanedCouponsScreen() {
     }
   }
 
-  function handleDelete(couponId: string, couponCode: string) {
-    const confirmed = confirm(`Delete ${couponCode}? This cannot be undone.`);
+  async function handleDelete(couponId: string, couponCode: string) {
+    const confirmed = await confirmDialog('Delete coupon?', `Delete ${couponCode}? This cannot be undone.`, { confirmText: 'Delete', destructive: true });
     if (!confirmed) return;
     performDelete(couponId);
   }

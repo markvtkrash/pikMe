@@ -37,7 +37,8 @@ export function useMenuRecommendations(restaurant: Restaurant | null, couponItem
       } else {
         // Fallback: fetch from API if nothing is stored
         console.log('[menuRecommendations] No stored items, fetching from API');
-        items = await fetchMenuItemsAi(restaurant.name);
+        // The customer opened this restaurant: pass its place so a real menu build is queued for it.
+        items = await fetchMenuItemsAi(restaurant.name, restaurant.placeId);
       }
 
       // AI-guessed fallback items are always unverified by construction, so

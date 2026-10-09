@@ -302,6 +302,39 @@ describe('getRestaurantMenuItems', () => {
     expect(builder.order).toHaveBeenCalledWith('cached_at', { ascending: false });
   });
 
+  describe('with a place ID (migration 100)', () => {
+    const row = (item_id: string, name: string, place_id: string | null) => ({
+      item_id, name, calories: 1, protein_g: 1, is_verified: true, is_out_of_stock: false, place_id,
+    });
+
+    it("shows only the restaurant's own items when it has any, not another place's or the shared ones", async () => {
+      from.mockReturnValue(makeQueryBuilder({
+        data: [row('a1', 'Mine', 'PLACE_A'), row('b1', 'Theirs', 'PLACE_B'), row('s1', 'Shared', null)],
+        error: null,
+      }));
+      const items = await getRestaurantMenuItems("Joe's Diner", 'PLACE_A');
+      expect(items.map((i: any) => i.name)).toEqual(['Mine']);
+    });
+
+    it("falls back to the shared name items when the place has none, still hiding another place's", async () => {
+      from.mockReturnValue(makeQueryBuilder({
+        data: [row('b1', 'Theirs', 'PLACE_B'), row('s1', 'Shared', null)],
+        error: null,
+      }));
+      const items = await getRestaurantMenuItems("Joe's Diner", 'PLACE_A');
+      expect(items.map((i: any) => i.name)).toEqual(['Shared']);
+    });
+
+    it('without a place ID, returns only the shared name items', async () => {
+      from.mockReturnValue(makeQueryBuilder({
+        data: [row('a1', 'Mine', 'PLACE_A'), row('s1', 'Shared', null), row('s2', 'Also shared', undefined as any)],
+        error: null,
+      }));
+      const items = await getRestaurantMenuItems("Joe's Diner");
+      expect(items.map((i: any) => i.name)).toEqual(['Also shared', 'Shared']);
+    });
+  });
+
   it('returns an empty array when data is null and throws on error', async () => {
     from.mockReturnValue(makeQueryBuilder({ data: null, error: null }));
     await expect(getRestaurantMenuItems('r1')).resolves.toEqual([]);

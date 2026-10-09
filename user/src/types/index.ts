@@ -59,6 +59,13 @@ export interface Restaurant {
   distanceMeters: number;
   rating: number;
   cuisineTypes: string[];
+  // What the place is, how you get the food and what it serves, as category keys (migration 129): the owner's choice, else a guess
+  // from Google's types. Absent from an older server, in which case cuisineTypes is used as before.
+  venueTypes?: string[];
+  services?: string[];
+  cuisines?: string[];
+  // true when the owner chose at least one of those groups
+  ownerCategories?: boolean;
   photoUrl?: string;
   openNow: boolean;
   openingHours?: OpeningHours;

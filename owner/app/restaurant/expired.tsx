@@ -3,7 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator,
 } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
@@ -53,11 +53,10 @@ export default function ExpiredCouponsScreen() {
     }
   }
 
-  function handleDelete(couponId: string, couponCode: string) {
+  async function handleDelete(couponId: string, couponCode: string) {
     console.log('[expired] handleDelete called for:', couponId, couponCode);
 
-    // Use confirm for web compatibility
-    const confirmed = confirm(`Delete ${couponCode}? This cannot be undone.`);
+    const confirmed = await confirmDialog('Delete coupon?', `Delete ${couponCode}? This cannot be undone.`, { confirmText: 'Delete', destructive: true });
     console.log('[expired] Confirm result:', confirmed);
 
     if (confirmed) {

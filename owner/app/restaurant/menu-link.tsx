@@ -6,16 +6,20 @@ import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { updateRestaurantMenuLink } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
+import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
 
 export default function MenuLinkScreen() {
   const router = useRouter();
   const { owner, restaurant, session } = useRestaurantOwnerStore();
+  const { data: isChain } = useIsChainRestaurant(restaurant?.name);
   const [menuLinkInput, setMenuLinkInput] = useState(restaurant?.menu_link || '');
   const [saving, setSaving] = useState(false);
   const [lastSavedCount, setLastSavedCount] = useState<number | null>(null);
 
   if (!owner || !restaurant) return null;
+  if (isChain) return <ChainMenuNotice />;
 
   let requiredDomain: string | null = null;
   if (restaurant.website_url) {

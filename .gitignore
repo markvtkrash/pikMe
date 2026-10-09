@@ -41,3 +41,9 @@ example
 # generated native folders
 /ios
 /android
+
+# menu crawl worker (runtime files)
+crawler/venv/
+crawler/work/
+crawler/__pycache__/
+crawler/tests/__pycache__/

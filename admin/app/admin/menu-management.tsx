@@ -22,7 +22,8 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 // many menu items each has. "View Menu" opens a read-only list of the current
 // items for any of them; "Update Menu" (photo / pasted text) is only offered
 // for claimed restaurants, since those tools need an owner. Items are keyed by
-// restaurant NAME, so a chain with many cached locations is listed once.
+// restaurant NAME for franchises (listed once, one shared menu) and by place for
+// independents (one row per location, each with its own menu — migration 108).
 export default function AdminMenuManagementScreen() {
   const router = useRouter();
   const [rows, setRows] = useState<RestaurantMenuSummary[]>([]);
@@ -68,8 +69,18 @@ export default function AdminMenuManagementScreen() {
   const firstShown = filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const lastShown = Math.min((safePage + 1) * PAGE_SIZE, filtered.length);
 
-  function viewMenu(name: string) {
-    router.push({ pathname: '/admin/menu-view', params: { name } } as any);
+  // Independents work on one location (its place ID); franchises on the one menu shared by name.
+  function menuParams(item: RestaurantMenuSummary) {
+    const params: Record<string, string> = { name: item.restaurant_name };
+    if (!item.is_franchise && item.place_id) {
+      params.placeId = item.place_id;
+      if (item.address) params.address = item.address;
+    }
+    return params;
+  }
+
+  function viewMenu(item: RestaurantMenuSummary) {
+    router.push({ pathname: '/admin/menu-view', params: menuParams(item) } as any);
   }
 
   if (loading) {
@@ -126,12 +137,12 @@ export default function AdminMenuManagementScreen() {
       ) : (
         <FlatList
           data={pageRows}
-          keyExtractor={(item) => `${item.source}-${item.restaurant_id ?? item.restaurant_name}`}
+          keyExtractor={(item) => `${item.source}-${item.restaurant_id ?? item.place_id ?? item.restaurant_name}`}
           renderItem={({ item }) => {
             const claimed = item.source === 'claimed';
             const statusInfo = item.status ? STATUS_COLORS[item.status] : undefined;
             return (
-              <TouchableOpacity style={styles.restaurantRow} onPress={() => viewMenu(item.restaurant_name)}>
+              <TouchableOpacity style={styles.restaurantRow} onPress={() => viewMenu(item)}>
                 <View style={styles.restaurantInfo}>
                   <View style={styles.nameRow}>
                     <Text style={styles.restaurantName}>{item.restaurant_name}</Text>
@@ -169,12 +180,12 @@ export default function AdminMenuManagementScreen() {
                   </Text>
                 </View>
                 <View style={styles.actions}>
-                  <TouchableOpacity style={styles.viewBtn} onPress={() => viewMenu(item.restaurant_name)}>
+                  <TouchableOpacity style={styles.viewBtn} onPress={() => viewMenu(item)}>
                     <Text style={styles.viewBtnText} numberOfLines={1}>👁 View Menu</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.manualBtn}
-                    onPress={() => router.push({ pathname: '/admin/menu-edit', params: { name: item.restaurant_name } } as any)}
+                    onPress={() => router.push({ pathname: '/admin/menu-edit', params: menuParams(item) } as any)}
                   >
                     <Text style={styles.manualBtnText} numberOfLines={1}>📝 Manual Edit</Text>
                   </TouchableOpacity>

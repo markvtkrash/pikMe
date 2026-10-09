@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.0';
+import { parsePhotoMaxTokens } from './photoExtractUtils.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -27,14 +28,22 @@ function err(message: string, status = 500) {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[extract-menu-from-image] Failed to load DB config, falling back to env/defaults:', loadErr);
@@ -97,7 +106,8 @@ async function extractItemsFromImage(
   base64: string,
   restaurantName: string
 ): Promise<ExtractResult> {
-  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverVisionModel']);
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverVisionModel', 'photoExtractMaxTokens']);
+  const MAX_TOKENS = parsePhotoMaxTokens(dbConfig.photoExtractMaxTokens, Deno.env.get('PHOTO_EXTRACT_MAX_TOKENS'));
   const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
   const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
   // Separate from QUICKSILVER_MODEL (used elsewhere for text-only calls,
@@ -129,6 +139,16 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
     if (!apiKey) throw new Error('ANTHROPIC_API_KEY secret not configured');
   }
 
+  // This one vision-model call does both the OCR (reading the text in the photo) and the
+  // item extraction, so this is the model doing the OCR. Logs no image data and no keys.
+  const modelInUse = AI_PROVIDER === 'quicksilver' ? QUICKSILVER_VISION_MODEL : CLAUDE_MODEL;
+  console.log(
+    `[extract-menu-from-image] OCR/extraction model: ${modelInUse} (provider: ${AI_PROVIDER}, ` +
+      `image: ${mediaType}, ~${Math.round((base64.length * 0.75) / 1024)} KB)`,
+  );
+  const aiStartedAt = Date.now();
+  let outputTokens: unknown = 'n/a';
+
   let rawText: string;
   if (AI_PROVIDER === 'quicksilver') {
     const controller = new AbortController();
@@ -148,7 +168,7 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
               ],
             },
           ],
-          max_tokens: 2048,
+          max_tokens: MAX_TOKENS,
         }),
         signal: controller.signal,
       });
@@ -159,6 +179,7 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
       }
       const data = await res.json();
       rawText = data.choices?.[0]?.message?.content ?? '';
+      outputTokens = data.usage?.completion_tokens ?? 'n/a';
     } catch (e) {
       clearTimeout(timeout);
       if (e instanceof Error && e.name === 'AbortError') return { items: [], error: 'Quicksilver timed out.' };
@@ -174,7 +195,7 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS,
         messages: [
           {
             role: 'user',
@@ -193,7 +214,12 @@ Return ONLY a JSON array, no markdown or explanation. Each item must have these 
     }
     const claudeData = await res.json();
     rawText = claudeData.content?.[0]?.text ?? '';
+    outputTokens = claudeData.usage?.output_tokens ?? 'n/a';
   }
+
+  console.log(
+    `[extract-menu-from-image] ${modelInUse} answered in ${Date.now() - aiStartedAt}ms, output tokens: ${outputTokens}`,
+  );
 
   const cleaned = rawText
     .replace(/^```json\s*/i, '')
@@ -252,9 +278,11 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) return err('Unauthorized', 401);
 
-    const { restaurantId, restaurantName, imageBase64, force, items: providedItems } = await req.json();
-    if (!restaurantId || !restaurantName?.trim() || !imageBase64?.trim()) {
-      return err('restaurantId, restaurantName, and imageBase64 are required', 400);
+    const { restaurantId, placeId, restaurantName, imageBase64, force, items: providedItems } = await req.json();
+    // An admin can also add a menu for a restaurant no owner has claimed, by its Google place ID (no restaurantId).
+    const forPlace = !restaurantId && typeof placeId === 'string' && placeId.trim() !== '';
+    if ((!restaurantId && !forPlace) || !restaurantName?.trim() || !imageBase64?.trim()) {
+      return err('restaurantId (or placeId), restaurantName, and imageBase64 are required', 400);
     }
 
     const parsed = parseDataUrl(imageBase64);
@@ -282,14 +310,12 @@ serve(async (req) => {
     if (userError || !userData.user) return err('Unauthorized', 401);
 
     const serviceSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: restaurant, error: restaurantError } = await serviceSupabase
-      .from('restaurants')
-      .select('owner_id')
-      .eq('id', restaurantId)
-      .single();
-    if (restaurantError || !restaurant) return err('Restaurant not found', 404);
-
-    if (restaurant.owner_id !== userData.user.id) {
+    // The restaurant name used from here on: the one the caller sent, or, for a place with no owner, the name
+    // recorded for that place (so an admin cannot save a menu under a different name).
+    let effectiveName: string = restaurantName;
+    let callerIsAdmin = false;
+    if (forPlace) {
+      // Only an admin may add a menu for a restaurant nobody has claimed.
       const { data: adminRole } = await serviceSupabase
         .from('user_roles')
         .select('role')
@@ -297,6 +323,33 @@ serve(async (req) => {
         .eq('role', 'admin')
         .maybeSingle();
       if (!adminRole) return err('Forbidden', 403);
+      callerIsAdmin = true;
+      const { data: place } = await serviceSupabase
+        .from('cached_restaurants')
+        .select('name')
+        .eq('place_id', placeId)
+        .maybeSingle();
+      if (!place) return err('Restaurant not found', 404);
+      effectiveName = place.name;
+    } else {
+      const { data: restaurant, error: restaurantError } = await serviceSupabase
+        .from('restaurants')
+        .select('owner_id')
+        .eq('id', restaurantId)
+        .single();
+      if (restaurantError || !restaurant) return err('Restaurant not found', 404);
+
+      // Admins may edit a chain restaurant's menu; owners may not (the replace function checks).
+      if (restaurant.owner_id !== userData.user.id) {
+        const { data: adminRole } = await serviceSupabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', userData.user.id)
+          .eq('role', 'admin')
+          .maybeSingle();
+        if (!adminRole) return err('Forbidden', 403);
+        callerIsAdmin = true;
+      }
     }
 
     // Reuse items from a prior call on this same photo instead of re-running
@@ -309,7 +362,7 @@ serve(async (req) => {
     if (Array.isArray(providedItems) && providedItems.length > 0) {
       items = providedItems;
     } else {
-      const extracted = await extractItemsFromImage(parsed.mediaType, parsed.base64, restaurantName);
+      const extracted = await extractItemsFromImage(parsed.mediaType, parsed.base64, effectiveName);
       if (extracted.items.length === 0) {
         return err(extracted.error || 'Could not extract a menu from that photo.', 400);
       }
@@ -328,7 +381,11 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
       },
-      body: JSON.stringify({ restaurantId, restaurantName, items, force: !!force, scope: 'add' }),
+      body: JSON.stringify(
+        forPlace
+          ? { placeId, restaurantName: effectiveName, items, force: !!force, scope: 'add', callerIsAdmin }
+          : { restaurantId, restaurantName, items, force: !!force, scope: 'add', callerIsAdmin },
+      ),
     });
     const replaceData = await replaceRes.json();
     if (!replaceRes.ok) {

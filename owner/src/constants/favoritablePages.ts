@@ -13,11 +13,12 @@ export interface FavoritablePage {
 export const FAVORITABLE_PAGES: FavoritablePage[] = [
   { key: 'coupon-add-coupons', icon: '🎟️', label: 'Add Coupons', href: '/restaurant/menu' },
   { key: 'coupon-manage-coupons', icon: '📋', label: 'Manage Coupons', href: '/restaurant/coupon-status' },
-  { key: 'menu-ai-pull', icon: '🤖', label: 'AI Assisted Menu Pull', href: '/restaurant/menu-items' },
+  // 'menu-ai-pull' (AI Assisted Menu Pull) and 'menu-nutrition' (Add Nutrition Info) are temporarily not favoritable —
+  // to be revisited. A favorite already saved under those keys is ignored by the Dashboard (unknown keys are skipped).
   { key: 'menu-manual-entry', icon: '✍️', label: 'Edit Menu', href: '/restaurant/manual-menu' },
-  { key: 'menu-photo', icon: '📷', label: 'Update Menu Items Using a Photo', href: '/restaurant/menu-photo' },
-  { key: 'menu-text', icon: '📋', label: 'Update Menu Items From Text', href: '/restaurant/menu-text' },
-  { key: 'menu-nutrition', icon: '🥗', label: 'Add Nutrition Info', href: '/restaurant/menu-nutrition' },
+  { key: 'menu-photo', icon: '📷', label: 'Import Menu from Photo', href: '/restaurant/menu-photo' },
+  { key: 'menu-text', icon: '📋', label: 'Import Menu from Text', href: '/restaurant/menu-text' },
+  { key: 'menu-online-link', icon: '🔗', label: 'Import Menu from Online Link', href: '/restaurant/menu-online-link' },
   { key: 'report-coupon-performance', icon: '📊', label: 'Coupon Performance', href: '/restaurant/reports/coupon-performance' },
   { key: 'report-redemptions-over-time', icon: '📈', label: 'Redemptions Over Time', href: '/restaurant/reports/redemptions-over-time' },
   { key: 'report-coupon-status-overview', icon: '🎟️', label: 'Coupon Status Overview', href: '/restaurant/reports/coupon-status-overview' },

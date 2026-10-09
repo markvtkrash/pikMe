@@ -5,7 +5,7 @@ import { useAlertStore, AlertButton } from '../../store/alertStore';
 // drop-in Alert replacement (../../utils/alert.ts) currently has queued —
 // every Alert.alert(...) call site in this app ends up here.
 export function AlertModalHost() {
-  const { visible, title, message, buttons, hide } = useAlertStore();
+  const { visible, title, message, buttons, hide, dismiss } = useAlertStore();
 
   function handlePress(btn: AlertButton) {
     hide();
@@ -13,7 +13,7 @@ export function AlertModalHost() {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={hide}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={dismiss}>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Text style={styles.title}>{title}</Text>

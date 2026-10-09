@@ -26,6 +26,10 @@ interface Restaurant {
   website_url?: string | null;
   is_paused?: boolean;
   paused_at?: string | null;
+  // what the owner told customers about the place (migration 129); null = not chosen yet
+  venue_types?: string[] | null;
+  services?: string[] | null;
+  cuisines?: string[] | null;
 }
 
 interface RestaurantOwnerStore {

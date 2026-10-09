@@ -27,14 +27,22 @@ function err(message: string, status = 500) {
 // on doesn't add a DB round-trip to every single invocation — refreshed only
 // on the next cold start, same "load once" model used by the client apps.
 let cachedDbConfig: Record<string, string> | null = null;
+// The config is kept for a few minutes, then read again, so a changed setting applies without a redeploy. The cache is for
+// one list of keys: a call with a different list reads again.
+let cachedDbConfigAt = 0;
+let cachedDbConfigSig = '';
+const DB_CONFIG_TTL_MS = 5 * 60 * 1000;
 async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
   if (Deno.env.get('APP_CONFIG_SOURCE') !== 'db') return {};
-  if (cachedDbConfig) return cachedDbConfig;
+  const sig = [...keys].sort().join(',');
+  if (cachedDbConfig && cachedDbConfigSig === sig && Date.now() - cachedDbConfigAt < DB_CONFIG_TTL_MS) return cachedDbConfig;
   try {
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const { data, error } = await client.from('app_config').select('key, value').in('key', keys);
     if (error) throw error;
     cachedDbConfig = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    cachedDbConfigAt = Date.now();
+    cachedDbConfigSig = sig;
     return cachedDbConfig;
   } catch (loadErr) {
     console.error('[extract-menu-from-link] Failed to load DB config, falling back to env/defaults:', loadErr);
@@ -176,7 +184,7 @@ async function deterministicId(restaurantName: string, itemName: string): Promis
 
 // Crude but dependency-free HTML → visible-text extraction. Good enough for
 // server-rendered menu pages. JS-rendered SPAs won't have their menu in the
-// raw HTML at all — that's what the ScrapingBee fallback below is for.
+// raw HTML at all, so they are not readable here.
 //
 // Block-level tag boundaries become newlines before tags are stripped, so
 // the output stays one-row-per-line instead of one continuous run-on blob —
@@ -204,51 +212,6 @@ function htmlToText(html: string): string {
     .filter(Boolean)
     .join('\n')
     .trim();
-}
-
-// ── JS-rendering fallback (ScrapingBee) ──────────────────────────────────────
-// Plain fetch() never runs a page's JavaScript, so JS-rendered sites (common
-// for restaurant ordering platforms) come back nearly empty — confirmed on
-// real examples (costavida.com/menu/, a Grubhub listing). Only called when
-// the plain-fetch attempt below finds nothing, so normal server-rendered
-// pages never touch this and cost stays near zero. Requires the optional
-// SCRAPINGBEE_API_KEY secret — silently skipped (falls through to the
-// existing "no items found" error) if that isn't configured.
-function maskKey(k: string): string {
-  if (k.length <= 10) return '*'.repeat(k.length);
-  return `${k.slice(0, 6)}...${k.slice(-4)} (len ${k.length})`;
-}
-
-// TEMP DEBUG — remove once SCRAPINGBEE_API_KEY is confirmed reaching the
-// container correctly. Logs the request shape with the key masked (not the
-// raw value) so this is safe to leave in briefly, but still delete once
-// diagnosed rather than leaving it long-term.
-async function fetchRenderedHtml(url: URL): Promise<string | null> {
-  const apiKey = Deno.env.get('SCRAPINGBEE_API_KEY');
-  console.log('[extract-menu-from-link] [scrapingbee-debug] SCRAPINGBEE_API_KEY present:', !!apiKey, apiKey ? maskKey(apiKey) : '(unset)');
-  if (!apiKey) return null;
-  try {
-    const beeUrl = new URL('https://app.scrapingbee.com/api/v1/');
-    beeUrl.searchParams.set('api_key', apiKey);
-    beeUrl.searchParams.set('url', url.toString());
-    beeUrl.searchParams.set('render_js', 'true');
-    const templateUrl = beeUrl.toString().replace(apiKey, 'YOUR_API_KEY_HERE');
-    console.log(
-      '[extract-menu-from-link] [scrapingbee-debug] curl equivalent (paste your real key in place of YOUR_API_KEY_HERE — ' +
-      `container's key is ${maskKey(apiKey)}, compare against what you tested locally):\n` +
-      `curl "${templateUrl}"`
-    );
-    const res = await fetch(beeUrl.toString(), { signal: AbortSignal.timeout(30000) });
-    console.log('[extract-menu-from-link] [scrapingbee-debug] Response status:', res.status, 'headers:', JSON.stringify(Object.fromEntries(res.headers.entries())));
-    if (!res.ok) {
-      console.warn('[extract-menu-from-link] ScrapingBee request failed:', res.status, (await res.text()).slice(0, 300));
-      return null;
-    }
-    return await res.text();
-  } catch (e) {
-    console.warn('[extract-menu-from-link] ScrapingBee fetch error:', e);
-    return null;
-  }
 }
 
 interface NormalizedItem {
@@ -416,9 +379,7 @@ ${pageText}
   return { items };
 }
 
-// Plain fetch first (free); only falls back to ScrapingBee's JS-rendered
-// fetch if that finds nothing, so cost stays near zero for the (common)
-// case of server-rendered pages.
+// A plain fetch of the page (server-rendered pages only).
 async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<ExtractResult> {
   let pageText = '';
   try {
@@ -441,34 +402,14 @@ async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<Ext
   if (pageText.length >= 40) {
     const plainResult = await extractItemsFromText(pageText, restaurantName);
     if (plainResult.items.length > 0) return plainResult;
-    console.log('[extract-menu-from-link] Plain fetch found nothing, trying JS-rendered fetch...');
-  } else {
-    console.log('[extract-menu-from-link] Plain fetch got too little text, trying JS-rendered fetch...');
   }
-
-  const renderedHtml = await fetchRenderedHtml(url);
-  if (!renderedHtml) {
-    return {
-      items: [],
-      error:
-        "Couldn't find any real menu items on that page. Make sure the link points directly to your menu " +
-        '(not a locations, contact, or ordering page), or try Manual Entry instead.',
-    };
-  }
-  const renderedText = htmlToText(renderedHtml).slice(0, 12000);
-  if (renderedText.length < 40) {
-    return { items: [], error: 'That page had no readable text content even after JS rendering.' };
-  }
-  const renderedResult = await extractItemsFromText(renderedText, restaurantName);
-  if (renderedResult.items.length === 0) {
-    return {
-      items: [],
-      error:
-        "Couldn't find any real menu items on that page. Make sure the link points directly to your menu " +
-        '(not a locations, contact, or ordering page), or try Manual Entry instead.',
-    };
-  }
-  return renderedResult;
+  return {
+    items: [],
+    error:
+      "Couldn't find any real menu items on that page. Make sure the link points directly to your menu " +
+      '(not a locations, contact, or ordering page, and not a page that only shows a picture of the menu), ' +
+      'or try Manual Entry instead.',
+  };
 }
 
 serve(async (req) => {

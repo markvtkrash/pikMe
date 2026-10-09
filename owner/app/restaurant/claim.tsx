@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Image, } from 'react-native';
+  ActivityIndicator, Image, Modal, ScrollView, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -13,6 +13,10 @@ import { formatDistance } from '../../src/utils/geo';
 import { normalizeForSearch } from '../../src/utils/textMatch';
 import { getOwnerSearchRadiusMeters } from '../../src/constants/searchRadius';
 import type { Restaurant } from '../../src/types';
+import { DataSourcesNotice } from '../../src/components/common/DataSourcesNotice';
+import { CategoryPicker } from '../../src/components/common/CategoryPicker';
+import { getGoogleGuess, getRestaurantCategories } from '../../src/api/categories';
+import { CategoryChoice, cleanChoice, EMPTY_CHOICE, RestaurantCategory, suggestDineIn, validateChoice } from '../../src/utils/categories';
 
 export default function ClaimRestaurantScreen() {
   const router = useRouter();
@@ -32,6 +36,12 @@ export default function ClaimRestaurantScreen() {
   const [hasSearched, setHasSearched] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimedRestaurants, setClaimedRestaurants] = useState<Set<string>>(new Set());
+  // The "tell customers about your place" step shown when Claim is tapped: pre-filled from Google, confirmed or changed by the owner.
+  const [pending, setPending] = useState<Restaurant | null>(null);
+  const [choice, setChoice] = useState<CategoryChoice>(EMPTY_CHOICE);
+  const [categories, setCategories] = useState<RestaurantCategory[]>([]);
+  const [loadingChoice, setLoadingChoice] = useState(false);
+  const [choiceError, setChoiceError] = useState<string | null>(null);
 
   // One owner claims exactly one restaurant — once this owner already has
   // one, this whole search/claim UI has no legitimate reason to show again
@@ -129,8 +139,40 @@ export default function ClaimRestaurantScreen() {
     }
   }
 
+  // Tapping Claim first asks what the place is (pre-filled from Google's guess), then claims.
   async function handleClaim(restaurant: Restaurant) {
-    console.log('[claim] handleClaim called for:', restaurant.placeId);
+    setPending(restaurant);
+    setChoiceError(null);
+    setChoice(EMPTY_CHOICE);
+    setLoadingChoice(true);
+    try {
+      const list = categories.length > 0 ? categories : await getRestaurantCategories();
+      setCategories(list);
+      const guess = await getGoogleGuess(restaurant.cuisineTypes ?? []);
+      // Dine-in is pre-ticked for a Restaurant or Bar (Google does not say); the owner confirms or unticks it
+      setChoice(suggestDineIn(cleanChoice(guess, list), list));
+    } catch (error: any) {
+      console.error('[claim] Could not load the categories:', error);
+      setChoiceError('Could not load the choices. Close this and try again.');
+    } finally {
+      setLoadingChoice(false);
+    }
+  }
+
+  async function confirmClaim() {
+    if (!pending) return;
+    const problem = validateChoice(choice);
+    if (problem) {
+      setChoiceError(problem);
+      return;
+    }
+    const restaurant = pending;
+    setPending(null);
+    await doClaim(restaurant, choice);
+  }
+
+  async function doClaim(restaurant: Restaurant, picked: CategoryChoice) {
+    console.log('[claim] doClaim called for:', restaurant.placeId);
 
     if (!session?.access_token) {
       console.error('[claim] No session token');
@@ -149,7 +191,8 @@ export default function ClaimRestaurantScreen() {
         restaurant.placeId,
         restaurant.name,
         restaurant.location.address,
-        session.access_token
+        session.access_token,
+        picked
       );
 
       console.log('[claim] Claim result received:', JSON.stringify(claimResult, null, 2));
@@ -203,6 +246,8 @@ export default function ClaimRestaurantScreen() {
         <Text style={styles.infoIcon}>⏳</Text>
         <Text style={styles.infoText}>Once you claim a restaurant below, an admin will need to review and approve it before you can manage coupons for it.</Text>
       </View>
+
+      <DataSourcesNotice variant="google" />
 
       <TouchableOpacity
         style={[styles.currentLocationBtn, loading && styles.searchBtnDisabled]}
@@ -332,12 +377,56 @@ export default function ClaimRestaurantScreen() {
           )
         }
       />
+
+      <Modal visible={!!pending} transparent animationType="fade" onRequestClose={() => setPending(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Tell customers about your place</Text>
+            <Text style={styles.modalSubtitle}>{pending?.name}</Text>
+            <Text style={styles.modalHint}>We filled this in from Google. Change anything that is not right, so customers find you in the right filters.</Text>
+            {loadingChoice ? (
+              <ActivityIndicator size="small" color="#1565C0" style={{ marginVertical: 24 }} />
+            ) : (
+              <ScrollView style={styles.modalScroll}>
+                <CategoryPicker categories={categories} value={choice} onChange={(next) => { setChoice(next); setChoiceError(null); }} />
+              </ScrollView>
+            )}
+            {!!choiceError && <Text style={styles.modalError}>{choiceError}</Text>}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setPending(null)} accessibilityRole="button">
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalConfirm, (loadingChoice || categories.length === 0) && styles.modalConfirmDisabled]}
+                onPress={confirmClaim}
+                disabled={loadingChoice || categories.length === 0}
+                accessibilityRole="button"
+              >
+                <Text style={styles.modalConfirmText}>Confirm and claim</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  modalCard: { width: '100%', maxWidth: 520, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 16, padding: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#222' },
+  modalSubtitle: { fontSize: 14, color: '#666', marginTop: 2 },
+  modalHint: { fontSize: 12, color: '#888', marginTop: 8, marginBottom: 12, lineHeight: 17 },
+  modalScroll: { flexGrow: 0, maxHeight: 420 },
+  modalError: { fontSize: 12, color: '#c62828', marginTop: 8 },
+  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 14 },
+  modalCancel: { paddingHorizontal: 16, paddingVertical: 11 },
+  modalCancelText: { color: '#666', fontWeight: '700', fontSize: 14 },
+  modalConfirm: { backgroundColor: '#1565C0', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 11 },
+  modalConfirmDisabled: { opacity: 0.5 },
+  modalConfirmText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 16 },

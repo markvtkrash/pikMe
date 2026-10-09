@@ -5,6 +5,7 @@ import {
 import { Alert } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getAllRestaurants, AdminRestaurant, RestaurantStatus } from '../../src/api/restaurants';
+import { RestaurantCategoriesModal } from '../../src/components/common/RestaurantCategoriesModal';
 
 type StatusFilter = 'all' | RestaurantStatus;
 
@@ -28,6 +29,8 @@ export default function AdminRestaurantsScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<StatusFilter>('all');
+  // the restaurant whose categories (what it is, how you get the food, what it serves) are being edited
+  const [editingCategories, setEditingCategories] = useState<{ id: string; name: string } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -123,6 +126,9 @@ export default function AdminRestaurantsScreen() {
                   <Text style={styles.restaurantDate}>
                     Claimed {new Date(item.claimed_at).toLocaleDateString()}
                   </Text>
+                  <TouchableOpacity onPress={() => setEditingCategories({ id: item.id, name: item.name })} accessibilityRole="button">
+                    <Text style={styles.categoriesLink}>🏷️ Categories</Text>
+                  </TouchableOpacity>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
                   <Text style={[styles.statusText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
@@ -133,6 +139,11 @@ export default function AdminRestaurantsScreen() {
           contentContainerStyle={styles.list}
         />
       )}
+      <RestaurantCategoriesModal
+        restaurantId={editingCategories?.id ?? null}
+        restaurantName={editingCategories?.name ?? ''}
+        onClose={() => setEditingCategories(null)}
+      />
     </View>
     </View>
   );
@@ -162,6 +173,7 @@ const styles = StyleSheet.create({
   restaurantAddress: { fontSize: 12, color: '#666', marginBottom: 4 },
   restaurantOwner: { fontSize: 12, color: '#1565C0', fontWeight: '600', marginBottom: 2 },
   restaurantDate: { fontSize: 11, color: '#999' },
+  categoriesLink: { fontSize: 12, fontWeight: '800', color: '#1565C0', marginTop: 6 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
 

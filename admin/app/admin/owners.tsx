@@ -8,9 +8,10 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import {
   adminListOwners, adminSetOwnerActive, adminSetRestaurantStatus,
-  adminUpdateOwner, adminReassignOwner, AdminOwnerRow,
+  adminUpdateOwner, adminReassignOwner, adminDeleteRestaurant, AdminOwnerRow,
 } from '../../src/api/restaurantAuth';
 import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
+import { buildDeleteMessage } from '../../src/utils/restaurantDelete';
 
 function generatePassword(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -141,6 +142,46 @@ export default function AdminOwnersScreen() {
     });
   }
 
+  // Permanent delete of a closed restaurant (migration 091). A dry run first, so the confirm window
+  // can say exactly what will be removed; the owner login stays and just has no restaurant.
+  async function handleDeleteRestaurant(owner: AdminOwnerRow) {
+    if (!owner.restaurant_id || owner.restaurant_status !== 'closed') return;
+    const restaurantId = owner.restaurant_id;
+    setBusyId(owner.owner_id);
+    let counts;
+    try {
+      counts = await adminDeleteRestaurant(restaurantId, true);
+    } catch (error: any) {
+      setBusyId(null);
+      Alert.alert('Error', error.message || 'Could not check what would be deleted');
+      return;
+    }
+    setBusyId(null);
+    setConfirmAction({
+      title: 'Delete restaurant permanently?',
+      message: buildDeleteMessage(counts),
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: async () => {
+        setBusyId(owner.owner_id);
+        try {
+          await adminDeleteRestaurant(restaurantId, false);
+          setOwners((prev) =>
+            prev.map((o) =>
+              o.owner_id === owner.owner_id
+                ? { ...o, restaurant_id: null, restaurant_name: null, restaurant_status: null, claimed_at: null, google_place_id: null, restaurant_address: null }
+                : o
+            )
+          );
+        } catch (error: any) {
+          Alert.alert('Error', error.message || 'Failed to delete restaurant');
+        } finally {
+          setBusyId(null);
+        }
+      },
+    });
+  }
+
   function openEdit(owner: AdminOwnerRow) {
     setEditTarget(owner);
     setEditBusinessName(owner.business_name);
@@ -216,7 +257,9 @@ export default function AdminOwnersScreen() {
     return (
       o.business_name.toLowerCase().includes(q) ||
       o.email.toLowerCase().includes(q) ||
-      (o.restaurant_name ?? '').toLowerCase().includes(q)
+      (o.restaurant_name ?? '').toLowerCase().includes(q) ||
+      (o.restaurant_address ?? '').toLowerCase().includes(q) ||
+      (o.google_place_id ?? '').toLowerCase().includes(q)
     );
   });
 
@@ -239,7 +282,7 @@ export default function AdminOwnersScreen() {
         <View style={styles.filterBox}>
           <TextInput
             style={styles.filterInput}
-            placeholder="Filter by owner, email, or restaurant..."
+            placeholder="Filter by owner, email, restaurant, address, or place ID..."
             placeholderTextColor="#999"
             value={filter}
             onChangeText={setFilter}
@@ -278,6 +321,14 @@ export default function AdminOwnersScreen() {
                 ) : (
                   <Text style={styles.noRestaurant}>No restaurant claimed</Text>
                 )}
+                {!!item.restaurant_id && !!item.restaurant_address && (
+                  <Text style={styles.address} selectable>📍 {item.restaurant_address}</Text>
+                )}
+                {!!item.restaurant_id && (
+                  <Text style={styles.placeId} selectable>
+                    Place ID: {item.google_place_id ?? 'not returned by the server (run migration 083)'}
+                  </Text>
+                )}
 
                 <View style={styles.actionsRow}>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)} disabled={isBusy}>
@@ -315,6 +366,16 @@ export default function AdminOwnersScreen() {
                       <Text style={[styles.actionBtnText, isClosed ? styles.actionBtnOkText : styles.actionBtnWarnText]}>
                         {isClosed ? '🔓 Reopen' : '🔒 Mark Closed'}
                       </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {item.restaurant_id && isClosed && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.actionBtnWarn]}
+                      onPress={() => handleDeleteRestaurant(item)}
+                      disabled={isBusy}
+                    >
+                      <Text style={[styles.actionBtnText, styles.actionBtnWarnText]}>🗑 Delete</Text>
                     </TouchableOpacity>
                   )}
 
@@ -507,6 +568,8 @@ const styles = StyleSheet.create({
   restaurantRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   restaurantName: { fontSize: 13, fontWeight: '700', color: '#333', flex: 1, minWidth: 0 },
   restaurantNameClosed: { color: '#c62828' },
+  address: { fontSize: 12, color: '#555', marginTop: 2 },
+  placeId: { fontSize: 11, color: '#888', marginTop: 2 },
   noRestaurant: { fontSize: 12, color: '#999', fontStyle: 'italic', marginBottom: 10 },
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, flexShrink: 0 },

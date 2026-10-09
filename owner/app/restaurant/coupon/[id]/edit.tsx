@@ -68,7 +68,7 @@ export default function EditCouponScreen() {
       console.log('[edit] Loading coupon:', id, 'for restaurant:', restaurant.id);
       const [coupons, menuItems] = await Promise.all([
         getRestaurantCoupons(restaurant.id),
-        getRestaurantMenuItems(restaurant.name),
+        getRestaurantMenuItems(restaurant.name, restaurant.google_place_id),
       ]);
       console.log('[edit] Loaded coupons:', coupons);
       setCurrentItems(menuItems);

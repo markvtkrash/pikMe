@@ -91,7 +91,8 @@ function hasCuisineMatch(
   restaurant: Restaurant,
   preferences: UserProfile['cuisinePreferences']
 ): boolean {
-  const types = restaurant.cuisineTypes.map((t) => t.toLowerCase());
+  // Google's types plus the cuisines (the owner's choice, else a guess) the server worked out, so an owner's answer counts too
+  const types = [...restaurant.cuisineTypes, ...(restaurant.cuisines ?? [])].map((t) => t.toLowerCase());
   return preferences.some((p) => types.some((t) => t.includes(p)));
 }
 
@@ -193,12 +194,17 @@ function buildRecommendation(
 // customer isn't left with a near-empty or empty list.
 const MIN_VERIFIED_ITEMS = 10;
 
+// How many ranked items a restaurant page shows. A restaurant with confirmed items shows up to 30 of them (best match
+// first); a list with no confirmed item at all is AI guesses (about 15 of them), which keeps the smaller cap.
+export const MAX_ITEMS_WITH_CONFIRMED = 30;
+export const MAX_ITEMS_UNCONFIRMED_ONLY = 20;
+
 export function scoreAndRankItems(
   profile: UserProfile,
   items: MenuItem[],
   restaurant: Restaurant,
-  // Item ids with an active coupon. Any of these that fall outside the top-20
-  // cap are appended after it (in their existing score order) rather than
+  // Item ids with an active coupon. Any of these that fall outside the cap
+  // (30 with confirmed items, else 20) are appended after it (in their existing score order) rather than
   // dropped — a coupon shouldn't silently disappear from the page just
   // because personalization ranked it below the cutoff.
   couponItemIds?: Set<string>
@@ -224,15 +230,16 @@ export function scoreAndRankItems(
   const unverified = ranked.filter((r) => !r.menuItem.isVerified);
   const combined = verified.length >= MIN_VERIFIED_ITEMS ? verified : [...verified, ...unverified];
 
-  const top20 = combined.slice(0, 20);
+  const cap = verified.length > 0 ? MAX_ITEMS_WITH_CONFIRMED : MAX_ITEMS_UNCONFIRMED_ONLY;
+  const top = combined.slice(0, cap);
 
-  let final = top20;
+  let final = top;
   if (couponItemIds && couponItemIds.size > 0) {
-    const includedIds = new Set(top20.map((r) => r.menuItem.itemId));
+    const includedIds = new Set(top.map((r) => r.menuItem.itemId));
     const missedCoupons = combined.filter(
       (r) => couponItemIds.has(r.menuItem.itemId) && !includedIds.has(r.menuItem.itemId)
     );
-    if (missedCoupons.length > 0) final = [...top20, ...missedCoupons];
+    if (missedCoupons.length > 0) final = [...top, ...missedCoupons];
   }
 
   return final.map((rec, i) => ({ ...rec, rank: i + 1 }));
