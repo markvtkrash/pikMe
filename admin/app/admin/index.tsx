@@ -8,6 +8,7 @@ import { supabase } from '../../src/api/supabase';
 import { getOpenTicketCounts } from '../../src/api/supportTickets';
 import { PasswordChangeModal } from './PasswordChangeModal';
 import { BRAND_NAME } from '../../src/constants/brand';
+import { AppIcon, IconText } from '../../src/components/common/AppIcon';
 
 interface Stats {
   totalUsers: number;
@@ -180,6 +181,25 @@ export default function AdminDashboard() {
     );
   }
 
+  // The dashboard shortcuts. A red number on a card is a count that needs attention; the small line is extra detail.
+  const tiles: { key: string; icon: string; title: string; href: string; color: string; bg: string; count?: number; detail?: string }[] = [
+    { key: 'claims', icon: '📋', title: 'Pending Claims', href: '/admin/claims', color: '#1565C0', bg: '#E3F2FD', count: stats.pendingClaims },
+    { key: 'relocations', icon: '📍', title: 'Relocation Requests', href: '/admin/relocations', color: '#00796B', bg: '#E0F2F1', count: stats.pendingRelocations },
+    { key: 'menu', icon: '🍽️', title: 'Menu Management', href: '/admin/menu-management', color: '#7B1FA2', bg: '#F3E5F5' },
+    { key: 'coupons', icon: '🎟️', title: 'Coupon Management', href: '/admin/coupons', color: '#E65100', bg: '#FFF3E0', count: stats.totalCoupons, detail: `${stats.activeCoupons} active` },
+    { key: 'owners', icon: '🏪', title: 'Manage Restaurants', href: '/admin/owners', color: '#C2185B', bg: '#FCE4EC' },
+    { key: 'users', icon: '👥', title: 'Manage Users', href: '/admin/users', color: '#0277BD', bg: '#E1F5FE', count: stats.totalUsers },
+    { key: 'create-owner', icon: '➕', title: 'Create Restaurant Owner', href: '/admin/create-owner', color: '#3949AB', bg: '#E8EAF6' },
+    { key: 'reports', icon: '📊', title: 'Reports', href: '/admin/reports', color: '#F9A825', bg: '#FFFDE7' },
+    { key: 'franchise-lookup', icon: '🍔', title: 'Franchise Lookup', href: '/admin/franchises', color: '#455A64', bg: '#ECEFF1' },
+    { key: 'franchise-menus', icon: '🔗', title: 'Franchise Menu Management', href: '/admin/chain-menus', color: '#455A64', bg: '#ECEFF1' },
+    { key: 'tools', icon: '🧰', title: 'Tools', href: '/admin/tools', color: '#455A64', bg: '#ECEFF1', detail: 'Scheduled builds · App config' },
+    {
+      key: 'support', icon: '🎧', title: 'Support', href: '/admin/tickets?status=open', color: '#C62828', bg: '#FFEBEE', count: stats.openTickets,
+      detail: stats.openTickets > 0 ? `${stats.openOwnerTickets} owner · ${stats.openConsumerTickets} consumer` : undefined,
+    },
+  ];
+
   return (
     <View style={{ flex: 1 }}>
     <ScrollView style={styles.container}>
@@ -200,7 +220,7 @@ export default function AdminDashboard() {
             style={styles.settingsBtn}
             onPress={() => setShowSettingsMenu(!showSettingsMenu)}
           >
-            <Text style={styles.settingsBtnText}>⚙️</Text>
+            <IconText style={styles.settingsBtnText} emoji="⚙️" />
           </TouchableOpacity>
         </View>
       </View>
@@ -210,133 +230,27 @@ export default function AdminDashboard() {
       <Text style={styles.sectionTitle}>Administration</Text>
 
       <View style={styles.adminTilesGrid}>
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileClaims]}
-          onPress={() => router.push('/admin/claims')}
-        >
-          {stats.pendingClaims > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.pendingClaims}</Text>
+        {tiles.map((t) => (
+          <TouchableOpacity
+            key={t.key}
+            style={[styles.adminTile, { backgroundColor: t.bg, borderColor: t.color }]}
+            onPress={() => router.push(t.href as any)}
+            accessibilityRole="button"
+          >
+            {!!t.count && t.count > 0 && (
+              <View style={styles.adminTileBadge}>
+                <Text style={styles.adminTileBadgeText}>{t.count}</Text>
+              </View>
+            )}
+            <View style={styles.adminTileTop}>
+              <View style={[styles.adminTileCircle, { backgroundColor: t.color }]}>
+                <AppIcon emoji={t.icon} size={16} color="#fff" />
+              </View>
+              <Text style={[styles.adminTileTitle, { color: t.color }]} numberOfLines={2}>{t.title}</Text>
             </View>
-          )}
-          <Text style={styles.adminTileIcon}>📋</Text>
-          <Text style={styles.adminTileTitle}>Pending Claims</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileRelocations]}
-          onPress={() => router.push('/admin/relocations')}
-        >
-          {stats.pendingRelocations > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.pendingRelocations}</Text>
-            </View>
-          )}
-          <Text style={styles.adminTileIcon}>📍</Text>
-          <Text style={styles.adminTileTitle}>Relocation Requests</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileMenuManagement]}
-          onPress={() => router.push('/admin/menu-management')}
-        >
-          <Text style={styles.adminTileIcon}>📋</Text>
-          <Text style={styles.adminTileTitle}>Menu Management</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileCoupons]}
-          onPress={() => router.push('/admin/coupons')}
-        >
-          {stats.totalCoupons > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.totalCoupons}</Text>
-            </View>
-          )}
-          <Text style={styles.adminTileIcon}>🎟️</Text>
-          <Text style={styles.adminTileTitle}>Coupon Management</Text>
-          <Text style={styles.adminTileDetail}>{stats.activeCoupons} active</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileOwner]}
-          onPress={() => router.push('/admin/owners')}
-        >
-          <Text style={styles.adminTileIcon}>🏪</Text>
-          <Text style={styles.adminTileTitle}>Manage Restaurants</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileUsers]}
-          onPress={() => router.push('/admin/users')}
-        >
-          {stats.totalUsers > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.totalUsers}</Text>
-            </View>
-          )}
-          <Text style={styles.adminTileIcon}>👥</Text>
-          <Text style={styles.adminTileTitle}>Manage Users</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileCreateOwner]}
-          onPress={() => router.push('/admin/create-owner')}
-        >
-          <Text style={styles.adminTileIcon}>➕</Text>
-          <Text style={styles.adminTileTitle}>Create Restaurant Owner</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileReports]}
-          onPress={() => router.push('/admin/reports')}
-        >
-          <Text style={styles.adminTileIcon}>📊</Text>
-          <Text style={styles.adminTileTitle}>Reports</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileConfig]}
-          onPress={() => router.push('/admin/franchises')}
-        >
-          <Text style={styles.adminTileIcon}>🍔</Text>
-          <Text style={styles.adminTileTitle}>Franchise Lookup</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileConfig]}
-          onPress={() => router.push('/admin/chain-menus')}
-        >
-          <Text style={styles.adminTileIcon}>🔗</Text>
-          <Text style={styles.adminTileTitle}>Franchise Menu Management</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileConfig]}
-          onPress={() => router.push('/admin/tools')}
-        >
-          <Text style={styles.adminTileIcon}>🧰</Text>
-          <Text style={styles.adminTileTitle}>Tools</Text>
-          <Text style={styles.adminTileDetail}>Scheduled builds · App config</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.adminTile, styles.adminTileSupport]}
-          onPress={() => router.push('/admin/tickets?status=open')}
-        >
-          {stats.openTickets > 0 && (
-            <View style={styles.adminTileBadge}>
-              <Text style={styles.adminTileBadgeText}>{stats.openTickets}</Text>
-            </View>
-          )}
-          <Text style={styles.adminTileIcon}>🎧</Text>
-          <Text style={styles.adminTileTitle}>Support</Text>
-          {stats.openTickets > 0 && (
-            <Text style={styles.adminTileDetail}>
-              {stats.openOwnerTickets} owner · {stats.openConsumerTickets} consumer
-            </Text>
-          )}
-        </TouchableOpacity>
+            {!!t.detail && <Text style={styles.adminTileDetail}>{t.detail}</Text>}
+          </TouchableOpacity>
+        ))}
       </View>
       </View>
     </ScrollView>
@@ -348,13 +262,13 @@ export default function AdminDashboard() {
           style={styles.settingsOption}
           onPress={handleChangePasswordClick}
         >
-          <Text style={styles.settingsOptionText}>🔐 Change Password</Text>
+          <IconText style={styles.settingsOptionText} emoji="🔐">Change Password</IconText>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.settingsOption}
           onPress={handleLogout}
         >
-          <Text style={styles.settingsOptionTextLogout}>🚪 Logout</Text>
+          <IconText style={styles.settingsOptionTextLogout} emoji="🚪">Logout</IconText>
         </TouchableOpacity>
       </View>
     )}
@@ -366,7 +280,7 @@ export default function AdminDashboard() {
     <Modal visible={showEasterEgg} transparent animationType="fade" onRequestClose={() => setShowEasterEgg(false)}>
       <View style={styles.easterEggOverlay}>
         <View style={styles.easterEggCard}>
-          <Text style={styles.easterEggIcon}>🎉</Text>
+          <IconText style={styles.easterEggIcon} emoji="🎉" />
           <Text style={styles.easterEggText}>Built with ❤️ by</Text>
           <Text style={styles.easterEggName}>Vikram R Vallurupalli</Text>
           <Text style={styles.easterEggRole}>Lead Engineer</Text>
@@ -420,29 +334,22 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   adminTile: {
-    width: '31%',
-    backgroundColor: '#fff',
+    width: '32%',
+    minWidth: 200,
+    minHeight: 64,
     borderRadius: 12,
-    paddingVertical: 18,
-    paddingHorizontal: 10,
-    alignItems: 'center',
-    gap: 6,
-    elevation: 1,
+    borderWidth: 2,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    gap: 4,
     position: 'relative',
   },
-  adminTileClaims: { backgroundColor: '#E3F2FD' },
-  adminTileRelocations: { backgroundColor: '#B2DFDB' },
-  adminTileCoupons: { backgroundColor: '#FFF3E0' },
-  adminTileMenuManagement: { backgroundColor: '#E0F2F1' },
-  adminTileOwner: { backgroundColor: '#FCE4EC' },
-  adminTileUsers: { backgroundColor: '#E0F7FA' },
-  adminTileCreateOwner: { backgroundColor: '#E8EAF6' },
-  adminTileReports: { backgroundColor: '#FFF9C4' },
-  adminTileConfig: { backgroundColor: '#ECEFF1' },
-  adminTileSupport: { backgroundColor: '#CFD8DC' },
+  adminTileTop: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 18 },
+  adminTileCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   adminTileIcon: { fontSize: 26 },
-  adminTileTitle: { fontSize: 13, fontWeight: '700', color: '#222', textAlign: 'center' },
-  adminTileDetail: { fontSize: 11, fontWeight: '700', color: '#1565C0', marginTop: 2 },
+  adminTileTitle: { flex: 1, fontSize: 14, fontWeight: '800' },
+  adminTileDetail: { fontSize: 11.5, fontWeight: '700', color: '#37474F', marginLeft: 44 },
   adminTileBadge: {
     position: 'absolute', top: 8, right: 8, backgroundColor: '#e53e3e', borderRadius: 10,
     minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,

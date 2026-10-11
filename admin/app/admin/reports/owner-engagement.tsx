@@ -6,6 +6,7 @@ import {
   getOwnerStatusSnapshot, getOwnersNeedingAttention,
   OwnerStatusSnapshot, OwnerNeedingAttention,
 } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function AdminOwnerEngagementReport() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function AdminOwnerEngagementReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>👤 Owner Engagement</Text>
+      <IconText style={styles.title} emoji="👤">Owner Engagement</IconText>
       <Text style={styles.subtitle}>Active/deactivated owners, plus who still needs a nudge</Text>
 
       <Text style={styles.sectionTitle}>Owner Status</Text>
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#222', paddingTop: 20, paddingBottom: 8 },
   hint: { fontSize: 11, color: '#999', marginTop: -4, marginBottom: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   emptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
 
   snapshotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

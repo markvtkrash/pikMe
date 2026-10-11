@@ -6,6 +6,7 @@ import { Alert } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getAllRestaurants, AdminRestaurant, RestaurantStatus } from '../../src/api/restaurants';
 import { RestaurantCategoriesModal } from '../../src/components/common/RestaurantCategoriesModal';
+import { IconText } from '../../src/components/common/AppIcon';
 
 type StatusFilter = 'all' | RestaurantStatus;
 
@@ -105,7 +106,7 @@ export default function AdminRestaurantsScreen() {
 
       {filteredRestaurants.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🍽️</Text>
+          <IconText style={styles.emptyIcon} emoji="🍽️" />
           <Text style={styles.emptyText}>No restaurants found</Text>
         </View>
       ) : (
@@ -127,7 +128,7 @@ export default function AdminRestaurantsScreen() {
                     Claimed {new Date(item.claimed_at).toLocaleDateString()}
                   </Text>
                   <TouchableOpacity onPress={() => setEditingCategories({ id: item.id, name: item.name })} accessibilityRole="button">
-                    <Text style={styles.categoriesLink}>🏷️ Categories</Text>
+                    <IconText style={styles.categoriesLink} emoji="🏷️">Categories</IconText>
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
@@ -164,10 +165,10 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#1565C0' },
 
   searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
-  searchInput: { backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222' },
+  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, elevation: 1 },
+  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   restaurantInfo: { flex: 1 },
   restaurantName: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
   restaurantAddress: { fontSize: 12, color: '#666', marginBottom: 4 },

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { Alert } from '../../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getCouponStatusSnapshot, CouponStatusSnapshot } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function AdminCouponStatusReport() {
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function AdminCouponStatusReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🎟️ Coupon Status</Text>
+      <IconText style={styles.title} emoji="🎟️">Coupon Status</IconText>
       <Text style={styles.subtitle}>Active, inactive, expired, and orphaned right now — across all restaurants</Text>
 
       <View style={styles.snapshotRow}>

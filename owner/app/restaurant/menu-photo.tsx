@@ -12,6 +12,7 @@ import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
 import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
+import { IconText } from '../../src/components/common/AppIcon';
 
 // Resized/compressed client-side before it ever leaves the device — a raw
 // phone photo can be several MB, and neither the payload size nor the
@@ -105,11 +106,11 @@ export default function MenuPhotoScreen() {
       <ScrollView style={styles.content}>
         {!!resultMessage && (
           <View style={styles.successBanner}>
-            <Text style={styles.successBannerText}>✅ {resultMessage}</Text>
+            <IconText style={styles.successBannerText} emoji="✅">{resultMessage}</IconText>
           </View>
         )}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📷 Scan a Menu Photo</Text>
+          <IconText style={styles.cardTitle} emoji="📷">Scan a Menu Photo</IconText>
           <Text style={styles.cardHint}>
             Upload a clear photo of your printed menu. We'll read the real dish names directly from it —
             we never invent items that aren't in the photo. This adds to your existing menu without
@@ -160,9 +161,9 @@ const styles = StyleSheet.create({
   content: { padding: 16 },
   successBanner: { backgroundColor: '#E3F2FD', borderLeftWidth: 4, borderLeftColor: '#1565C0', borderRadius: 10, padding: 14, marginBottom: 12 },
   successBannerText: { fontSize: 14, fontWeight: '700', color: '#0D47A1', lineHeight: 20 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   preview: { width: '100%', height: 280, borderRadius: 10, backgroundColor: '#f0f0f0', marginBottom: 14 },
 

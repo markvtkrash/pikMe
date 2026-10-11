@@ -8,6 +8,7 @@ import { getRestaurantCoupons, getRestaurantMenuItems, updateCoupon, deleteCoupo
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
+import { IconText, IconLabel } from '../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -201,7 +202,7 @@ export default function CouponStatusScreen() {
         </View>
       </View>
 
-      <Text style={styles.filterHint}>👆 Select one or more to filter</Text>
+      <IconText style={styles.filterHint} emoji="👆">Select one or more to filter</IconText>
       <View style={styles.filterRow}>
         {STATUS_FILTERS.map((f) => {
           const selected = selectedFilters.has(f.key);
@@ -214,7 +215,7 @@ export default function CouponStatusScreen() {
               <View style={[styles.checkbox, { borderColor: f.color }, selected && { backgroundColor: f.color }]}>
                 {selected && <Text style={styles.checkboxMark}>✓</Text>}
               </View>
-              <Text style={[styles.filterCheckLabel, { color: f.color }]}>{f.label}</Text>
+              <IconLabel label={f.label} style={[styles.filterCheckLabel, { color: f.color }]} />
             </TouchableOpacity>
           );
         })}
@@ -222,12 +223,12 @@ export default function CouponStatusScreen() {
 
       {selectedFilters.size === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🎟️</Text>
+          <IconText style={styles.emptyIcon} emoji="🎟️" />
           <Text style={styles.emptyText}>Pick at least one status above</Text>
         </View>
       ) : filteredRows.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🎟️</Text>
+          <IconText style={styles.emptyIcon} emoji="🎟️" />
           <Text style={styles.emptyText}>No coupons match</Text>
         </View>
       ) : (
@@ -243,7 +244,7 @@ export default function CouponStatusScreen() {
                 <View style={styles.badgeRow}>
                   {STATUS_FILTERS.filter((f) => statuses.has(f.key)).map((f) => (
                     <View key={f.key} style={[styles.statusBadge, { backgroundColor: f.color }]}>
-                      <Text style={styles.statusBadgeText}>{f.label}</Text>
+                      <IconLabel label={f.label} style={styles.statusBadgeText} />
                     </View>
                   ))}
                 </View>
@@ -333,7 +334,7 @@ export default function CouponStatusScreen() {
                     onPress={() => handleDelete(coupon.id, coupon.coupon_code)}
                     disabled={busy}
                   >
-                    {busy ? <ActivityIndicator size="small" color="#e53e3e" /> : <Text style={styles.deleteBtnText}>🗑️ Delete</Text>}
+                    {busy ? <ActivityIndicator size="small" color="#e53e3e" /> : <IconText style={styles.deleteBtnText} emoji="🗑️">Delete</IconText>}
                   </TouchableOpacity>
                 </View>
 
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  count: { fontSize: 12, color: '#999' },
+  count: { fontSize: 12, color: '#546E7A' },
 
   filterHint: {
     fontSize: 14, fontWeight: '700', color: '#1565C0', paddingHorizontal: 16, paddingTop: 12,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   filterCheckLabel: { fontSize: 13, fontWeight: '700' },
 
   list: { padding: 16 },
-  couponCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
+  couponCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
   statusBadgeText: { fontSize: 10, fontWeight: '800', color: '#fff' },
@@ -424,7 +425,7 @@ const styles = StyleSheet.create({
 
   itemPicker: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   itemPickerLabel: { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 8 },
-  noItemsText: { fontSize: 12, color: '#999', fontStyle: 'italic' },
+  noItemsText: { fontSize: 12, color: '#546E7A', fontStyle: 'italic' },
   itemOption: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#f6f6f6', borderRadius: 8, marginBottom: 6 },
   itemOptionText: { fontSize: 13, color: '#222', fontWeight: '600' },
 

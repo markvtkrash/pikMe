@@ -5,6 +5,7 @@ import { getTopCoupons, TopCouponRow } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../../src/hooks/useFavoritePages';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function TopCouponsReport() {
   const { restaurant } = useRestaurantOwnerStore();
@@ -44,7 +45,7 @@ export default function TopCouponsReport() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>🏆 Top Performing Coupons</Text>
+        <IconText style={styles.title} emoji="🏆">Top Performing Coupons</IconText>
         <FavoriteHeart
           active={favorites.has('report-top-coupons')}
           onPress={() => toggleFavorite('report-top-coupons')}
@@ -90,23 +91,23 @@ const styles = StyleSheet.create({
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
+  subtitle: { fontSize: 13, color: '#546E7A', marginBottom: 16 },
 
   card: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', elevation: 1 },
   emptyList: { alignItems: 'center', paddingVertical: 40 },
   emptyListText: { fontSize: 16, fontWeight: '600', color: '#222' },
-  emptyListSubtext: { fontSize: 12, color: '#999', marginTop: 4 },
+  emptyListSubtext: { fontSize: 12, color: '#546E7A', marginTop: 4 },
 
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
   },
-  rank: { width: 20, fontSize: 14, fontWeight: '800', color: '#999' },
+  rank: { width: 20, fontSize: 14, fontWeight: '800', color: '#546E7A' },
   info: { flex: 1, minWidth: 0 },
   codeBadge: { backgroundColor: '#E3F2FD', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
   codeBadgeText: { fontSize: 12, fontWeight: '800', color: '#1565C0' },
-  usage: { fontSize: 11, color: '#888', marginTop: 4 },
+  usage: { fontSize: 11, color: '#546E7A', marginTop: 4 },
   stats: { alignItems: 'flex-end' },
   redemptions: { fontSize: 16, fontWeight: '800', color: '#1565C0' },
-  redemptionsLabel: { fontSize: 10, color: '#999' },
+  redemptionsLabel: { fontSize: 10, color: '#546E7A' },
 });

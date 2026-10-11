@@ -6,6 +6,7 @@ import {
   getMenuHealthSnapshot, getMenuHealthByRestaurant, getRestaurantsNoMenuItems,
   MenuHealthSnapshot, MenuHealthByRestaurantRow, RestaurantNoMenuItems,
 } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', approved: 'Approved', rejected: 'Rejected', closed: 'Closed',
@@ -63,7 +64,7 @@ export default function AdminMenuHealthReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🍽️ Menu Data Health</Text>
+      <IconText style={styles.title} emoji="🍽️">Menu Data Health</IconText>
       <Text style={styles.subtitle}>Verified vs unverified items, and gaps by restaurant</Text>
 
       <View style={styles.snapshotRow}>
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
   subsectionTitle: { fontSize: 12, fontWeight: '700', color: '#888', paddingTop: 16, paddingBottom: 6, textTransform: 'uppercase', letterSpacing: 0.3 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   emptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
 
   snapshotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

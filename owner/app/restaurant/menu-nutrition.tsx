@@ -14,6 +14,7 @@ import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { parseNutritionText } from '../../src/utils/parseNutritionText';
 import { bestFuzzyMatch } from '../../src/utils/stringSimilarity';
+import { IconText } from '../../src/components/common/AppIcon';
 
 const PLACEHOLDER =
   'e.g.\n' +
@@ -178,7 +179,7 @@ export default function MenuNutritionScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🥗 Real Nutrition Info (Optional)</Text>
+          <IconText style={styles.cardTitle} emoji="🥗">Real Nutrition Info (Optional)</IconText>
           <Text style={styles.cardHint}>
             Know the actual calories or macros for some dishes — from a recipe, supplier spec sheet, or
             printed nutrition guide? Paste them below, one dish per line, matched against your existing
@@ -287,9 +288,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   textArea: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
   previewRow: { paddingVertical: 4, gap: 6 },
   previewMain: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
   previewName: { flex: 1, fontSize: 13, fontWeight: '600', color: '#333' },
-  previewMeta: { fontSize: 12, color: '#888' },
+  previewMeta: { fontSize: 12, color: '#546E7A' },
 
   aiSuggestionBox: {
     backgroundColor: '#FFF3E0', borderRadius: 8, borderWidth: 1, borderColor: '#FFB74D',

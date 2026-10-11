@@ -6,7 +6,8 @@ import {
 import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
-import { isBooleanValue, nextBooleanValue, switchQuestion } from '../../src/utils/configValues';
+import { isBooleanValue, nextBooleanValue, switchQuestion, QUICK_SWITCHES, quickSwitchQuestion } from '../../src/utils/configValues';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 interface ConfigRow {
   key: string;
@@ -29,6 +30,11 @@ export default function AdminConfigScreen() {
   const [adding, setAdding] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState<ConfigRow | null>(null);
+  // Everything is read-only until Edit is pressed on a row (one row at a time); Add opens its own window.
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+
+  const chain = useEnterChain(4, () => handleAdd());
 
   useFocusEffect(
     useCallback(() => {
@@ -70,6 +76,7 @@ export default function AdminConfigScreen() {
         .eq('key', row.key);
       if (error) throw error;
       setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, value: nextValue } : r)));
+      setEditingKey(null);
     } catch (error: any) {
       console.error('[admin-config] Save error:', error);
       Alert.alert('Error', error.message || 'Failed to save value');
@@ -79,9 +86,10 @@ export default function AdminConfigScreen() {
   }
 
   // A true/false value is switched with one button (after a short question), and saved at once.
-  async function handleToggle(row: ConfigRow) {
+  async function handleToggle(row: ConfigRow, question?: { title: string; message: string; confirmText: string }) {
     if (savingKey) return;
-    if (!(await confirmDialog('Switch setting?', switchQuestion(row.key, row.value), { confirmText: 'Switch' }))) return;
+    const q = question ?? { title: 'Switch setting?', message: switchQuestion(row.key, row.value), confirmText: 'Switch' };
+    if (!(await confirmDialog(q.title, q.message, { confirmText: q.confirmText, destructive: row.value === 'true' && !!question }))) return;
     const nextValue = nextBooleanValue(row.value);
     setSavingKey(row.key);
     try {
@@ -92,6 +100,7 @@ export default function AdminConfigScreen() {
       if (error) throw error;
       setRows((prev) => prev.map((r) => (r.key === row.key ? { ...r, value: nextValue } : r)));
       setDrafts((prev) => ({ ...prev, [row.key]: nextValue }));
+      setEditingKey(null);
     } catch (error: any) {
       console.error('[admin-config] Toggle error:', error);
       Alert.alert('Error', error.message || 'Failed to change the value');
@@ -127,6 +136,7 @@ export default function AdminConfigScreen() {
       setAddingValue('');
       setAddingDescription('');
       setAddingEnvVarName('');
+      setAddOpen(false);
       await loadRows();
     } catch (error: any) {
       console.error('[admin-config] Add error:', error);
@@ -174,56 +184,56 @@ export default function AdminConfigScreen() {
         </Text>
 
         <FlatList
-          data={rows}
+          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key))}
           keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <View style={styles.addCard}>
-              <Text style={styles.addTitle}>Add new value</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Key (e.g. maxManualMenuItems)"
-                value={addingKey}
-                onChangeText={setAddingKey}
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Value"
-                value={addingValue}
-                onChangeText={setAddingValue}
-                autoCapitalize="none"
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Description (optional)"
-                value={addingDescription}
-                onChangeText={setAddingDescription}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder=".env equivalent (optional, e.g. owner/.env: EXPO_PUBLIC_...)"
-                value={addingEnvVarName}
-                onChangeText={setAddingEnvVarName}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={[styles.addBtn, adding && styles.btnDisabled]}
-                onPress={handleAdd}
-                disabled={adding}
-              >
-                {adding ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.addBtnText}>+ Add</Text>
-                )}
-              </TouchableOpacity>
+            <>
+            <View style={styles.switchCard}>
+              <Text style={styles.addTitle}>What customers see</Text>
+              <View style={styles.switchRow}>
+                {QUICK_SWITCHES.map((sw) => {
+                  const row = rows.find((r) => r.key === sw.key);
+                  const on = row?.value === 'true';
+                  const busy = savingKey === sw.key;
+                  return (
+                    <TouchableOpacity
+                      key={sw.key}
+                      style={[styles.switchBtn, !row ? styles.switchMissing : on ? styles.switchOn : styles.switchOff, busy && styles.btnDisabled]}
+                      disabled={!row || busy}
+                      onPress={() => row && handleToggle(row, {
+                        title: on ? `Hide ${sw.title}?` : `Show ${sw.title}?`,
+                        message: quickSwitchQuestion(sw, row.value),
+                        confirmText: on ? 'Hide' : 'Show',
+                      })}
+                      accessibilityRole="switch"
+                      accessibilityState={{ checked: on }}
+                    >
+                      {busy ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                      ) : (
+                        <>
+                          <Text style={styles.switchTitle}>{sw.title}</Text>
+                          <Text style={styles.switchState}>
+                            {!row ? 'Not set up yet (run migration 126)' : on ? `✓ ${sw.onText}` : `✕ ${sw.offText}`}
+                          </Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
+            <TouchableOpacity style={styles.openAddBtn} onPress={() => setAddOpen(true)} accessibilityRole="button">
+              <Text style={styles.addBtnText}>+ Add new value</Text>
+            </TouchableOpacity>
+            </>
           }
           renderItem={({ item }) => {
             const draft = drafts[item.key] ?? item.value;
             const dirty = draft !== item.value;
             const busy = savingKey === item.key;
+            const editing = editingKey === item.key;
             return (
               <View style={styles.row}>
                 <View style={styles.rowInfo}>
@@ -231,45 +241,64 @@ export default function AdminConfigScreen() {
                   {!!item.description && <Text style={styles.rowDescription}>{item.description}</Text>}
                   {!!item.env_var_name && <Text style={styles.rowEnvVar}>.env: {item.env_var_name}</Text>}
                 </View>
-                {isBooleanValue(item.value) ? (
-                  <TouchableOpacity
-                    style={[styles.toggleBtn, item.value === 'true' ? styles.toggleOn : styles.toggleOff, busy && styles.btnDisabled]}
-                    onPress={() => handleToggle(item)}
-                    disabled={busy}
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: item.value === 'true' }}
-                    accessibilityLabel={`${item.key}: ${item.value}. Tap to switch.`}
-                  >
-                    {busy ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                {editing ? (
+                  <>
+                    {isBooleanValue(item.value) ? (
+                      <TouchableOpacity
+                        style={[styles.toggleBtn, item.value === 'true' ? styles.toggleOn : styles.toggleOff, busy && styles.btnDisabled]}
+                        onPress={() => handleToggle(item)}
+                        disabled={busy}
+                        accessibilityRole="switch"
+                        accessibilityState={{ checked: item.value === 'true' }}
+                        accessibilityLabel={`${item.key}: ${item.value}. Tap to switch.`}
+                      >
+                        {busy ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={styles.toggleText}>{item.value === 'true' ? '✓ true' : '✕ false'}</Text>
+                        )}
+                      </TouchableOpacity>
                     ) : (
-                      <Text style={styles.toggleText}>{item.value === 'true' ? '✓ true' : '✕ false'}</Text>
+                      <>
+                        <TextInput
+                          style={styles.valueInput}
+                          value={draft}
+                          onChangeText={(text) => setDrafts((prev) => ({ ...prev, [item.key]: text }))}
+                          autoCapitalize="none"
+                          autoFocus
+                        />
+                        <TouchableOpacity
+                          style={[styles.saveBtn, (!dirty || busy) && styles.btnDisabled]}
+                          onPress={() => handleSave(item)}
+                          disabled={!dirty || busy}
+                        >
+                          {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                        </TouchableOpacity>
+                      </>
                     )}
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cancelEditBtn}
+                      onPress={() => { setDrafts((prev) => ({ ...prev, [item.key]: item.value })); setEditingKey(null); }}
+                    >
+                      <Text style={styles.cancelEditText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.deleteBtn, busy && styles.btnDisabled]}
+                      onPress={() => handleDeleteRequest(item)}
+                      disabled={busy}
+                      accessibilityLabel={`Delete ${item.key}`}
+                    >
+                      <Text style={styles.deleteBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </>
                 ) : (
                   <>
-                    <TextInput
-                      style={styles.valueInput}
-                      value={draft}
-                      onChangeText={(text) => setDrafts((prev) => ({ ...prev, [item.key]: text }))}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity
-                      style={[styles.saveBtn, (!dirty || busy) && styles.btnDisabled]}
-                      onPress={() => handleSave(item)}
-                      disabled={!dirty || busy}
-                    >
-                      {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                    <Text style={styles.valueText} selectable numberOfLines={2}>{item.value}</Text>
+                    <TouchableOpacity style={styles.editBtn} onPress={() => setEditingKey(item.key)} accessibilityRole="button">
+                      <Text style={styles.editBtnText}>Edit</Text>
                     </TouchableOpacity>
                   </>
                 )}
-                <TouchableOpacity
-                  style={[styles.deleteBtn, busy && styles.btnDisabled]}
-                  onPress={() => handleDeleteRequest(item)}
-                  disabled={busy}
-                >
-                  <Text style={styles.deleteBtnText}>✕</Text>
-                </TouchableOpacity>
               </View>
             );
           }}
@@ -280,6 +309,50 @@ export default function AdminConfigScreen() {
           }
         />
       </View>
+
+      <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.addModalCard}>
+            <Text style={styles.addTitle}>Add new value</Text>
+            <TextInput {...chain(0)}
+              style={styles.input}
+              placeholder="Key (e.g. maxManualMenuItems)"
+              value={addingKey}
+              onChangeText={setAddingKey}
+              autoCapitalize="none"
+              autoFocus
+            />
+            <TextInput {...chain(1)}
+              style={styles.input}
+              placeholder="Value"
+              value={addingValue}
+              onChangeText={setAddingValue}
+              autoCapitalize="none"
+            />
+            <TextInput {...chain(2)}
+              style={styles.input}
+              placeholder="Description (optional)"
+              value={addingDescription}
+              onChangeText={setAddingDescription}
+            />
+            <TextInput {...chain(3)}
+              style={styles.input}
+              placeholder=".env equivalent (optional, e.g. owner/.env: EXPO_PUBLIC_...)"
+              value={addingEnvVarName}
+              onChangeText={setAddingEnvVarName}
+              autoCapitalize="none"
+            />
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setAddOpen(false)}>
+                <Text style={styles.confirmCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.addBtn, styles.addModalBtn, adding && styles.btnDisabled]} onPress={handleAdd} disabled={adding}>
+                {adding ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.addBtnText}>+ Add</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!deleteTarget} transparent animationType="fade" onRequestClose={() => setDeleteTarget(null)}>
         <View style={styles.confirmOverlay}>
@@ -312,19 +385,35 @@ const styles = StyleSheet.create({
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
 
-  addCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, gap: 8, elevation: 1 },
+  switchCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, gap: 8, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
+  switchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  switchBtn: { flex: 1, minWidth: 220, borderRadius: 10, paddingVertical: 12, paddingHorizontal: 14, gap: 2 },
+  switchOn: { backgroundColor: '#2E7D32' },
+  switchOff: { backgroundColor: '#78909C' },
+  switchMissing: { backgroundColor: '#B0BEC5' },
+  switchTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  switchState: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  addCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, gap: 8, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   addTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginBottom: 2 },
+  openAddBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 14 },
+  addModalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 460, gap: 10, borderWidth: 1, borderColor: '#CFD8DC' },
+  addModalBtn: { paddingHorizontal: 22 },
+  valueText: { flex: 1, minWidth: 80, fontSize: 13, fontWeight: '700', color: '#263238' },
+  editBtn: { backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  editBtnText: { color: '#1565C0', fontWeight: '800', fontSize: 12 },
+  cancelEditBtn: { paddingHorizontal: 10, paddingVertical: 8 },
+  cancelEditText: { color: '#546E7A', fontWeight: '700', fontSize: 12 },
   addBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
   addBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
 
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, color: '#222' },
+  input: { paddingHorizontal: 12, paddingVertical: 8, fontSize: 13, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
-  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 1 },
+  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   rowInfo: { flex: 1, minWidth: 100 },
   rowKey: { fontSize: 13, fontWeight: '700', color: '#222' },
   rowDescription: { fontSize: 11, color: '#999', marginTop: 2 },
   rowEnvVar: { fontSize: 10, color: '#1565C0', fontWeight: '600', marginTop: 2 },
-  valueInput: { flex: 1, minWidth: 80, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222' },
+  valueInput: { flex: 1, minWidth: 80, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   toggleBtn: { flex: 1, minWidth: 110, borderRadius: 8, paddingVertical: 9, alignItems: 'center' },
   toggleOn: { backgroundColor: '#2E7D32' },

@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  claimCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
+  claimCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   claimInfo: { marginBottom: 12 },
   restaurantName: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 4 },
   address: { fontSize: 13, color: '#666', marginBottom: 8 },

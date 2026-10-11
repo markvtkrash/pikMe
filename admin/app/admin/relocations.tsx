@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   restaurantName: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 2 },
   ownerEmail: { fontSize: 12, color: '#999', marginBottom: 10 },
 
@@ -220,10 +220,7 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 420 },
   modalTitle: { fontSize: 17, fontWeight: '800', color: '#222', marginBottom: 6 },
   modalHint: { fontSize: 13, color: '#888', marginBottom: 14 },
-  modalInput: {
-    backgroundColor: '#fafafa', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
-    fontSize: 14, color: '#222', borderWidth: 1, borderColor: '#e0e0e0', minHeight: 70, textAlignVertical: 'top',
-  },
+  modalInput: { paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#222', minHeight: 70, textAlignVertical: 'top', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   modalActions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   modalCancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', backgroundColor: '#F5F5F5' },
   modalCancelBtnText: { fontSize: 14, fontWeight: '700', color: '#666' },

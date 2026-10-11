@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 20, fontWeight: '800', color: '#222' },
   statLabel: { fontSize: 10, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 2 },
 
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10, borderWidth: 1, borderColor: '#CFD8DC' },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#fff' },
   filterChipActive: { backgroundColor: '#1565C0' },
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: '#fff' },
   rangeText: { fontSize: 12, color: '#888', marginBottom: 8 },
 
-  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 4 },
+  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 4, borderWidth: 1, borderColor: '#CFD8DC' },
   rowTop: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   itemName: { fontSize: 14, fontWeight: '700', color: '#222' },
   badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },

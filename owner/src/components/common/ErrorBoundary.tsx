@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
+import { IconText } from './AppIcon';
 
 interface Props { children: ReactNode }
 interface State { hasError: boolean; message: string }
@@ -20,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <View style={styles.container}>
-        <Text style={styles.icon}>⚠️</Text>
+        <IconText style={styles.icon} emoji="⚠️" />
         <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.body}>
           The app hit an unexpected error. Please restart and try again.
@@ -40,7 +41,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
   icon: { fontSize: 48, marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },
-  body: { fontSize: 14, color: '#888', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
+  body: { fontSize: 14, color: '#546E7A', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
   btn: { backgroundColor: '#1565C0', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 32 },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

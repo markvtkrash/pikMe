@@ -14,6 +14,8 @@ import { formatDistance } from '../../src/utils/geo';
 import { normalizeForSearch } from '../../src/utils/textMatch';
 import { getOwnerSearchRadiusMeters } from '../../src/constants/searchRadius';
 import type { Restaurant } from '../../src/types';
+import { IconText } from '../../src/components/common/AppIcon';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 const MILES_TO_METERS = 1609.34;
 
@@ -100,6 +102,8 @@ export default function AdminCreateOwnerScreen() {
   // otherwise falls back to the existing prominence-ranked nearby browse.
   // Mirrors owner claim.tsx's searchNear() exactly, so Admin can find
   // anything an owner could find when claiming.
+  const chain = useEnterChain(2, () => handleCreate());
+
   async function searchNear(latitude: number, longitude: number) {
     const name = businessNameQuery.trim();
     if (name) {
@@ -233,7 +237,7 @@ export default function AdminCreateOwnerScreen() {
   if (credentials) {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.successContent}>
-        <Text style={styles.successIcon}>✅</Text>
+        <IconText style={styles.successIcon} emoji="✅" />
         <Text style={styles.successTitle}>Owner Account Created</Text>
         <Text style={styles.successSubtitle}>
           {credentials.restaurantName} is approved. Share these credentials with the owner in
@@ -280,7 +284,7 @@ export default function AdminCreateOwnerScreen() {
         </View>
 
         <Text style={styles.label}>Owner Email <Text style={styles.required}>*</Text></Text>
-        <TextInput
+        <TextInput {...chain(0)}
           style={[styles.input, !!errors.email && styles.inputError]}
           placeholder="owner@example.com"
           placeholderTextColor="#999"
@@ -304,7 +308,7 @@ export default function AdminCreateOwnerScreen() {
 
         <Text style={styles.label}>Temporary Password <Text style={styles.required}>*</Text></Text>
         <View style={styles.passwordRow}>
-          <TextInput
+          <TextInput {...chain(1)}
             style={[styles.input, styles.passwordInput, !!errors.password && styles.inputError]}
             placeholderTextColor="#999"
             value={password}
@@ -317,7 +321,7 @@ export default function AdminCreateOwnerScreen() {
             onPress={() => { setPassword(generatePassword()); if (errors.password) setErrors((e) => ({ ...e, password: undefined })); }}
             disabled={submitting}
           >
-            <Text style={styles.regenBtnText}>🔄</Text>
+            <IconText style={styles.regenBtnText} emoji="🔄" />
           </TouchableOpacity>
         </View>
         {!!errors.password
@@ -407,7 +411,7 @@ export default function AdminCreateOwnerScreen() {
         >
           {searching
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={styles.searchBtnText}>🔍</Text>}
+            : <IconText style={styles.searchBtnText} emoji="🔍" />}
         </TouchableOpacity>
       </View>
 
@@ -495,10 +499,7 @@ const styles = StyleSheet.create({
   radiusInput: { flex: 1, textAlign: 'center' },
 
   searchBox: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
-  searchInput: {
-    flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff',
-  },
+  searchInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   searchBtn: {
     width: 44, height: 44, borderRadius: 10, backgroundColor: '#1565C0',
     alignItems: 'center', justifyContent: 'center',
@@ -508,16 +509,11 @@ const styles = StyleSheet.create({
   radiusBanner: { backgroundColor: '#E3F2FD', marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10 },
   radiusBannerText: { fontSize: 12, color: '#0D47A1', fontWeight: '600', lineHeight: 17 },
   filterBox: { paddingHorizontal: 16, paddingBottom: 12 },
-  filterInput: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12,
-    paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff',
-  },
+  filterInput: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  resultCard: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, padding: 14,
-    marginBottom: 10, alignItems: 'center', gap: 12, elevation: 1,
-  },
+  resultCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, padding: 14,
+    marginBottom: 10, alignItems: 'center', gap: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   resultCardClaimed: { backgroundColor: '#f0f0f0' },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   resultInfo: { flex: 1 },
@@ -538,10 +534,7 @@ const styles = StyleSheet.create({
 
   label: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 6, marginTop: 4 },
   required: { color: '#e53e3e', fontWeight: '800' },
-  input: {
-    backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#222', borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 12,
-  },
+  input: { paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   inputError: { borderColor: '#e53e3e', borderWidth: 1.5 },
   inputReadOnly: { backgroundColor: '#f0f0f0', color: '#666' },
   errorText: { fontSize: 12, fontWeight: '600', color: '#e53e3e', marginTop: -6, marginBottom: 12 },

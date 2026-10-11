@@ -7,6 +7,7 @@ import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -110,7 +111,7 @@ export default function ExpiredCouponsScreen() {
 
       {coupons.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📭</Text>
+          <IconText style={styles.emptyIcon} emoji="📭" />
           <Text style={styles.emptyText}>No expired coupons</Text>
           <Text style={styles.emptySubtext}>All your coupons are still active!</Text>
         </View>
@@ -121,7 +122,7 @@ export default function ExpiredCouponsScreen() {
           renderItem={({ item }) => (
             <View style={styles.couponCard}>
               <View style={styles.expiredBadgeContainer}>
-                <Text style={styles.expiredBadge}>❌ EXPIRED • {new Date(item.expiry_date).toLocaleDateString()}</Text>
+                <IconText style={styles.expiredBadge} emoji="❌">EXPIRED • {new Date(item.expiry_date).toLocaleDateString()}</IconText>
               </View>
 
               <View style={styles.couponInfo}>
@@ -157,7 +158,7 @@ export default function ExpiredCouponsScreen() {
                 {deleting === item.id ? (
                   <ActivityIndicator color="#e53e3e" size="small" />
                 ) : (
-                  <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
+                  <IconText style={styles.deleteBtnText} emoji="🗑️">Delete</IconText>
                 )}
               </TouchableOpacity>
               </View>
@@ -179,7 +180,7 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  count: { fontSize: 12, color: '#999' },
+  count: { fontSize: 12, color: '#546E7A' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   couponCard: { backgroundColor: '#FFEBEE', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 2, flexDirection: 'column', borderLeftWidth: 4, borderLeftColor: '#c62828', gap: 12 },
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   couponType: { fontSize: 12, color: '#666', marginBottom: 8, textTransform: 'capitalize' },
   couponRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   discountValue: { fontSize: 18, fontWeight: '800', color: '#c62828' },
-  expiredDate: { fontSize: 11, color: '#999', fontStyle: 'italic' },
+  expiredDate: { fontSize: 11, color: '#546E7A', fontStyle: 'italic' },
   usageText: { fontSize: 11, color: '#666', fontWeight: '600' },
 
   couponFooter: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
@@ -203,5 +204,5 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#222' },
-  emptySubtext: { fontSize: 13, color: '#999', marginTop: 4 },
+  emptySubtext: { fontSize: 13, color: '#546E7A', marginTop: 4 },
 });

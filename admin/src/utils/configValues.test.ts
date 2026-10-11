@@ -28,3 +28,17 @@ describe('switchQuestion', () => {
     expect(switchQuestion('x', 'false')).toMatch(/from false to true/);
   });
 });
+
+import { QUICK_SWITCHES, quickSwitchQuestion } from './configValues';
+
+describe('quick switches', () => {
+  it('has the franchise and independent switches with plain names', () => {
+    expect(QUICK_SWITCHES.map((q) => q.key)).toEqual(['showFranchiseRestaurants', 'showIndependentRestaurants']);
+    expect(QUICK_SWITCHES.map((q) => q.title)).toEqual(['Franchise Restaurants', 'Independent Restaurants']);
+  });
+
+  it('asks in plain words to hide when on, and to show when off', () => {
+    expect(quickSwitchQuestion(QUICK_SWITCHES[0], 'true')).toMatch(/^Hide all franchise restaurants from customers\?/);
+    expect(quickSwitchQuestion(QUICK_SWITCHES[1], 'false')).toMatch(/^Show independent restaurants to customers again\?/);
+  });
+});

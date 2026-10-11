@@ -6,6 +6,7 @@ import {
   getClaimsOverTime, getClaimApprovalTime, getRestaurantStatusSnapshot,
   ClaimsOverTimeRow, ClaimApprovalTime, RestaurantStatusRow,
 } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending', approved: 'Approved', rejected: 'Rejected', closed: 'Closed',
@@ -69,7 +70,7 @@ export default function RestaurantGrowthReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>📈 Restaurant Growth</Text>
+      <IconText style={styles.title} emoji="📈">Restaurant Growth</IconText>
       <Text style={styles.subtitle}>Claims over time, approval speed, and current status mix</Text>
 
       <Text style={styles.sectionTitle}>Restaurant Status</Text>
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
   sectionTitle: { fontSize: 15, fontWeight: '800', color: '#222', paddingTop: 20, paddingBottom: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardSubtext: { fontSize: 12, color: '#888', marginTop: 4 },
   emptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
 

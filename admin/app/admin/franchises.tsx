@@ -121,9 +121,9 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, color: '#666', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4 },
   list: { paddingHorizontal: 16, paddingVertical: 12 },
 
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 12 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 12, borderWidth: 1, borderColor: '#CFD8DC' },
 
-  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3 },
+  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3, borderWidth: 1, borderColor: '#CFD8DC' },
   rowInactive: { opacity: 0.55 },
   rowTop: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   rowName: { fontSize: 14, fontWeight: '700', color: '#222' },

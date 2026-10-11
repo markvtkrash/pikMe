@@ -7,6 +7,7 @@ import {
   describeStatus, describeVersions, describeWindow, EMPTY_ANNOUNCEMENT_FORM, formFromRow, LINK_LABEL_MAX, MESSAGE_MAX,
   publishQuestion, TITLE_MAX,
 } from '../../src/utils/announcements';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 const AUDIENCES: { value: AnnouncementAudience; label: string }[] = [
   { value: 'customer', label: 'Customers' },
@@ -46,6 +47,8 @@ export default function AnnouncementsScreen() {
       setLoading(false);
     }
   }, []);
+
+  const chain = useEnterChain(8);
 
   useEffect(() => {
     load();
@@ -119,10 +122,10 @@ export default function AnnouncementsScreen() {
         </View>
 
         <Text style={styles.label}>Title ({form.title.trim().length}/{TITLE_MAX})</Text>
-        <TextInput style={styles.input} value={form.title} onChangeText={(v) => set('title', v)} placeholder="A short headline" placeholderTextColor="#999" maxLength={TITLE_MAX + 20} />
+        <TextInput {...chain(0)} style={styles.input} value={form.title} onChangeText={(v) => set('title', v)} placeholder="A short headline" placeholderTextColor="#999" maxLength={TITLE_MAX + 20} />
 
         <Text style={styles.label}>Message ({form.message.trim().length}/{MESSAGE_MAX})</Text>
-        <TextInput
+        <TextInput {...chain(1)}
           style={[styles.input, styles.multiline]}
           value={form.message}
           onChangeText={(v) => set('message', v)}
@@ -144,22 +147,22 @@ export default function AnnouncementsScreen() {
 
         <Text style={styles.label}>Link button (optional, https only)</Text>
         <View style={styles.row}>
-          <TextInput style={[styles.input, styles.flex1]} value={form.linkLabel} onChangeText={(v) => set('linkLabel', v)} placeholder={`Label (max ${LINK_LABEL_MAX})`} placeholderTextColor="#999" />
-          <TextInput style={[styles.input, styles.flex2]} value={form.linkUrl} onChangeText={(v) => set('linkUrl', v)} placeholder="https://…" placeholderTextColor="#999" autoCapitalize="none" autoCorrect={false} />
+          <TextInput {...chain(2)} style={[styles.input, styles.flex1]} value={form.linkLabel} onChangeText={(v) => set('linkLabel', v)} placeholder={`Label (max ${LINK_LABEL_MAX})`} placeholderTextColor="#999" />
+          <TextInput {...chain(3)} style={[styles.input, styles.flex2]} value={form.linkUrl} onChangeText={(v) => set('linkUrl', v)} placeholder="https://…" placeholderTextColor="#999" autoCapitalize="none" autoCorrect={false} />
         </View>
 
         <Text style={styles.label}>When (your local time, leave blank for now / no end)</Text>
         <View style={styles.row}>
-          <TextInput style={[styles.input, styles.flex1]} value={form.startsAt} onChangeText={(v) => set('startsAt', v)} placeholder="Start: 2026-10-12 09:30" placeholderTextColor="#999" autoCapitalize="none" />
-          <TextInput style={[styles.input, styles.flex1]} value={form.endsAt} onChangeText={(v) => set('endsAt', v)} placeholder="End: 2026-10-19 18:00" placeholderTextColor="#999" autoCapitalize="none" />
+          <TextInput {...chain(4)} style={[styles.input, styles.flex1]} value={form.startsAt} onChangeText={(v) => set('startsAt', v)} placeholder="Start: 2026-10-12 09:30" placeholderTextColor="#999" autoCapitalize="none" />
+          <TextInput {...chain(5)} style={[styles.input, styles.flex1]} value={form.endsAt} onChangeText={(v) => set('endsAt', v)} placeholder="End: 2026-10-19 18:00" placeholderTextColor="#999" autoCapitalize="none" />
         </View>
 
         {showVersions && (
           <>
             <Text style={styles.label}>Customer app versions (optional)</Text>
             <View style={styles.row}>
-              <TextInput style={[styles.input, styles.flex1]} value={form.minAppVersion} onChangeText={(v) => set('minAppVersion', v)} placeholder="Lowest, e.g. 1.0.0" placeholderTextColor="#999" autoCapitalize="none" />
-              <TextInput style={[styles.input, styles.flex1]} value={form.maxAppVersion} onChangeText={(v) => set('maxAppVersion', v)} placeholder="Highest, e.g. 1.2.0" placeholderTextColor="#999" autoCapitalize="none" />
+              <TextInput {...chain(6)} style={[styles.input, styles.flex1]} value={form.minAppVersion} onChangeText={(v) => set('minAppVersion', v)} placeholder="Lowest, e.g. 1.0.0" placeholderTextColor="#999" autoCapitalize="none" />
+              <TextInput {...chain(7)} style={[styles.input, styles.flex1]} value={form.maxAppVersion} onChangeText={(v) => set('maxAppVersion', v)} placeholder="Highest, e.g. 1.2.0" placeholderTextColor="#999" autoCapitalize="none" />
             </View>
           </>
         )}
@@ -246,7 +249,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   chipText: { fontSize: 12, fontWeight: '700', color: '#444' },
   chipTextOn: { color: '#fff' },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222', backgroundColor: '#fff' },
+  input: { paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   multiline: { minHeight: 90, textAlignVertical: 'top' },
   preview: { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 14, padding: 14, backgroundColor: '#fafafa' },
   previewTag: { alignSelf: 'flex-start', fontSize: 10, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginBottom: 8, overflow: 'hidden' },

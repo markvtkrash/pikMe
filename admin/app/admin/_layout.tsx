@@ -3,8 +3,7 @@ import { AdminHeaderLeft, AdminHeaderRight } from '../../src/components/common/A
 
 // Every admin screen gets the same header: logo + Dashboard button on the
 // left, and a menu to jump to any page (plus Logout) on the right — see
-// AdminNavHeader. Screens below only need a title; login and the dashboard
-// itself hide the header.
+// AdminNavHeader. Screens below only need a title; only the login page hides the header.
 //
 // Don't enforce an admin check here - let individual screens handle auth.
 // Login doesn't require auth, but dashboard/claims do.
@@ -21,7 +20,7 @@ export default function AdminLayout() {
       }}
     >
       <Stack.Screen name="login" options={{ title: 'Admin Login', headerShown: false }} />
-      <Stack.Screen name="index" options={{ title: 'Admin Dashboard', headerShown: false }} />
+      <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="claims" options={{ title: 'Pending Claims' }} />
       <Stack.Screen name="relocations" options={{ title: '📍 Relocations' }} />
       <Stack.Screen name="restaurants" options={{ title: '🍽️ Restaurants' }} />

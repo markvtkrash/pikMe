@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   ActivityIndicator, Platform,
@@ -8,6 +8,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { createCoupon } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 // Type for HTML input element
 declare global {
@@ -81,6 +82,13 @@ export default function NewCouponScreen() {
   });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Enter moves to the next field: Code, Discount, Usage Limit, Per-consumer limit, Expiry date, then the Create button.
+  const discountRef = useRef<TextInput>(null);
+  const usageRef = useRef<TextInput>(null);
+  const perUserRef = useRef<TextInput>(null);
+  const dateRef = useRef<any>(null);
+  const createRef = useRef<any>(null);
+  const focusField = (ref: { current: any }) => ref.current?.focus?.();
   const [errors, setErrors] = useState<{ code?: string; discount?: string; menuItem?: string; usageLimit?: string; perUserLimit?: string }>({});
 
   // Validate on input change
@@ -258,12 +266,15 @@ export default function NewCouponScreen() {
               if (text.trim()) setErrors(prev => ({ ...prev, code: undefined }));
             }}
             autoCapitalize="characters"
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => focusField(discountRef)}
           />
           <TouchableOpacity
             style={styles.generateBtn}
             onPress={generateCode}
           >
-            <Text style={styles.generateBtnText}>🎲 Generate</Text>
+            <IconText style={styles.generateBtnText} emoji="🎲">Generate</IconText>
           </TouchableOpacity>
         </View>
         {errors.code && <Text style={styles.errorText}>{errors.code}</Text>}
@@ -276,6 +287,10 @@ export default function NewCouponScreen() {
             placeholder="15"
             placeholderTextColor="#999"
             keyboardType="decimal-pad"
+            ref={discountRef}
+            returnKeyType="next"
+            blurOnSubmit={false}
+            onSubmitEditing={() => focusField(usageRef)}
             value={discount}
             onChangeText={(text) => {
               setDiscount(text);
@@ -309,6 +324,10 @@ export default function NewCouponScreen() {
           placeholder="e.g., 100"
           placeholderTextColor="#999"
           keyboardType="number-pad"
+          ref={usageRef}
+          returnKeyType="next"
+          blurOnSubmit={false}
+          onSubmitEditing={() => focusField(perUserRef)}
           value={usageLimit}
           onChangeText={(text) => {
             setUsageLimit(text);
@@ -328,6 +347,10 @@ export default function NewCouponScreen() {
           placeholder="e.g., 1"
           placeholderTextColor="#999"
           keyboardType="number-pad"
+          ref={perUserRef}
+          returnKeyType={Platform.OS === 'web' ? 'next' : 'done'}
+          blurOnSubmit={Platform.OS !== 'web'}
+          onSubmitEditing={() => focusField(Platform.OS === 'web' ? dateRef : createRef)}
           value={perUserLimit}
           onChangeText={(text) => {
             setPerUserLimit(text);
@@ -341,6 +364,13 @@ export default function NewCouponScreen() {
         {Platform.OS === 'web' ? (
           <input
             type="date"
+            ref={dateRef}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                focusField(createRef);
+              }
+            }}
             value={expiryDate.toISOString().split('T')[0]}
             onChange={(e) => {
               console.log('[coupon] Date changed:', e.target.value);
@@ -374,6 +404,7 @@ export default function NewCouponScreen() {
         {/* Action Buttons */}
         <View style={styles.buttonGroup}>
           <TouchableOpacity
+            ref={createRef}
             style={styles.createBtn}
             onPress={handleCreate}
             disabled={loading}
@@ -432,7 +463,7 @@ const styles = StyleSheet.create({
   duplicateBanner: { backgroundColor: '#F3E5F5', borderRadius: 10, padding: 12, marginTop: -12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#8E24AA' },
   duplicateBannerText: { fontSize: 12.5, color: '#6A1B9A', fontWeight: '600', lineHeight: 17 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
-  helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
+  helpText: { fontSize: 12, color: '#546E7A', lineHeight: 17, marginTop: -4, marginBottom: 8 },
   typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
   typeBtn: {
     flex: 1,
@@ -448,17 +479,7 @@ const styles = StyleSheet.create({
   typeBtnActive: { borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
   typeBtnText: { fontSize: 12, fontWeight: '600', color: '#666' },
   typeBtnTextActive: { color: '#1565C0' },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#222',
-    marginBottom: 12,
-  },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', marginBottom: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   inputError: { borderColor: '#e53e3e', borderWidth: 2 },
   errorText: { fontSize: 12, color: '#e53e3e', fontWeight: '600', marginBottom: 8, marginTop: -8 },
   codeInputRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12 },

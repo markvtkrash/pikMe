@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   summaryWarn: { color: '#E65100' },
   note: { fontSize: 11, color: '#999', marginTop: 6, lineHeight: 16 },
   label: { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4, marginTop: 10 },
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6 },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   inputReadOnly: { color: '#666', backgroundColor: '#e8e8e8' },
   searchInput: { flex: 1 },

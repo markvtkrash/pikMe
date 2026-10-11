@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  count: { fontSize: 12, color: '#999' },
+  count: { fontSize: 12, color: '#546E7A' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   couponCard: { backgroundColor: '#F5F5F5', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#999', gap: 12 },
@@ -192,5 +192,5 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#222' },
-  emptySubtext: { fontSize: 13, color: '#999', marginTop: 4, textAlign: 'center' },
+  emptySubtext: { fontSize: 13, color: '#546E7A', marginTop: 4, textAlign: 'center' },
 });

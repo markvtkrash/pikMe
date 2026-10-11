@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { dismissMenuImportAlert, getMenuImportAlert } from '../../api/menuImport';
 import { MENU_IMPORT_ALERT_TITLE, menuImportAlertMessage } from '../../utils/menuImportText';
 import { Alert } from '../../utils/alert';
+import { IconText } from './AppIcon';
 
 export const MENU_IMPORT_ALERT_KEY = ['menuImportAlert'];
 
@@ -34,13 +35,13 @@ export function MenuImportAlertBar({ onOpenPhotoImport }: { onOpenPhotoImport: (
 
   return (
     <View style={styles.bar} accessibilityRole="alert">
-      <Text style={styles.bell}>🔔</Text>
+      <IconText style={styles.bell} emoji="🔔" />
       <View style={styles.body}>
         <Text style={styles.title}>{MENU_IMPORT_ALERT_TITLE}</Text>
         <Text style={styles.message}>{menuImportAlertMessage(data.status, data.link)}</Text>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.primary} onPress={onOpenPhotoImport} accessibilityRole="button">
-            <Text style={styles.primaryText}>📷 Import Menu from Photo</Text>
+            <IconText style={styles.primaryText} emoji="📷">Import Menu from Photo</IconText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.secondary} onPress={handleDismiss} accessibilityRole="button">
             <Text style={styles.secondaryText}>Dismiss</Text>

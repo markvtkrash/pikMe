@@ -17,6 +17,7 @@ import { DataSourcesNotice } from '../../src/components/common/DataSourcesNotice
 import { CategoryPicker } from '../../src/components/common/CategoryPicker';
 import { getGoogleGuess, getRestaurantCategories } from '../../src/api/categories';
 import { CategoryChoice, cleanChoice, EMPTY_CHOICE, RestaurantCategory, suggestDineIn, validateChoice } from '../../src/utils/categories';
+import { IconText } from '../../src/components/common/AppIcon';
 
 export default function ClaimRestaurantScreen() {
   const router = useRouter();
@@ -243,7 +244,7 @@ export default function ClaimRestaurantScreen() {
       </View>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoIcon}>⏳</Text>
+        <IconText style={styles.infoIcon} emoji="⏳" />
         <Text style={styles.infoText}>Once you claim a restaurant below, an admin will need to review and approve it before you can manage coupons for it.</Text>
       </View>
 
@@ -254,7 +255,7 @@ export default function ClaimRestaurantScreen() {
         onPress={handleUseCurrentLocation}
         disabled={loading}
       >
-        <Text style={styles.currentLocationBtnText}>📍 Use my current location</Text>
+        <IconText style={styles.currentLocationBtnText} emoji="📍">Use my current location</IconText>
       </TouchableOpacity>
 
       <Text style={styles.orDivider}>or</Text>
@@ -300,7 +301,7 @@ export default function ClaimRestaurantScreen() {
           {loading ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
-            <Text style={styles.searchBtnText}>🔍</Text>
+            <IconText style={styles.searchBtnText} emoji="🔍" />
           )}
         </TouchableOpacity>
       </View>
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
   modalCard: { width: '100%', maxWidth: 520, maxHeight: '90%', backgroundColor: '#fff', borderRadius: 16, padding: 20 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#222' },
   modalSubtitle: { fontSize: 14, color: '#666', marginTop: 2 },
-  modalHint: { fontSize: 12, color: '#888', marginTop: 8, marginBottom: 12, lineHeight: 17 },
+  modalHint: { fontSize: 12, color: '#546E7A', marginTop: 8, marginBottom: 12, lineHeight: 17 },
   modalScroll: { flexGrow: 0, maxHeight: 420 },
   modalError: { fontSize: 12, color: '#c62828', marginTop: 8 },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 14 },
@@ -444,23 +445,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   currentLocationBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  orDivider: { textAlign: 'center', fontSize: 12, color: '#999', marginVertical: 10 },
+  orDivider: { textAlign: 'center', fontSize: 12, color: '#546E7A', marginVertical: 10 },
   businessNameLabel: { fontSize: 13, fontWeight: '700', color: '#222', marginHorizontal: 16, marginBottom: 2 },
-  businessNameHint: { fontSize: 11.5, color: '#888', lineHeight: 16, marginHorizontal: 16, marginBottom: 8 },
+  businessNameHint: { fontSize: 11.5, color: '#546E7A', lineHeight: 16, marginHorizontal: 16, marginBottom: 8 },
   businessNameRow: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   businessNameInput: { flex: 3, marginBottom: 0 },
   radiusInput: { flex: 1, marginBottom: 0, textAlign: 'center' },
   searchBox: { flexDirection: 'row', paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
-  searchInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#222',
-  },
+  searchInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   searchBtn: {
     width: 44,
     height: 44,
@@ -481,33 +473,22 @@ const styles = StyleSheet.create({
   },
   radiusBannerText: { fontSize: 12, color: '#1565C0', fontWeight: '600', lineHeight: 17 },
   filterBox: { paddingHorizontal: 16, paddingBottom: 12 },
-  filterInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#222',
-    backgroundColor: '#fff',
-  },
+  filterInput: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  resultCard: {
-    flexDirection: 'row',
+  resultCard: { flexDirection: 'row',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
     alignItems: 'center',
     gap: 12,
-    elevation: 2,
-  },
+    elevation: 2, borderWidth: 1, borderColor: '#CFD8DC' },
   resultCardClaimed: { backgroundColor: '#f0f0f0' },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   resultInfo: { flex: 1 },
   resultName: { fontSize: 15, fontWeight: '700', color: '#222' },
   resultAddress: { fontSize: 12, color: '#666' },
-  resultDistance: { fontSize: 11, color: '#999', marginTop: 2 },
+  resultDistance: { fontSize: 11, color: '#546E7A', marginTop: 2 },
   claimedBadge: { fontSize: 11, fontWeight: '700', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
   claimBtn: {
     backgroundColor: '#1565C0',
@@ -520,5 +501,5 @@ const styles = StyleSheet.create({
   claimBtnClaimed: { backgroundColor: '#ccc' },
   claimBtnDisabled: { opacity: 0.6 },
   claimBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  emptyText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 40 },
+  emptyText: { fontSize: 14, color: '#546E7A', textAlign: 'center', marginTop: 40 },
 });

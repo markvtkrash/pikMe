@@ -9,6 +9,7 @@ import { getRestaurantMenuItems, getRestaurantCoupons, verifyMenuItem } from '..
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface MenuItem {
   id: string;
@@ -166,7 +167,7 @@ export default function RestaurantMenuScreen() {
       {/* Menu Items List */}
       {menuItems.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📋</Text>
+          <IconText style={styles.emptyIcon} emoji="📋" />
           <Text style={styles.emptyText}>No menu items yet</Text>
           <Text style={styles.emptySubtext}>Add items from Menu Management</Text>
         </View>
@@ -200,14 +201,14 @@ export default function RestaurantMenuScreen() {
                 <View style={styles.itemInfo}>
                   <View style={styles.itemNameRow}>
                     <Text style={styles.itemName}>{item.name}</Text>
-                    {existingCoupon && <Text style={styles.couponIcon}>🎟️</Text>}
+                    {existingCoupon && <IconText style={styles.couponIcon} emoji="🎟️" />}
                   </View>
                   <Text style={styles.itemNutrition}>
                     {item.calories ? `${Math.round(item.calories)} cal` : 'N/A'} •{' '}
                     {item.protein_g ? `${item.protein_g}g protein` : 'N/A'}
                   </Text>
                   {!item.is_verified && (
-                    <Text style={styles.unverifiedLabel}>⚠️ Unconfirmed — review in Menu Items</Text>
+                    <IconText style={styles.unverifiedLabel} emoji="⚠️">Unconfirmed — review in Menu Items</IconText>
                   )}
                   {existingCoupon && (
                     <View style={styles.couponDetailsBox}>
@@ -234,7 +235,7 @@ export default function RestaurantMenuScreen() {
                   )}
                 </View>
                 {canAddCoupon ? (
-                  existingCoupon ? null : <Text style={styles.actionText}>🎟️ Add</Text>
+                  existingCoupon ? null : <IconText style={styles.actionText} emoji="🎟️">Add</IconText>
                 ) : (
                   <TouchableOpacity
                     style={styles.verifyToAddBtn}
@@ -328,28 +329,17 @@ const styles = StyleSheet.create({
   addCouponHint: { fontSize: 12, color: '#FFA500', fontWeight: '600', marginTop: 4 },
 
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12 },
-  searchInput: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#222',
-  },
+  searchInput: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingBottom: 20 },
-  itemCard: {
-    flexDirection: 'row',
+  itemCard: { flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    elevation: 1,
-  },
+    elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   itemCardWithCoupon: { backgroundColor: '#F0F8FF', borderLeftWidth: 4, borderLeftColor: '#1565C0' },
   itemCardDisabled: { backgroundColor: '#FAFAFA' },
   itemInfo: { flex: 1, minWidth: 0 },
@@ -376,7 +366,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 16, fontWeight: '600', color: '#222', marginBottom: 4 },
   emptySubtext: { fontSize: 13, color: '#666', textAlign: 'center' },
 
-  noResultsText: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 20 },
+  noResultsText: { fontSize: 14, color: '#546E7A', textAlign: 'center', marginTop: 20 },
 
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20,
@@ -385,11 +375,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 14, padding: 20, width: '100%', maxWidth: 420, elevation: 4,
   },
   modalTitle: { fontSize: 17, fontWeight: '800', color: '#222', marginBottom: 4 },
-  modalHint: { fontSize: 13, color: '#888', marginBottom: 14, lineHeight: 18 },
-  modalInput: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 16,
-  },
+  modalHint: { fontSize: 13, color: '#546E7A', marginBottom: 14, lineHeight: 18 },
+  modalInput: { paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 16, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   modalBtnRow: { flexDirection: 'row', gap: 10 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   modalBtnDisabled: { opacity: 0.6 },

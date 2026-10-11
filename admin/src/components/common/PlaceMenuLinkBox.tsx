@@ -4,6 +4,7 @@ import { getPlaceMenuLink, setPlaceMenuLink } from '../../api/placeMenuLink';
 import {
   adminLinkOnHold, checkMenuLinkInput, describeAdminLinkResult, describeLinkSource, describeLinkStatus, PlaceMenuLink,
 } from '../../utils/placeMenuLink';
+import { IconText } from './AppIcon';
 
 // The menu link for one restaurant on its Manage page: the link in force and how its last read went, and a box to set
 // the admin's own link. Saving queues the restaurant for the browser crawler; the page stays open.
@@ -57,7 +58,7 @@ export default function PlaceMenuLinkBox({ placeId }: { placeId: string }) {
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>🔗 Menu link</Text>
+      <IconText style={styles.title} emoji="🔗">Menu link</IconText>
       {loading ? (
         <ActivityIndicator size="small" color="#1565C0" />
       ) : (
@@ -115,7 +116,7 @@ const styles = StyleSheet.create({
   current: { fontSize: 12, color: '#1565C0' },
   meta: { fontSize: 11, color: '#777', marginTop: 2, marginBottom: 6 },
   detail: { fontSize: 11, color: '#E65100', marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222', marginTop: 4 },
+  input: { paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: '#222', marginTop: 4, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   error: { fontSize: 12, color: '#c62828', marginTop: 6 },
   ok: { fontSize: 12, color: '#2E7D32', marginTop: 6 },
   saveBtn: { alignSelf: 'flex-start', marginTop: 8, backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },

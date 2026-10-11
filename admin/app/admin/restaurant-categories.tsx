@@ -6,6 +6,7 @@ import {
   AdminCategory, buildCategoryInput, categoriesInGroup, cleanGoogleType, CategoryGroup, CategoryMapping, GROUP_LABELS,
   GROUP_ORDER, mappedTypes,
 } from '../../src/utils/categories';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 // Tools -> Restaurant Categories: the categories customers filter on and owners choose from (what a place is, ways to get the food,
 // cuisine), and which Google place types count as each. A change reaches the apps within a few minutes. A category that restaurants
@@ -41,6 +42,8 @@ export default function RestaurantCategoriesScreen() {
       setLoading(false);
     }
   }, []);
+
+  const chain = useEnterChain(2);
 
   useEffect(() => {
     load();
@@ -161,8 +164,8 @@ export default function RestaurantCategoriesScreen() {
               ))}
             </View>
             <View style={styles.row}>
-              <TextInput style={[styles.input, styles.flex1]} value={newKey} onChangeText={setNewKey} placeholder="Key, e.g. food_hall" placeholderTextColor="#999" autoCapitalize="none" autoCorrect={false} />
-              <TextInput style={[styles.input, styles.flex1]} value={newLabel} onChangeText={setNewLabel} placeholder="Name, e.g. Food hall" placeholderTextColor="#999" onSubmitEditing={addCategory} />
+              <TextInput {...chain(0)} style={[styles.input, styles.flex1]} value={newKey} onChangeText={setNewKey} placeholder="Key, e.g. food_hall" placeholderTextColor="#999" autoCapitalize="none" autoCorrect={false} />
+              <TextInput {...chain(1)} style={[styles.input, styles.flex1]} value={newLabel} onChangeText={setNewLabel} placeholder="Name, e.g. Food hall" placeholderTextColor="#999" onSubmitEditing={addCategory} />
             </View>
             {!!newError && <Text style={styles.error}>{newError}</Text>}
             <TouchableOpacity style={[styles.addBtn, styles.addWide, busy === 'new' && styles.disabled]} onPress={addCategory} disabled={busy === 'new'} accessibilityRole="button">
@@ -187,7 +190,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 6 },
   flex1: { flex: 1, minWidth: 150 },
   order: { width: 70 },
-  input: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, color: '#222', backgroundColor: '#fff' },
+  input: { paddingHorizontal: 10, paddingVertical: 7, fontSize: 13, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   meta: { fontSize: 11, color: '#888' },
   label: { fontSize: 11, fontWeight: '700', color: '#666', marginTop: 10 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },

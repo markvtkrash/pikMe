@@ -6,6 +6,7 @@ import { confirmNavigationAllowed } from '../../store/unsavedChangesStore';
 import { BRAND_NAME } from '../../constants/brand';
 import { ChangePasswordModal } from './ChangePasswordModal';
 import { MenuImportAlertBar } from './MenuImportAlertBar';
+import { IconText, IconLabel } from './AppIcon';
 
 function pathIs(pathname: string, target: string) {
   return pathname === target || pathname.startsWith(target + '/');
@@ -61,8 +62,9 @@ const NAV_ITEMS: NavItem[] = [
   {
     key: 'coupons',
     label: '🎟️ Coupons',
-    href: '/restaurant/menu',
+    href: '/restaurant/coupons',
     isActive: (p) =>
+      pathIs(p, '/restaurant/coupons') ||
       pathIs(p, '/restaurant/menu') ||
       pathIs(p, '/restaurant/coupon-status') ||
       pathIs(p, '/restaurant/active-coupons') ||
@@ -92,15 +94,16 @@ const NAV_ITEMS: NavItem[] = [
   {
     key: 'tools',
     label: '🛠️ Tools',
-    href: '/restaurant/preview',
+    href: '/restaurant/tools',
     isActive: (p) =>
+      pathIs(p, '/restaurant/tools') ||
       pathIs(p, '/restaurant/preview') ||
       pathIs(p, '/restaurant/relocate') ||
       pathIs(p, '/restaurant/visibility'),
     children: [
       { label: 'Preview as a Customer', href: '/restaurant/preview' },
       { label: 'My Restaurant Moved', href: '/restaurant/relocate' },
-      { label: 'Visible to Customers', href: '/restaurant/visibility' },
+      { label: 'Pause My Restaurant', href: '/restaurant/visibility' },
     ],
   },
   {
@@ -157,19 +160,17 @@ export function OwnerNavHeader() {
       <MenuImportAlertBar onOpenPhotoImport={() => handleNavigate('/restaurant/menu-photo')} />
       <View style={styles.brandRow}>
         <Image source={require('../../../assets/logo.png')} style={styles.brandLogo} />
-        <View style={styles.brandTextGroup}>
-          <Text style={styles.brandSmall}>{BRAND_NAME}</Text>
-          <Text style={styles.brand} numberOfLines={1}>
-            {restaurant ? restaurant.name : 'Owner Portal'}
-          </Text>
-        </View>
+        <Text style={styles.brandName}>{BRAND_NAME}</Text>
+        <Text style={styles.brand} numberOfLines={1}>
+          {restaurant ? restaurant.name : 'Owner Portal'}
+        </Text>
         <TouchableOpacity
           style={styles.gearBtn}
           onPress={() => setSettingsOpen(true)}
           accessibilityRole="button"
           accessibilityLabel="Account settings"
         >
-          <Text style={styles.gearIcon}>⚙️</Text>
+          <IconText style={styles.gearIcon} emoji="⚙️" />
         </TouchableOpacity>
       </View>
 
@@ -184,7 +185,7 @@ export function OwnerNavHeader() {
                 setChangePasswordOpen(true);
               }}
             >
-              <Text style={styles.menuIcon}>🔑</Text>
+              <IconText style={styles.menuIcon} emoji="🔑" />
               <Text style={styles.menuLabel}>Change Password</Text>
             </TouchableOpacity>
             <View style={styles.menuDivider} />
@@ -195,7 +196,7 @@ export function OwnerNavHeader() {
                 handleLogout();
               }}
             >
-              <Text style={styles.menuIcon}>🚪</Text>
+              <IconText style={styles.menuIcon} emoji="🚪" />
               <Text style={[styles.menuLabel, styles.menuLogout]}>Logout</Text>
             </TouchableOpacity>
           </Pressable>
@@ -221,7 +222,7 @@ export function OwnerNavHeader() {
                   }
                 }}
               >
-                <Text style={[styles.navBtnText, active && styles.navBtnTextActive]}>{item.label}</Text>
+                <IconLabel label={item.label} style={[styles.navBtnText, active && styles.navBtnTextActive]} />
               </TouchableOpacity>
             );
           })}
@@ -256,7 +257,7 @@ export function OwnerNavHeader() {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  wrapper: { backgroundColor: '#1565C0', borderBottomWidth: 3, borderBottomColor: '#0D47A1' },
   // Brand name and Logout get their own full-width row, separate from the
   // nav — when they shared a row, the nav only got whatever sliver of width
   // was left after the brand name, which on a narrow screen could be less
@@ -267,10 +268,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6,
   },
-  brandLogo: { width: 28, height: 28, borderRadius: 14, marginRight: 8 },
-  brandTextGroup: { flexShrink: 1 },
-  brandSmall: { fontSize: 11, fontWeight: '700', color: '#1565C0', letterSpacing: 0.3 },
-  brand: { fontSize: 15, fontWeight: '800', color: '#222', flexShrink: 1 },
+  brandLogo: { width: 36, height: 36, borderRadius: 18, marginRight: 10 },
+  brandName: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 0.4, marginRight: 12 },
+  brand: { flex: 1, fontSize: 13, fontWeight: '600', color: '#E3F2FD', paddingLeft: 12, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.45)' },
   navWrapOuter: { position: 'relative' },
   // Bridges the gap between the pill's own bottom edge and the triangle
   // below (navWrap's 8px bottom padding + the pill's own 4px margin, plus
@@ -293,13 +293,13 @@ const styles = StyleSheet.create({
   },
   navBtn: {
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 4, marginBottom: 4,
-    borderWidth: 1, borderColor: '#90CAF9', backgroundColor: '#BBDEFB',
+    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.45)', backgroundColor: 'rgba(255,255,255,0.14)',
   },
-  navBtnActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
-  navBtnText: { fontSize: 13, fontWeight: '700', color: '#555' },
-  navBtnTextActive: { color: '#fff' },
-  gearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  gearIcon: { fontSize: 18 },
+  navBtnActive: { backgroundColor: '#fff', borderColor: '#fff' },
+  navBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  navBtnTextActive: { color: '#0D47A1', fontWeight: '800' },
+  gearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  gearIcon: { fontSize: 18, color: '#fff' },
   menuOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'flex-end', paddingTop: 56, paddingRight: 12 },
   menuCard: {
     backgroundColor: '#fff', borderRadius: 12, paddingVertical: 6, minWidth: 200,
@@ -314,13 +314,13 @@ const styles = StyleSheet.create({
   subRow: {
     flexDirection: 'row', flexWrap: 'wrap',
     paddingHorizontal: 16, paddingVertical: 8,
-    backgroundColor: '#FAFAFA', borderTopWidth: 1, borderTopColor: '#f0f0f0',
+    backgroundColor: '#E3F2FD', borderTopWidth: 1, borderTopColor: '#BBDEFB',
   },
   subBtn: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginRight: 8, marginBottom: 6,
-    borderWidth: 1, borderColor: '#90CAF9', backgroundColor: '#BBDEFB',
+    borderWidth: 1.5, borderColor: '#1565C0', backgroundColor: '#fff',
   },
   subBtnActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
-  subBtnText: { fontSize: 12, fontWeight: '700', color: '#555' },
+  subBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
   subBtnTextActive: { color: '#fff' },
 });

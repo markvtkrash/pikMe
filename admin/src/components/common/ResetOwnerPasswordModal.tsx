@@ -203,10 +203,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4 },
   credValue: { fontSize: 14, fontWeight: '700', color: '#222' },
   passwordRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  passwordInput: {
-    flex: 1, backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, color: '#222', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, letterSpacing: 0.5,
-  },
+  passwordInput: { flex: 1, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', fontFamily: Platform.OS === 'web' ? 'monospace' : undefined, letterSpacing: 0.5, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   regenBtn: { borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, minWidth: 64, alignItems: 'center' },
   regenText: { color: '#1565C0', fontWeight: '700', fontSize: 12 },
   checks: { backgroundColor: '#F5F5F5', borderRadius: 8, padding: 10, marginTop: 10, gap: 3 },

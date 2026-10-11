@@ -5,6 +5,8 @@ import {
 import { useRouter, usePathname } from 'expo-router';
 import { supabase } from '../../api/supabase';
 import { NAV_ITEMS, QUICK_NAV, isNavActive, isNavItemActive, showQuickNav } from '../../utils/adminNav';
+import { AppIcon, IconText } from './AppIcon';
+import { BRAND_NAME } from '../../constants/brand';
 
 // Header-left for every admin screen: logo, a Dashboard button, direct links to the
 // most-used pages (wide screens only), and — on a report page — a link back up to
@@ -19,9 +21,10 @@ export function AdminHeaderLeft() {
   return (
     <View style={styles.leftRow}>
       <Image source={require('../../../assets/logo.png')} style={styles.logo} />
+      {width >= 420 && <Text style={styles.brandName}>{BRAND_NAME}</Text>}
       {!onDashboard && (
         <TouchableOpacity onPress={() => router.push('/admin')} style={styles.headerBtn}>
-          <Text style={styles.headerBtnText}>🏠 Dashboard</Text>
+          <IconText style={styles.headerBtnText} emoji="🏠">Dashboard</IconText>
         </TouchableOpacity>
       )}
       {showQuickNav(width) &&
@@ -83,14 +86,14 @@ export function AdminHeaderRight() {
                     style={[styles.menuItem, active && styles.menuItemActive]}
                     onPress={() => go(item.href)}
                   >
-                    <Text style={styles.menuIcon}>{item.icon}</Text>
+                    <AppIcon emoji={item.icon} size={20} color="#455A64" />
                     <Text style={[styles.menuLabel, active && styles.menuLabelActive]}>{item.label}</Text>
                   </TouchableOpacity>
                 );
               })}
               <View style={styles.menuDivider} />
               <TouchableOpacity style={styles.menuItem} onPress={logout}>
-                <Text style={styles.menuIcon}>🚪</Text>
+                <IconText style={styles.menuIcon} emoji="🚪" />
                 <Text style={[styles.menuLabel, styles.logoutLabel]}>Logout</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -104,7 +107,8 @@ export function AdminHeaderRight() {
 const styles = StyleSheet.create({
   leftRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 16 },
   rightRow: { marginRight: 16 },
-  logo: { width: 24, height: 24, borderRadius: 12 },
+  logo: { width: 32, height: 32, borderRadius: 16 },
+  brandName: { color: '#fff', fontSize: 19, fontWeight: '900', letterSpacing: 0.4, marginRight: 6 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
   headerBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   headerBtnActive: { backgroundColor: '#fff' },

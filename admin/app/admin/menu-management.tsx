@@ -6,6 +6,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Alert } from '../../src/utils/alert';
 import { getRestaurantsWithMenuCounts, RestaurantMenuSummary } from '../../src/api/menuAdmin';
+import { IconText } from '../../src/components/common/AppIcon';
 
 const PAGE_SIZE = 50;
 
@@ -131,7 +132,7 @@ export default function AdminMenuManagementScreen() {
 
       {filtered.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🍽️</Text>
+          <IconText style={styles.emptyIcon} emoji="🍽️" />
           <Text style={styles.emptyText}>No restaurants found</Text>
         </View>
       ) : (
@@ -181,20 +182,20 @@ export default function AdminMenuManagementScreen() {
                 </View>
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.viewBtn} onPress={() => viewMenu(item)}>
-                    <Text style={styles.viewBtnText} numberOfLines={1}>👁 View Menu</Text>
+                    <IconText style={styles.viewBtnText} numberOfLines={1} emoji="👁">View Menu</IconText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.manualBtn}
                     onPress={() => router.push({ pathname: '/admin/menu-edit', params: menuParams(item) } as any)}
                   >
-                    <Text style={styles.manualBtnText} numberOfLines={1}>📝 Manual Edit</Text>
+                    <IconText style={styles.manualBtnText} numberOfLines={1} emoji="📝">Manual Edit</IconText>
                   </TouchableOpacity>
                   {claimed && item.restaurant_id && (
                     <TouchableOpacity
                       style={styles.updateBtn}
                       onPress={() => router.push(`/admin/menu-management/${item.restaurant_id}` as any)}
                     >
-                      <Text style={styles.updateBtnText} numberOfLines={1}>🔄 Update Menu</Text>
+                      <IconText style={styles.updateBtnText} numberOfLines={1} emoji="🔄">Update Menu</IconText>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 13, color: '#666', backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12, elevation: 2 },
 
   searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10 },
-  searchInput: { backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222' },
+  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   filterRow: { flexDirection: 'row', gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#f0f0f0' },
   filterChipActive: { backgroundColor: '#1565C0' },
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   rangeText: { fontSize: 12, color: '#888', paddingHorizontal: 16, paddingTop: 10 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1 },
+  restaurantRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   restaurantInfo: {},
   nameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
   restaurantName: { fontSize: 15, fontWeight: '700', color: '#222' },

@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CHAIN_MENU_MESSAGE } from '../../api/chainMenu';
+import { IconText } from './AppIcon';
 
 // Full-screen replacement for a menu-editing screen when the restaurant is part
 // of a chain: its menu is managed centrally, so there is nothing to edit here.
@@ -9,7 +10,7 @@ export function ChainMenuNotice({ title = 'Menu managed centrally' }: { title?: 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.icon}>🔒</Text>
+        <IconText style={styles.icon} emoji="🔒" />
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.message}>{CHAIN_MENU_MESSAGE}</Text>
         <TouchableOpacity style={styles.button} onPress={() => router.back()}>
@@ -25,14 +26,14 @@ export function ChainMenuNotice({ title = 'Menu managed centrally' }: { title?: 
 export function ChainMenuBanner() {
   return (
     <View style={styles.banner}>
-      <Text style={styles.bannerText}>🔒 {CHAIN_MENU_MESSAGE}</Text>
+      <IconText style={styles.bannerText} emoji="🔒">{CHAIN_MENU_MESSAGE}</IconText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 24, maxWidth: 440, width: '100%', alignItems: 'center', elevation: 2, gap: 8 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 24, maxWidth: 440, width: '100%', alignItems: 'center', elevation: 2, gap: 8, borderWidth: 1, borderColor: '#CFD8DC' },
   icon: { fontSize: 32 },
   title: { fontSize: 18, fontWeight: '800', color: '#222', textAlign: 'center' },
   message: { fontSize: 14, color: '#555', lineHeight: 20, textAlign: 'center' },

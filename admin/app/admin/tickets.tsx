@@ -5,6 +5,7 @@ import {
 import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { getAllTickets, AdminSupportTicket, TicketStatus, TicketSubmitterType } from '../../src/api/supportTickets';
+import { IconText, IconLabel } from '../../src/components/common/AppIcon';
 
 type StatusFilter = 'all' | TicketStatus;
 type TypeFilter = 'all' | TicketSubmitterType;
@@ -92,9 +93,7 @@ export default function AdminTicketsScreen() {
             style={[styles.tab, activeTab === tab.key && styles.tabActive]}
             onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-              {tab.label}
-            </Text>
+            <IconLabel label={tab.label} style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]} />
           </TouchableOpacity>
         ))}
       </View>
@@ -106,16 +105,14 @@ export default function AdminTicketsScreen() {
             style={[styles.typeTab, activeType === tab.key && styles.typeTabActive]}
             onPress={() => setActiveType(tab.key)}
           >
-            <Text style={[styles.typeTabText, activeType === tab.key && styles.typeTabTextActive]}>
-              {tab.label}
-            </Text>
+            <IconLabel label={tab.label} style={[styles.typeTabText, activeType === tab.key && styles.typeTabTextActive]} />
           </TouchableOpacity>
         ))}
       </View>
 
       {filteredTickets.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📭</Text>
+          <IconText style={styles.emptyIcon} emoji="📭" />
           <Text style={styles.emptyText}>No tickets found</Text>
         </View>
       ) : (
@@ -133,7 +130,7 @@ export default function AdminTicketsScreen() {
                 <View style={styles.ticketInfo}>
                   <View style={styles.ticketTitleRow}>
                     <View style={[styles.typeBadge, { backgroundColor: typeInfo.bg }]}>
-                      <Text style={[styles.typeBadgeText, { color: typeInfo.text }]}>{typeInfo.label}</Text>
+                      <IconLabel label={typeInfo.label} style={[styles.typeBadgeText, { color: typeInfo.text }]} />
                     </View>
                   </View>
                   <Text style={styles.ticketSubject} numberOfLines={1}>{item.subject}</Text>
@@ -181,7 +178,7 @@ const styles = StyleSheet.create({
   typeTabTextActive: { color: '#fff' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  ticketRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, elevation: 1 },
+  ticketRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   ticketInfo: { flex: 1 },
   ticketTitleRow: { flexDirection: 'row', marginBottom: 4 },
   typeBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },

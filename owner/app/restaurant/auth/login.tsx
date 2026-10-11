@@ -8,6 +8,8 @@ import { loginRestaurantOwner, getRestaurantForOwner } from '../../../src/api/re
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { supabase } from '../../../src/api/supabase';
 import { BRAND_NAME } from '../../../src/constants/brand';
+import { IconText } from '../../../src/components/common/AppIcon';
+import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
@@ -16,6 +18,8 @@ export default function RestaurantLoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const chain = useEnterChain(2, () => handleLogin());
 
   async function handleLogin() {
     setError('');
@@ -92,10 +96,10 @@ export default function RestaurantLoginScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.brand}>{BRAND_NAME}</Text>
-        <Text style={styles.title}>🍽️ Restaurant Owner</Text>
+        <IconText style={styles.title} emoji="🍽️">Restaurant Owner</IconText>
         <Text style={styles.subtitle}>Sign in to your account</Text>
 
-        <TextInput
+        <TextInput {...chain(0)}
           style={styles.input}
           placeholder="Email"
           placeholderTextColor="#999"
@@ -105,7 +109,7 @@ export default function RestaurantLoginScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput
+        <TextInput {...chain(1)}
           style={styles.input}
           placeholder="Password"
           placeholderTextColor="#999"
@@ -153,16 +157,7 @@ const styles = StyleSheet.create({
   brand: { fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
-    color: '#222',
-  },
+  input: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, marginBottom: 12, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   errorText: {
     color: '#e53e3e',
     fontSize: 14,

@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AppIcon } from '../../src/components/common/AppIcon';
 
 interface ReportCard {
   key: string;
@@ -138,7 +139,7 @@ export default function AdminReportsScreen() {
             style={[styles.card, { backgroundColor: report.bg }]}
             onPress={() => router.push(report.href as any)}
           >
-            <Text style={styles.cardIcon}>{report.icon}</Text>
+            <AppIcon emoji={report.icon} size={30} color={report.color} />
             <Text style={[styles.cardTitle, { color: report.color }]}>{report.title}</Text>
             <Text style={styles.cardSubtitle}>{report.subtitle}</Text>
           </TouchableOpacity>

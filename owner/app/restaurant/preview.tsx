@@ -5,6 +5,7 @@ import { getRestaurantCoupons, getRestaurantMenuItems } from '../../src/api/rest
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../src/hooks/useFavoritePages';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -88,7 +89,7 @@ export default function PreviewAsCustomerScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.pageHeaderRow}>
-        <Text style={styles.pageHeaderTitle}>👀 Preview as a Customer</Text>
+        <IconText style={styles.pageHeaderTitle} emoji="👀">Preview as a Customer</IconText>
         <FavoriteHeart
           active={favorites.has('tool-preview')}
           onPress={() => toggleFavorite('tool-preview')}
@@ -107,7 +108,7 @@ export default function PreviewAsCustomerScreen() {
 
       {genericCoupons.length > 0 && (
         <View style={styles.couponsSection}>
-          <Text style={styles.couponsSectionTitle}>🎉 Deals on Any Item</Text>
+          <IconText style={styles.couponsSectionTitle} emoji="🎉">Deals on Any Item</IconText>
           {genericCoupons.map((c) => (
             <View key={c.id} style={styles.couponCard}>
               <Text style={styles.couponCode}>Use: {c.coupon_code}</Text>
@@ -133,7 +134,7 @@ export default function PreviewAsCustomerScreen() {
                   {item.calories ? `${Math.round(item.calories)} cal` : 'N/A'} •{' '}
                   {item.protein_g ? `${item.protein_g}g protein` : 'N/A'}
                 </Text>
-                {!item.is_verified && <Text style={styles.unverifiedTag}>⚠️ Not yet verified</Text>}
+                {!item.is_verified && <IconText style={styles.unverifiedTag} emoji="⚠️">Not yet verified</IconText>}
               </View>
               {coupon && (
                 <View style={styles.itemCouponBadge}>
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   previewBannerText: { fontSize: 12.5, color: '#1565C0', fontWeight: '600', textAlign: 'center' },
 
   restaurantName: { fontSize: 22, fontWeight: '800', color: '#222' },
-  restaurantAddress: { fontSize: 13, color: '#888', marginTop: 2, marginBottom: 16 },
+  restaurantAddress: { fontSize: 13, color: '#546E7A', marginTop: 2, marginBottom: 16 },
 
   couponsSection: { backgroundColor: '#FFECB3', borderRadius: 14, borderWidth: 2, borderColor: '#FF9800', padding: 14, marginBottom: 20 },
   couponsSectionTitle: { fontSize: 15, fontWeight: '800', color: '#D84315', marginBottom: 10 },
@@ -170,12 +171,10 @@ const styles = StyleSheet.create({
   couponDiscount: { fontSize: 12, color: '#E65100', fontWeight: '700', marginTop: 2 },
 
   menuTitle: { fontSize: 17, fontWeight: '800', color: '#222', marginBottom: 10 },
-  emptyText: { fontSize: 14, color: '#999', fontStyle: 'italic' },
+  emptyText: { fontSize: 14, color: '#546E7A', fontStyle: 'italic' },
 
-  itemCard: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, elevation: 1,
-  },
+  itemCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   itemInfo: { flex: 1, minWidth: 0 },
   itemName: { fontSize: 14, fontWeight: '700', color: '#222' },
   itemNutrition: { fontSize: 12, color: '#666', marginTop: 2 },

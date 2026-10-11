@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { Alert } from '../../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getTopCoupons, TopCouponRow } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function AdminTopCouponsReport() {
   const [loading, setLoading] = useState(true);
@@ -37,7 +38,7 @@ export default function AdminTopCouponsReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🏆 Top Coupons</Text>
+      <IconText style={styles.title} emoji="🏆">Top Coupons</IconText>
       <Text style={styles.subtitle}>Ranked by redemption count, across all restaurants</Text>
 
       <View style={styles.card}>
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   emptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
 
   topCouponRow: {

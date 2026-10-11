@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Modal, ScrollView,
 import { Alert } from '../../utils/alert';
 import { addFranchiseChain } from '../../api/chainMenus';
 import { parseAliases, validateNewFranchise } from '../../utils/newFranchise';
+import { useEnterChain } from '../../hooks/useEnterChain';
 
 // "Add franchise" window on the Franchise Menu Management page (migration 092): puts a new chain on the
 // franchise list the customer app matches restaurants against.
@@ -19,6 +20,8 @@ export default function AddFranchiseModal({
   const problem = validateNewFranchise({ name, category, aliases, menuUrl });
   // Nothing is flagged until the first attempt, so an empty form does not open with an error.
   const shownProblem = touched ? problem : null;
+
+  const chain = useEnterChain(4, () => save());
 
   function reset() {
     setName(''); setCategory(''); setAliases(''); setMenuUrl(''); setTouched(false);
@@ -59,7 +62,7 @@ export default function AddFranchiseModal({
             </Text>
 
             <Text style={styles.label}>Name *</Text>
-            <TextInput
+            <TextInput {...chain(0)}
               style={styles.input}
               value={name}
               onChangeText={setName}
@@ -70,7 +73,7 @@ export default function AddFranchiseModal({
             />
 
             <Text style={styles.label}>Category</Text>
-            <TextInput
+            <TextInput {...chain(1)}
               style={styles.input}
               value={category}
               onChangeText={setCategory}
@@ -80,7 +83,7 @@ export default function AddFranchiseModal({
             />
 
             <Text style={styles.label}>Aliases</Text>
-            <TextInput
+            <TextInput {...chain(2)}
               style={styles.input}
               value={aliases}
               onChangeText={setAliases}
@@ -91,7 +94,7 @@ export default function AddFranchiseModal({
             />
 
             <Text style={styles.label}>Built-in menu page</Text>
-            <TextInput
+            <TextInput {...chain(3)}
               style={styles.input}
               value={menuUrl}
               onChangeText={setMenuUrl}
@@ -129,7 +132,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 6 },
   message: { fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 12 },
   label: { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4, marginTop: 4 },
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6 },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   warning: { fontSize: 12, color: '#c62828', marginTop: 4, fontWeight: '600' },
   note: { fontSize: 11, color: '#999', marginTop: 8, lineHeight: 16 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },

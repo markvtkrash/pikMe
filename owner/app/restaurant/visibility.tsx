@@ -30,7 +30,7 @@ export default function VisibilityScreen() {
     <View style={styles.container}>
       <View style={styles.pageWrapper}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Visible to Customers</Text>
+          <Text style={styles.title}>Pause My Restaurant</Text>
           <FavoriteHeart
             active={favorites.has('tool-visibility')}
             onPress={() => toggleFavorite('tool-visibility')}
@@ -40,7 +40,7 @@ export default function VisibilityScreen() {
         <Text style={styles.subtitle}>{restaurant.name}</Text>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{restaurant.is_paused ? '⏸ Temporarily Paused' : '▶ Visible to Customers'}</Text>
+          <Text style={styles.cardTitle}>{restaurant.is_paused ? '⏸ Temporarily Paused' : '▶ Live for Customers'}</Text>
           <Text style={styles.cardHint}>
             {restaurant.is_paused
               ? 'Your restaurant is hidden from customer search. Resume anytime — no approval needed.'
@@ -72,9 +72,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666', marginBottom: 16 },
 
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   pauseBtn: { marginTop: 4, backgroundColor: '#FFF3E0', borderWidth: 1.5, borderColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   pauseBtnText: { color: '#E65100', fontSize: 14, fontWeight: '700' },

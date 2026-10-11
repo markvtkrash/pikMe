@@ -6,6 +6,8 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { BRAND_NAME } from '../../src/constants/brand';
+import { IconText } from '../../src/components/common/AppIcon';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 export default function AdminLoginScreen() {
   const router = useRouter();
@@ -13,6 +15,8 @@ export default function AdminLoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const chain = useEnterChain(2, () => handleLogin());
 
   async function handleLogin() {
     setError('');
@@ -72,9 +76,9 @@ export default function AdminLoginScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <Text style={styles.brand}>{BRAND_NAME}</Text>
-        <Text style={styles.title}>🔐 Admin Portal</Text>
+        <IconText style={styles.title} emoji="🔐">Admin Portal</IconText>
 
-        <TextInput
+        <TextInput {...chain(0)}
           style={styles.input}
           placeholder="Admin Email"
           placeholderTextColor="#999"
@@ -84,7 +88,7 @@ export default function AdminLoginScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput
+        <TextInput {...chain(1)}
           style={styles.input}
           placeholder="Password"
           placeholderTextColor="#999"
@@ -125,16 +129,7 @@ const styles = StyleSheet.create({
   topLeftLogo: { width: 32, height: 32, borderRadius: 16 },
   brand: { fontSize: 15, fontWeight: '700', color: '#1565C0', textAlign: 'center', marginBottom: 4, letterSpacing: 0.5 },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 32 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
-    color: '#222',
-  },
+  input: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, marginBottom: 12, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   errorText: {
     color: '#e53e3e',
     fontSize: 14,

@@ -9,6 +9,7 @@ import { ONLINE_LINK_TITLE, linkHelpMessage, onlineLinkHelp, onlineLinkSavedMess
 import { getMenuLinkHelp } from '../../api/menuImport';
 import { MENU_IMPORT_ALERT_KEY } from './MenuImportAlertBar';
 import { CARD } from '../../constants/cardStyle';
+import { IconText } from './AppIcon';
 
 // The page a restaurant's menu is on. Saving it asks us to read that page again (within about a day) and add any new
 // dishes to the menu. Saving the SAME address again counts too: the page behind it may have changed, so the Import Menu
@@ -62,7 +63,7 @@ export function MenuUrlSection({ isChain }: { isChain: boolean }) {
     <View style={styles.card}>
       <View style={styles.titleRow}>
         <View style={styles.badge}>
-          <Text style={styles.badgeIcon}>🔗</Text>
+          <IconText style={styles.badgeIcon} emoji="🔗" />
         </View>
         <Text style={styles.title}>{ONLINE_LINK_TITLE}</Text>
         <TouchableOpacity
@@ -136,10 +137,7 @@ const styles = StyleSheet.create({
   infoBtn: { fontSize: 22, color: '#1565C0', fontWeight: '700', paddingLeft: 6 },
   hint: { fontSize: 13, color: '#78909C', lineHeight: 18, marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: {
-    flex: 1, borderWidth: 1, borderColor: '#DDE3EA', borderRadius: 12, backgroundColor: '#FAFBFD',
-    paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, color: '#1F2A44',
-  },
+  input: { flex: 1, paddingHorizontal: 12, paddingVertical: 11, fontSize: 14, color: '#1F2A44', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   saveBtn: { backgroundColor: '#1565C0', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', minWidth: 96 },
   saveBtnDisabled: { opacity: 0.45 },
   saveBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },

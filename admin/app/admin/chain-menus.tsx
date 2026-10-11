@@ -16,6 +16,8 @@ import {
   ChainMenuSource, SourceFilter, describeCheckState, describePullResult, filterSources, markedDueTimestamp, needsStore, parseSourceFilter,
   statusInfo, summarizeSources, validateMenuLinkInput,
 } from '../../src/utils/chainMenuSources';
+import { IconText } from '../../src/components/common/AppIcon';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 // Colour for the "last looked up" text in a row: orange when marked for a fresh lookup, blue when never
 // looked up, the normal grey otherwise.
@@ -146,7 +148,7 @@ export default function AdminChainMenusScreen() {
                 not be read automatically: tap one and enter its menu link by hand. That link is then used as is.
               </Text>
               <TouchableOpacity style={styles.addBtn} onPress={() => setAdding(true)} accessibilityRole="button">
-                <Text style={styles.addBtnText}>➕ Add franchise</Text>
+                <IconText style={styles.addBtnText} emoji="➕">Add franchise</IconText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.createOwnerLink} onPress={() => router.push('/admin/create-owner')}>
                 <Text style={styles.createOwnerLinkText}>
@@ -201,7 +203,7 @@ export default function AdminChainMenusScreen() {
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.rowManage} onPress={() => setEditing(item)} accessibilityRole="button">
-                    <Text style={styles.rowManageText}>⚙ Manage</Text>
+                    <IconText style={styles.rowManageText} emoji="⚙">Manage</IconText>
                   </TouchableOpacity>
                   <Text style={[styles.badge, { backgroundColor: tone.bg, color: tone.fg }]}>{info.label}</Text>
                 </View>
@@ -276,6 +278,7 @@ function EditModal({
   const [working, setWorking] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [lastSource, setLastSource] = useState<string | null>(null);
+  const chain = useEnterChain(2);
 
   // Reset the form each time a different chain is opened.
   if (source && source.chain_id !== lastSource) {
@@ -350,7 +353,7 @@ function EditModal({
             )}
 
             <Text style={styles.label}>Menu link (set by hand)</Text>
-            <TextInput
+            <TextInput {...chain(0)}
               style={styles.input}
               value={link}
               onChangeText={setLink}
@@ -361,7 +364,7 @@ function EditModal({
               editable={!working}
             />
             <Text style={styles.label}>Store parameter (optional)</Text>
-            <TextInput
+            <TextInput {...chain(1)}
               style={styles.input}
               value={storeRef}
               onChangeText={setStoreRef}
@@ -499,9 +502,9 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '600', color: '#555' },
   chipTextActive: { color: '#fff' },
 
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 12 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 12, borderWidth: 1, borderColor: '#CFD8DC' },
 
-  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3 },
+  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3, borderWidth: 1, borderColor: '#CFD8DC' },
   rowTop: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   rowAction: {
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#1565C0', width: 170,
@@ -529,7 +532,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, color: '#999' },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, maxHeight: '90%' },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 480, maxHeight: '90%', borderWidth: 1, borderColor: '#CFD8DC' },
   // The Manage window: a little wider than the small confirm windows, and the content scrolls (with a visible
   // scrollbar) when it is taller than the window.
   manageCard: { maxWidth: 640, maxHeight: '92%' },
@@ -538,7 +541,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 6 },
   message: { fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 14 },
   label: { fontSize: 11, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 0.3, marginBottom: 4, marginTop: 4 },
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6 },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   warning: { fontSize: 12, color: '#c62828', marginTop: 4, fontWeight: '600' },
   note: { fontSize: 11, color: '#999', marginTop: 8, lineHeight: 16 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },

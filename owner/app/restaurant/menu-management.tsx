@@ -12,6 +12,7 @@ import { useFavoritePages } from '../../src/hooks/useFavoritePages';
 import { MenuUrlSection } from '../../src/components/common/MenuUrlSection';
 import { CARD } from '../../src/constants/cardStyle';
 import { confirmedPercent, menuSummaryText } from '../../src/utils/menuSummary';
+import { IconText } from '../../src/components/common/AppIcon';
 
 // The ways to add or update a menu (independent restaurants). Each is a card with a coloured icon, a title and a line
 // saying what it does. The "online link" way is the form below them, since it needs a field.
@@ -21,18 +22,27 @@ const IMPORT_CARDS = [
     href: '/restaurant/menu-photo',
     icon: '📷',
     title: 'Import Menu from Photo',
-    blurb: 'Snap or upload a picture of your menu. We read the dishes from it.',
+    blurb: 'Snap or upload a picture. We read the dishes.',
     tint: '#F3E5F5',
-    accent: '#8E24AA',
+    accent: '#7B1FA2',
   },
   {
     key: 'menu-text',
     href: '/restaurant/menu-text',
     icon: '📋',
     title: 'Import Menu from Text',
-    blurb: 'Paste menu text from a PDF, an email or a document.',
+    blurb: 'Paste text from a PDF, an email or a document.',
     tint: '#E0F2F1',
-    accent: '#00695C',
+    accent: '#00796B',
+  },
+  {
+    key: 'menu-online-link',
+    href: '/restaurant/menu-online-link',
+    icon: '🔗',
+    title: 'Import Menu from Online Link',
+    blurb: 'Enter the web address of your menu page.',
+    tint: '#E3F2FD',
+    accent: '#1565C0',
   },
 ] as const;
 
@@ -95,6 +105,7 @@ export default function MenuManagementScreen() {
           <Text style={styles.title}>Menu Management</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
+        <FavoriteHeart active={favorites.has('main-menu')} onPress={() => toggleFavorite('main-menu')} size="large" />
       </View>
 
       {isChain && <ChainMenuBanner />}
@@ -109,12 +120,12 @@ export default function MenuManagementScreen() {
             </View>
             {isChain ? (
               <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/restaurant/menu-items')} accessibilityRole="button">
-                <Text style={styles.primaryBtnText}>📖  View Menu Items</Text>
+                <IconText style={styles.primaryBtnText} emoji="📖">View Menu Items</IconText>
               </TouchableOpacity>
             ) : (
               <View style={styles.primaryWrap}>
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/restaurant/manual-menu')} accessibilityRole="button">
-                  <Text style={styles.primaryBtnText}>✍️  Edit Menu</Text>
+                  <IconText style={styles.primaryBtnText} emoji="✍️">Edit Menu</IconText>
                 </TouchableOpacity>
                 <FavoriteHeart active={favorites.has('menu-manual-entry')} onPress={() => toggleFavorite('menu-manual-entry')} />
               </View>
@@ -141,17 +152,19 @@ export default function MenuManagementScreen() {
               {IMPORT_CARDS.map((c) => (
                 <TouchableOpacity
                   key={c.key}
-                  style={styles.importCard}
+                  style={[styles.importCard, { backgroundColor: c.tint, borderColor: c.accent }]}
                   onPress={() => router.push(c.href as any)}
                   accessibilityRole="button"
                 >
                   <View style={styles.heartCorner}>
                     <FavoriteHeart active={favorites.has(c.key)} onPress={() => toggleFavorite(c.key)} />
                   </View>
-                  <View style={[styles.badge, { backgroundColor: c.tint }]}>
-                    <Text style={styles.badgeIcon}>{c.icon}</Text>
+                  <View style={styles.cardTop}>
+                    <View style={[styles.badge, { backgroundColor: c.accent }]}>
+                      <IconText style={styles.badgeIcon} emoji={c.icon} iconColor="#fff" />
+                    </View>
+                    <Text style={[styles.importTitle, { color: c.accent }]} numberOfLines={2}>{c.title}</Text>
                   </View>
-                  <Text style={[styles.importTitle, { color: c.accent }]}>{c.title}</Text>
                   <Text style={styles.importBlurb}>{c.blurb}</Text>
                 </TouchableOpacity>
               ))}
@@ -159,8 +172,9 @@ export default function MenuManagementScreen() {
           </>
         )}
 
-        {/* The page the menu is read from (for chains it is a suggestion to our team) */}
-        <MenuUrlSection isChain={isChain === true} />
+        {/* For a franchise restaurant the menu link is a suggestion to our team. An independent restaurant has the same form as the
+            "Import Menu from Online Link" card above, so it is not repeated here. */}
+        {isChain === true && <MenuUrlSection isChain />}
       </ScrollView>
     </View>
     </View>
@@ -196,11 +210,12 @@ const styles = StyleSheet.create({
 
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1F2A44', marginTop: 4 },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  importCard: { ...CARD, flexBasis: 260, flexGrow: 1, padding: 16, position: 'relative' },
-  heartCorner: { position: 'absolute', top: 8, right: 8, zIndex: 1 },
-  badge: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  badgeIcon: { fontSize: 22 },
-  importTitle: { fontSize: 15.5, fontWeight: '800', marginBottom: 3 },
-  importBlurb: { fontSize: 13, color: '#78909C', lineHeight: 18 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  importCard: { ...CARD, width: '32%', minWidth: 200, minHeight: 92, padding: 12, paddingRight: 30, position: 'relative', borderWidth: 2, borderRadius: 12 },
+  heartCorner: { position: 'absolute', top: 6, right: 6, zIndex: 1 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  badge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  badgeIcon: { fontSize: 16, color: '#fff' },
+  importTitle: { flex: 1, fontSize: 14, fontWeight: '800' },
+  importBlurb: { fontSize: 12, color: '#37474F', lineHeight: 16 },
 });

@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
+import { IconText } from './AppIcon';
 
 interface Props { children: ReactNode }
 interface State { hasError: boolean; message: string }
@@ -20,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
     return (
       <View style={styles.container}>
-        <Text style={styles.icon}>⚠️</Text>
+        <IconText style={styles.icon} emoji="⚠️" />
         <Text style={styles.title}>Something went wrong</Text>
         <Text style={styles.body}>
           The app hit an unexpected error. Please restart and try again.

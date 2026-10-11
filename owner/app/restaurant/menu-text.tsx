@@ -9,6 +9,7 @@ import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
 import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
+import { IconText } from '../../src/components/common/AppIcon';
 
 export default function MenuTextScreen() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function MenuTextScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Paste Your Menu Text</Text>
+          <IconText style={styles.cardTitle} emoji="📋">Paste Your Menu Text</IconText>
           <Text style={styles.cardHint}>
             Copy your real menu text from anywhere — a PDF, an email, a document, a site that's hard to
             link — and paste it below. We'll read the real dish names directly from it — we never invent
@@ -116,9 +117,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   textArea: {
     borderWidth: 1, borderColor: '#ddd', borderRadius: 10,

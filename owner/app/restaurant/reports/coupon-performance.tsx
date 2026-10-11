@@ -5,6 +5,7 @@ import { getRestaurantCoupons } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../../src/hooks/useFavoritePages';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -59,7 +60,7 @@ export default function CouponPerformanceReport() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>📊 Coupon Performance</Text>
+        <IconText style={styles.title} emoji="📊">Coupon Performance</IconText>
         <FavoriteHeart
           active={favorites.has('report-coupon-performance')}
           onPress={() => toggleFavorite('report-coupon-performance')}
@@ -148,18 +149,18 @@ const styles = StyleSheet.create({
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
+  subtitle: { fontSize: 13, color: '#546E7A', marginBottom: 16 },
 
   emptyList: { alignItems: 'center', paddingVertical: 40 },
   emptyListText: { fontSize: 16, fontWeight: '600', color: '#222' },
-  emptyListSubtext: { fontSize: 12, color: '#999', marginTop: 4 },
+  emptyListSubtext: { fontSize: 12, color: '#546E7A', marginTop: 4 },
 
   table: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', elevation: 1 },
   tableHeaderRow: {
     flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: '#eee', backgroundColor: '#FAFAFA',
   },
-  tableHeaderCell: { fontSize: 10, fontWeight: '800', color: '#999', textTransform: 'uppercase', letterSpacing: 0.5 },
+  tableHeaderCell: { fontSize: 10, fontWeight: '800', color: '#546E7A', textTransform: 'uppercase', letterSpacing: 0.5 },
   tableRow: {
     flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: '#f5f5f5',

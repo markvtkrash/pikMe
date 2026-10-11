@@ -6,6 +6,7 @@ import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, getRestaurantMenuItems, updateCoupon, deleteCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -171,7 +172,7 @@ export default function OrphanedCouponsScreen() {
                     {busy ? (
                       <ActivityIndicator size="small" color="#e53e3e" />
                     ) : (
-                      <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
+                      <IconText style={styles.deleteBtnText} emoji="🗑️">Delete</IconText>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -213,16 +214,16 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  subtitle: { fontSize: 13, color: '#999' },
+  subtitle: { fontSize: 13, color: '#546E7A' },
 
   list: { padding: 16 },
-  explainer: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  explainer: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   couponCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderLeftWidth: 4, borderLeftColor: '#FFA500' },
   couponHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   couponCode: { fontSize: 16, fontWeight: '800', color: '#222' },
   discountValue: { fontSize: 14, fontWeight: '700', color: '#1565C0' },
-  expiryText: { fontSize: 11, color: '#999', marginBottom: 12 },
+  expiryText: { fontSize: 11, color: '#546E7A', marginBottom: 12 },
 
   actionsRow: { flexDirection: 'row', gap: 8 },
   reactivateBtn: { flex: 1, backgroundColor: '#E3F2FD', paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
@@ -232,12 +233,12 @@ const styles = StyleSheet.create({
 
   itemPicker: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   itemPickerLabel: { fontSize: 12, fontWeight: '700', color: '#666', marginBottom: 8 },
-  noItemsText: { fontSize: 12, color: '#999', fontStyle: 'italic' },
+  noItemsText: { fontSize: 12, color: '#546E7A', fontStyle: 'italic' },
   itemOption: { paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#f6f6f6', borderRadius: 8, marginBottom: 6 },
   itemOptionText: { fontSize: 13, color: '#222', fontWeight: '600' },
 
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#222' },
-  emptySubtext: { fontSize: 13, color: '#999', marginTop: 4 },
+  emptySubtext: { fontSize: 13, color: '#546E7A', marginTop: 4 },
 });

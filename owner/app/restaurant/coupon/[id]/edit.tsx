@@ -8,6 +8,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { updateCoupon, deleteCoupon, getRestaurantCoupons, getRestaurantMenuItems } from '../../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../../src/store/restaurantOwnerStore';
+import { IconText } from '../../../../src/components/common/AppIcon';
+import { useEnterChain } from '../../../../src/hooks/useEnterChain';
 
 // Type for HTML input element
 declare global {
@@ -53,6 +55,8 @@ export default function EditCouponScreen() {
   const [deleting, setDeleting] = useState(false);
   const [usageLimitError, setUsageLimitError] = useState<string | undefined>();
   const [perUserLimitError, setPerUserLimitError] = useState<string | undefined>();
+
+  const chain = useEnterChain(4);
 
   useEffect(() => {
     loadCoupon();
@@ -235,7 +239,7 @@ export default function EditCouponScreen() {
 
           {/* Coupon Code */}
           <Text style={styles.label}>Coupon Code</Text>
-          <TextInput
+          <TextInput {...chain(0)}
             style={styles.input}
             placeholder="e.g., SAVE15"
             placeholderTextColor="#999"
@@ -247,7 +251,7 @@ export default function EditCouponScreen() {
           {/* Discount Value */}
           <Text style={styles.label}>Discount Value</Text>
           <View style={styles.discountRow}>
-            <TextInput
+            <TextInput {...chain(1)}
               style={[styles.input, styles.discountInput]}
               placeholder="15"
               placeholderTextColor="#999"
@@ -303,7 +307,7 @@ export default function EditCouponScreen() {
             Once that many people have activated it, it stops appearing for anyone
             else — so pick a number you can actually honor at the register.
           </Text>
-          <TextInput
+          <TextInput {...chain(2)}
             style={[styles.input, usageLimitError && styles.inputError]}
             placeholder="e.g., 100"
             placeholderTextColor="#999"
@@ -322,7 +326,7 @@ export default function EditCouponScreen() {
             How many times the SAME customer can redeem this coupon. Set to 1 for a one-time-per-person
             deal, or higher to let a customer use it repeatedly (still counted against the total above).
           </Text>
-          <TextInput
+          <TextInput {...chain(3)}
             style={[styles.input, perUserLimitError && styles.inputError]}
             placeholder="e.g., 1"
             placeholderTextColor="#999"
@@ -415,7 +419,7 @@ export default function EditCouponScreen() {
             {deleting ? (
               <ActivityIndicator color="#e53e3e" size="small" />
             ) : (
-              <Text style={styles.deleteBtnText}>🗑️ Delete Coupon</Text>
+              <IconText style={styles.deleteBtnText} emoji="🗑️">Delete Coupon</IconText>
             )}
           </TouchableOpacity>
         </View>
@@ -442,28 +446,16 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: 560, alignSelf: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#222', marginBottom: 8, marginTop: 12 },
-  helpText: { fontSize: 12, color: '#888', lineHeight: 17, marginTop: -4, marginBottom: 8 },
+  helpText: { fontSize: 12, color: '#546E7A', lineHeight: 17, marginTop: -4, marginBottom: 8 },
   inputError: { borderColor: '#e53e3e', borderWidth: 2 },
   errorText: { fontSize: 12, color: '#e53e3e', fontWeight: '600', marginBottom: 8, marginTop: -8 },
-  typeDisplay: {
-    backgroundColor: '#fff',
+  typeDisplay: { backgroundColor: '#fff',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 12,
-  },
+    marginBottom: 12, borderWidth: 1, borderColor: '#CFD8DC' },
   typeDisplayText: { fontSize: 14, color: '#666' },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#222',
-    marginBottom: 12,
-  },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', marginBottom: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   discountRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   discountInput: { flex: 1, marginBottom: 0 },
   discountUnit: { fontSize: 18, fontWeight: '800', color: '#1565C0', minWidth: 30, textAlign: 'center' },
@@ -474,12 +466,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 8,
   },
   itemPickerToggleText: { flex: 1, fontSize: 14, color: '#222' },
-  itemPickerToggleArrow: { fontSize: 13, color: '#999', marginLeft: 8 },
+  itemPickerToggleArrow: { fontSize: 13, color: '#546E7A', marginLeft: 8 },
   itemPicker: {
     backgroundColor: '#fafafa', borderRadius: 10, borderWidth: 1, borderColor: '#eee',
     marginBottom: 12, maxHeight: 220, overflow: 'hidden',
   },
-  noItemsText: { fontSize: 13, color: '#999', padding: 12, fontStyle: 'italic' },
+  noItemsText: { fontSize: 13, color: '#546E7A', padding: 12, fontStyle: 'italic' },
   itemOption: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
   itemOptionText: { fontSize: 13, color: '#333', fontWeight: '600' },
   datePicker: {

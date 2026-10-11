@@ -6,6 +6,7 @@ import {
 import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { IconText } from '../../src/components/common/AppIcon';
 
 type CouponStatus = 'active' | 'expired' | 'deleted' | 'all';
 
@@ -184,7 +185,7 @@ export default function AdminDashboard() {
       {/* Coupons List */}
       {filteredCoupons.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📭</Text>
+          <IconText style={styles.emptyIcon} emoji="📭" />
           <Text style={styles.emptyText}>No coupons found</Text>
         </View>
       ) : (
@@ -238,7 +239,7 @@ export default function AdminDashboard() {
                     style={[styles.actionBtn, styles.purgeBtn]}
                     onPress={() => handlePurge(item.id)}
                   >
-                    <Text style={styles.purgeBtnText}>🗑️ Purge</Text>
+                    <IconText style={styles.purgeBtnText} emoji="🗑️">Purge</IconText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#1565C0' },
 
   searchContainer: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff' },
-  searchInput: { backgroundColor: '#f5f5f5', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222' },
+  searchInput: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   couponRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderLeftWidth: 4, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },

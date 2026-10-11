@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { Alert } from '../../utils/alert';
 import { deleteCachedRestaurants } from '../../api/reports';
+import { IconText } from './AppIcon';
 
 export const REPORT_PAGE_SIZE = 50;
 
@@ -149,7 +150,7 @@ export function SelectableRestaurantList<T extends BaseRow>({
                       <Text style={styles.clearText}>Clear ({selected.size})</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => setConfirmOpen(true)}>
-                      <Text style={styles.deleteBtnText}>🗑 Delete {selected.size}</Text>
+                      <IconText style={styles.deleteBtnText} emoji="🗑">Delete {selected.size}</IconText>
                     </TouchableOpacity>
                   </>
                 )}
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   content: { padding: 16, paddingBottom: 32 },
 
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10, borderWidth: 1, borderColor: '#CFD8DC' },
 
   toolbar: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   selectAllBtn: { backgroundColor: '#fff', borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },

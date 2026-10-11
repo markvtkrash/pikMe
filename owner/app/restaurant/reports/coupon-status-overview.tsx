@@ -5,6 +5,7 @@ import { getCouponStatusSnapshot, CouponStatusSnapshot } from '../../../src/api/
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../../src/hooks/useFavoritePages';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function CouponStatusOverviewReport() {
   const router = useRouter();
@@ -47,7 +48,7 @@ export default function CouponStatusOverviewReport() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>🎟️ Coupon Status Overview</Text>
+        <IconText style={styles.title} emoji="🎟️">Coupon Status Overview</IconText>
         <FavoriteHeart
           active={favorites.has('report-coupon-status-overview')}
           onPress={() => toggleFavorite('report-coupon-status-overview')}
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
+  subtitle: { fontSize: 13, color: '#546E7A', marginBottom: 16 },
 
   snapshotRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   snapshotBox: {
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   snapshotNumber: { fontSize: 24, fontWeight: '800', color: '#222' },
   snapshotLabel: { fontSize: 11, fontWeight: '700', color: '#666', textTransform: 'uppercase', letterSpacing: 0.3, marginTop: 4 },
 
-  hint: { fontSize: 11, color: '#999', marginTop: 8 },
+  hint: { fontSize: 11, color: '#546E7A', marginTop: 8 },
 
   actionCard: {
     flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF3E0',

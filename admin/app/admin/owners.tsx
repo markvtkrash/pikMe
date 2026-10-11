@@ -12,6 +12,10 @@ import {
 } from '../../src/api/restaurantAuth';
 import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
 import { buildDeleteMessage } from '../../src/utils/restaurantDelete';
+import { IconText } from '../../src/components/common/AppIcon';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
+import { getFranchiseNameSet } from '../../src/api/franchiseKinds';
+import { OWNER_KINDS, OwnerKind, countByKind, matchesOwnerKind } from '../../src/utils/ownerKinds';
 
 function generatePassword(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -41,8 +45,9 @@ export default function AdminOwnersScreen() {
   const [owners, setOwners] = useState<AdminOwnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [kind, setKind] = useState<OwnerKind>('all');
+  const [franchiseNames, setFranchiseNames] = useState<Set<string>>(new Set());
   const [busyId, setBusyId] = useState<string | null>(null);
-
   const [resetTarget, setResetTarget] = useState<ResetOwnerTarget | null>(null);
 
   const [editTarget, setEditTarget] = useState<AdminOwnerRow | null>(null);
@@ -65,6 +70,9 @@ export default function AdminOwnersScreen() {
     onConfirm: () => void;
   } | null>(null);
 
+  const chainEdit = useEnterChain(2, () => handleSaveEdit());
+  const chainReassign = useEnterChain(3, () => handleSaveReassign());
+
   useFocusEffect(
     useCallback(() => {
       loadOwners();
@@ -76,6 +84,7 @@ export default function AdminOwnersScreen() {
     try {
       const data = await adminListOwners();
       setOwners(data);
+      setFranchiseNames(await getFranchiseNameSet(data.map((o) => o.restaurant_name ?? '')));
     } catch (error: any) {
       console.error('[admin-owners] Load error:', error);
       Alert.alert('Error', error.message || 'Failed to load owners');
@@ -251,7 +260,10 @@ export default function AdminOwnersScreen() {
     }
   }
 
+  const kindCounts = countByKind(owners, franchiseNames);
+
   const filtered = owners.filter((o) => {
+    if (!matchesOwnerKind(o.restaurant_name, franchiseNames, kind)) return false;
     const q = filter.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -287,6 +299,20 @@ export default function AdminOwnersScreen() {
             value={filter}
             onChangeText={setFilter}
           />
+        </View>
+
+        <View style={styles.kindRow}>
+          {OWNER_KINDS.map((k) => (
+            <TouchableOpacity
+              key={k.key}
+              style={[styles.kindChip, kind === k.key && styles.kindChipActive]}
+              onPress={() => setKind(k.key)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: kind === k.key }}
+            >
+              <Text style={[styles.kindChipText, kind === k.key && styles.kindChipTextActive]}>{k.label} ({kindCounts[k.key]})</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <FlatList
@@ -332,7 +358,7 @@ export default function AdminOwnersScreen() {
 
                 <View style={styles.actionsRow}>
                   <TouchableOpacity style={styles.actionBtn} onPress={() => openEdit(item)} disabled={isBusy}>
-                    <Text style={styles.actionBtnText}>✏️ Edit</Text>
+                    <IconText style={styles.actionBtnText} emoji="✏️">Edit</IconText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -340,7 +366,7 @@ export default function AdminOwnersScreen() {
                     onPress={() => setResetTarget({ ownerId: item.owner_id, name: item.business_name, email: item.email })}
                     disabled={isBusy}
                   >
-                    <Text style={styles.actionBtnText}>🔑 Reset Password</Text>
+                    <IconText style={styles.actionBtnText} emoji="🔑">Reset Password</IconText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -375,13 +401,13 @@ export default function AdminOwnersScreen() {
                       onPress={() => handleDeleteRestaurant(item)}
                       disabled={isBusy}
                     >
-                      <Text style={[styles.actionBtnText, styles.actionBtnWarnText]}>🗑 Delete</Text>
+                      <IconText style={[styles.actionBtnText, styles.actionBtnWarnText]} emoji="🗑">Delete</IconText>
                     </TouchableOpacity>
                   )}
 
                   {item.restaurant_id && (
                     <TouchableOpacity style={styles.actionBtn} onPress={() => openReassign(item)} disabled={isBusy}>
-                      <Text style={styles.actionBtnText}>🔁 Reassign</Text>
+                      <IconText style={styles.actionBtnText} emoji="🔁">Reassign</IconText>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -402,7 +428,7 @@ export default function AdminOwnersScreen() {
             <Text style={styles.modalTitle}>Edit Owner</Text>
 
             <Text style={styles.label}>Business Name</Text>
-            <TextInput
+            <TextInput {...chainEdit(0)}
               style={styles.input}
               value={editBusinessName}
               onChangeText={setEditBusinessName}
@@ -410,7 +436,7 @@ export default function AdminOwnersScreen() {
             />
 
             <Text style={styles.label}>Email</Text>
-            <TextInput
+            <TextInput {...chainEdit(1)}
               style={styles.input}
               value={editEmail}
               onChangeText={setEditEmail}
@@ -463,7 +489,7 @@ export default function AdminOwnersScreen() {
                 </Text>
 
                 <Text style={styles.label}>New Owner Email</Text>
-                <TextInput
+                <TextInput {...chainReassign(0)}
                   style={styles.input}
                   value={reassignEmail}
                   onChangeText={setReassignEmail}
@@ -475,7 +501,7 @@ export default function AdminOwnersScreen() {
                 />
 
                 <Text style={styles.label}>New Owner Business Name</Text>
-                <TextInput
+                <TextInput {...chainReassign(1)}
                   style={styles.input}
                   value={reassignBusinessName}
                   onChangeText={setReassignBusinessName}
@@ -486,7 +512,7 @@ export default function AdminOwnersScreen() {
 
                 <Text style={styles.label}>Temporary Password</Text>
                 <View style={styles.passwordRow}>
-                  <TextInput
+                  <TextInput {...chainReassign(2)}
                     style={[styles.input, styles.passwordInput]}
                     value={reassignPassword}
                     onChangeText={setReassignPassword}
@@ -498,7 +524,7 @@ export default function AdminOwnersScreen() {
                     onPress={() => setReassignPassword(generatePassword())}
                     disabled={reassignSaving}
                   >
-                    <Text style={styles.regenBtnText}>🔄</Text>
+                    <IconText style={styles.regenBtnText} emoji="🔄" />
                   </TouchableOpacity>
                 </View>
 
@@ -552,14 +578,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: '#222' },
   count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
 
+  kindRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
+  kindChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, borderWidth: 1.5, borderColor: '#cfd8dc', backgroundColor: '#fff' },
+  kindChipActive: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
+  kindChipText: { fontSize: 13, fontWeight: '700', color: '#455A64' },
+  kindChipTextActive: { color: '#fff' },
   filterBox: { paddingHorizontal: 16, paddingTop: 12 },
-  filterInput: {
-    backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, color: '#222', borderWidth: 1, borderColor: '#e0e0e0',
-  },
+  filterInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardClosed: { backgroundColor: '#FFF5F5', borderWidth: 1.5, borderColor: '#e53e3e' },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 2 },
   ownerName: { fontSize: 16, fontWeight: '800', color: '#222', flex: 1, minWidth: 0 },
@@ -598,10 +626,7 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 440 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 12 },
   label: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 6, marginTop: 4 },
-  input: {
-    backgroundColor: '#fafafa', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11,
-    fontSize: 14, color: '#222', borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 10,
-  },
+  input: { paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#222', marginBottom: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   hint: { fontSize: 12, color: '#888', lineHeight: 18, marginBottom: 14 },
   passwordRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
   passwordInput: { flex: 1 },

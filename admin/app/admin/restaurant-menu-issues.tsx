@@ -9,6 +9,7 @@ import {
   describeRequests, describeRetry, placeIssueInfo, PlaceMenuIssue, summarizePlaceIssues,
 } from '../../src/utils/menuIssues';
 import { formatLastRun, validateMenuLinkInput } from '../../src/utils/chainMenuSources';
+import { IconText } from '../../src/components/common/AppIcon';
 
 const TONES = {
   bad: { bg: '#FFEBEE', fg: '#c62828' },
@@ -157,7 +158,7 @@ export default function RestaurantMenuIssuesScreen() {
 
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.linkBtn} onPress={() => openLink(item)} accessibilityRole="button">
-                    <Text style={styles.linkBtnText}>🔗 {item.override_link ? 'Change menu link' : 'Set menu link'}</Text>
+                    <IconText style={styles.linkBtnText} emoji="🔗">{item.override_link ? 'Change menu link' : 'Set menu link'}</IconText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.retryBtn, busyId === item.job_id && styles.disabled]}
@@ -168,7 +169,7 @@ export default function RestaurantMenuIssuesScreen() {
                     {busyId === item.job_id ? <ActivityIndicator size="small" color="#455a64" /> : <Text style={styles.retryBtnText}>↻ Try again</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.retryBtn} onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: { placeId: item.place_id } } as any)} accessibilityRole="button">
-                    <Text style={styles.retryBtnText}>📷 Add the menu</Text>
+                    <IconText style={styles.retryBtnText} emoji="📷">Add the menu</IconText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -227,8 +228,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, color: '#666', lineHeight: 17, marginBottom: 8 },
   summary: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 8 },
   error: { fontSize: 12, color: '#c62828', fontWeight: '600', marginVertical: 4 },
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10 },
-  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10, borderWidth: 1, borderColor: '#CFD8DC' },
+  row: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1, gap: 3, borderWidth: 1, borderColor: '#CFD8DC' },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   name: { fontSize: 15, fontWeight: '800', color: '#222', flex: 1 },
   badge: { fontSize: 10, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
@@ -243,10 +244,10 @@ const styles = StyleSheet.create({
   emptyBox: { paddingVertical: 40, alignItems: 'center' },
   emptyText: { fontSize: 14, color: '#999' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 520, maxHeight: '90%' },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '100%', maxWidth: 520, maxHeight: '90%', borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 6 },
   cardNote: { fontSize: 12, color: '#666', lineHeight: 17, marginBottom: 10 },
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6 },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 6, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   cardActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 12 },
   cancelBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, borderColor: '#9aa5ad', backgroundColor: '#fff' },
   cancelText: { fontSize: 13, fontWeight: '700', color: '#455a64' },

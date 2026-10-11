@@ -1,26 +1,24 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, TextInput,
+  View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
-import { supabase } from '../../src/api/supabase';
-import { normalizeUrl } from '../../src/utils/urlInput';
 import { CategoryPicker } from '../../src/components/common/CategoryPicker';
 import { getGoogleGuess, getRestaurantCategories, getStoredGoogleTypes, saveRestaurantCategories } from '../../src/api/categories';
 import {
   CategoryChoice, choiceForEditing, cleanChoice, EMPTY_CHOICE, needsCategories, RestaurantCategory, sameChoice, suggestDineIn,
   validateChoice,
 } from '../../src/utils/categories';
+import { IconText } from '../../src/components/common/AppIcon';
 
 // What an owner sees about their restaurant: the address (read-only; it follows the restaurant's Google listing, and
-// "My Restaurant Moved" changes it) and the website, the one thing they can edit here. The page the menu is read from
-// is set on the Menu Management page, not here.
+// "My Restaurant Moved" changes it) and what kind of place it is (place type, ways to order, cuisine). The page the menu is
+// read from is set on the Menu Management page, not here.
 export default function RestaurantProfileScreen() {
   const router = useRouter();
   const { owner, restaurant, setRestaurant } = useRestaurantOwnerStore();
-  const [website, setWebsite] = useState(restaurant?.website_url || '');
   const [saving, setSaving] = useState(false);
   // What the place is, how customers get the food, and what it serves: the saved choice, else Google's guess for what is not set.
   const [categories, setCategories] = useState<RestaurantCategory[]>([]);
@@ -59,17 +57,8 @@ export default function RestaurantProfileScreen() {
   async function handleSave() {
     setSaving(true);
     try {
-      const website_url = normalizeUrl(website);
-
-      // Only the website is saved here. The menu page is saved from Menu Management, so saving this page never
+      // Only the place choices are saved here. The menu page is saved from Menu Management, so saving this page never
       // asks for the menu to be read again.
-      const { error } = await supabase
-        .from('restaurants')
-        .update({ website_url, updated_at: new Date().toISOString() })
-        .eq('id', restaurant!.id);
-
-      if (error) throw error;
-
       // The place choices are saved when they changed, or when the owner has not chosen yet (confirming Google's guess counts).
       let saved: { venue_types: string[]; services: string[]; cuisines: string[] } | null = null;
       if (categoriesReady && (needsCategories(restaurant) || !sameChoice(choice, loadedChoice))) {
@@ -82,7 +71,7 @@ export default function RestaurantProfileScreen() {
         setLoadedChoice(choice);
       }
 
-      setRestaurant({ ...restaurant!, website_url, ...(saved ?? {}) });
+      setRestaurant({ ...restaurant!, ...(saved ?? {}) });
       Alert.alert('Success', 'Restaurant profile updated.');
     } catch (error: any) {
       console.error('[profile] Save error:', error);
@@ -106,33 +95,29 @@ export default function RestaurantProfileScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📍 Address</Text>
-          <Text style={styles.addressText}>{restaurant.address || 'No address on file'}</Text>
-          <Text style={styles.cardHint}>
-            This comes from your Google listing and can't be edited here. If your restaurant has moved,{' '}
-            <Text style={styles.link} onPress={() => router.push('/restaurant/relocate' as any)}>tell us it moved</Text>.
+        <View style={styles.addressRow}>
+          <IconText style={styles.addressText} emoji="📍">{restaurant.address || 'No address on file'}</IconText>
+          <Text style={styles.addressNote}>
+            From your Google listing. Moved?{' '}
+            <Text style={styles.link} onPress={() => router.push('/restaurant/relocate' as any)}>Tell us</Text>
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏠 Website</Text>
-          <Text style={styles.cardHint}>Your restaurant's homepage.</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://yourrestaurant.com"
-            placeholderTextColor="#999"
-            autoCapitalize="none"
-            keyboardType="url"
-            value={website}
-            onChangeText={setWebsite}
-            editable={!saving}
-          />
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏷️ About your place</Text>
-          <Text style={styles.cardHint}>How customers find you in the filters. Pre-filled from Google; change what is not right.</Text>
+          <View style={styles.cardHeadRow}>
+            <View style={{ flex: 1 }}>
+              <IconText style={styles.cardTitle} emoji="🏷️">About your place</IconText>
+              <Text style={styles.cardHint}>How customers find you in the filters. Pre-filled from Google; change what is not right.</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+              accessibilityRole="button"
+            >
+              {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveBtnText}>Save</Text>}
+            </TouchableOpacity>
+          </View>
           {categoriesError ? (
             <Text style={styles.cardHint}>{categoriesError}</Text>
           ) : !categoriesReady ? (
@@ -141,18 +126,6 @@ export default function RestaurantProfileScreen() {
             <CategoryPicker categories={categories} value={choice} onChange={setChoice} disabled={saving} />
           )}
         </View>
-
-        <TouchableOpacity
-          style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>Save Profile</Text>
-          )}
-        </TouchableOpacity>
       </View>
     </View>
     </View>
@@ -162,25 +135,25 @@ export default function RestaurantProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
-  header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, elevation: 2, flexDirection: 'row', alignItems: 'center', gap: 10 },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
-  title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  subtitle: { fontSize: 14, color: '#666' },
+  title: { fontSize: 20, fontWeight: '800', color: '#222' },
+  subtitle: { fontSize: 13, color: '#546E7A' },
 
-  content: { padding: 12 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, elevation: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '800', color: '#222', marginBottom: 4 },
-  cardHint: { fontSize: 12, color: '#888', lineHeight: 16, marginBottom: 8 },
-  input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#222',
-  },
+  content: { padding: 10 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 10, marginBottom: 6, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
+  cardHeadRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginBottom: 2 },
+  cardHint: { fontSize: 11.5, color: '#546E7A', lineHeight: 15 },
+  input: { paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
-  addressText: { fontSize: 15, color: '#222', lineHeight: 21, marginBottom: 8 },
+  addressRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 6, borderWidth: 1, borderColor: '#CFD8DC' },
+  addressText: { fontSize: 13.5, fontWeight: '700', color: '#263238' },
+  addressNote: { fontSize: 11.5, color: '#546E7A' },
   link: { color: '#1565C0', fontWeight: '700' },
 
-  saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 18, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  saveBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
 });

@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getMenuBuildStatus, MENU_BUILD_MESSAGE } from '../../api/menuBuild';
+import { IconText } from './AppIcon';
 
 // Dashboard message for an owner of an independent restaurant whose menu could not be built automatically:
 // it says so and links to the two ways to add it. Shows nothing when there is no problem (or nothing can be read).
@@ -18,14 +19,14 @@ export function MenuBuildBanner() {
 
   return (
     <View style={styles.banner}>
-      <Text style={styles.title}>📋 Your menu needs your help</Text>
+      <IconText style={styles.title} emoji="📋">Your menu needs your help</IconText>
       <Text style={styles.text}>{MENU_BUILD_MESSAGE}</Text>
       <View style={styles.actions}>
         <TouchableOpacity style={styles.button} onPress={() => router.push('/restaurant/menu-photo')} accessibilityRole="button">
-          <Text style={styles.buttonText}>📷 Add with a photo</Text>
+          <IconText style={styles.buttonText} emoji="📷">Add with a photo</IconText>
         </TouchableOpacity>
         <TouchableOpacity style={styles.button} onPress={() => router.push('/restaurant/menu-text')} accessibilityRole="button">
-          <Text style={styles.buttonText}>📋 Paste the text</Text>
+          <IconText style={styles.buttonText} emoji="📋">Paste the text</IconText>
         </TouchableOpacity>
       </View>
     </View>

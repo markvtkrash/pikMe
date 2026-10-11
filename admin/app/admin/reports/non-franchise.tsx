@@ -4,6 +4,7 @@ import { Alert } from '../../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getNonFranchiseRestaurants, NonFranchiseRestaurantRow } from '../../../src/api/reports';
 import { SelectableRestaurantList } from '../../../src/components/common/SelectableRestaurantList';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function AdminNonFranchiseReport() {
   const [loading, setLoading] = useState(true);
@@ -44,7 +45,7 @@ export default function AdminNonFranchiseReport() {
       onDeleted={loadData}
       header={
         <View>
-          <Text style={styles.title}>🏠 Non-Franchise Restaurants</Text>
+          <IconText style={styles.title} emoji="🏠">Non-Franchise Restaurants</IconText>
           <Text style={styles.subtitle}>
             Cached restaurants that did not match the Franchise Lookup, so the consumer app only shows
             menu items the restaurant confirmed.

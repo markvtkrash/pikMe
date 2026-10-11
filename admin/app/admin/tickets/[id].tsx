@@ -177,11 +177,7 @@ const styles = StyleSheet.create({
   statusBtnText: { fontSize: 13, fontWeight: '600', color: '#666' },
   statusBtnTextActive: { color: '#1565C0' },
 
-  resolutionInput: {
-    backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#222',
-    minHeight: 120, textAlignVertical: 'top', marginBottom: 8,
-  },
+  resolutionInput: { paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#222', minHeight: 120, textAlignVertical: 'top', marginBottom: 8, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   hint: { fontSize: 12, color: '#999', marginBottom: 20 },
 
   saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },

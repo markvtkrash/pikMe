@@ -16,6 +16,7 @@ import { getMaxManualMenuItems } from '../../src/constants/menuLimits';
 import {
   confirmableSelection, confirmSelectedQuestion, toggleUnconfirmedSelection, unconfirmedIndices,
 } from '../../src/utils/menuSelection';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface ManualItem {
   name: string;
@@ -466,7 +467,7 @@ export default function ManualMenuScreen() {
 
       <ScrollView style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>✏️ Real Menu Items</Text>
+          <IconText style={styles.cardTitle} emoji="✏️">Real Menu Items</IconText>
           <Text style={styles.cardHint}>
             No website to link? Type in the real dish names from your menu below. We'll only estimate
             nutrition for the names you enter — we never invent dishes. Saving replaces what's currently
@@ -521,7 +522,7 @@ export default function ManualMenuScreen() {
 
                 {item.isOutOfStock && (
                   <View style={styles.outOfStockBadge}>
-                    <Text style={styles.outOfStockBadgeText} numberOfLines={1}>🚫 Out of Stock</Text>
+                    <IconText style={styles.outOfStockBadgeText} numberOfLines={1} emoji="🚫">Out of Stock</IconText>
                   </View>
                 )}
 
@@ -767,9 +768,9 @@ const styles = StyleSheet.create({
   topSaveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
 
   // Two stacked rows per item instead of one long flex row — cramming the
   // input, verified badge, and verify/unconfirm button all on one line left
@@ -800,10 +801,7 @@ const styles = StyleSheet.create({
   // content," not 0) — without it, this refuses to shrink and pushes
   // everything else off the visible row instead of just making the input
   // narrower. Same underlying issue as the nav bug.
-  itemInput: {
-    flex: 1, minWidth: 0, borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: '#222',
-  },
+  itemInput: { flex: 1, minWidth: 0, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   removeBtn: {
     width: 26, height: 26, borderRadius: 6, backgroundColor: '#FFEBEE',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -891,11 +889,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 14, padding: 20, width: '100%', maxWidth: 420, elevation: 4,
   },
   modalTitle: { fontSize: 17, fontWeight: '800', color: '#222', marginBottom: 4 },
-  modalHint: { fontSize: 13, color: '#888', marginBottom: 14, lineHeight: 18 },
-  modalInput: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 16,
-  },
+  modalHint: { fontSize: 13, color: '#546E7A', marginBottom: 14, lineHeight: 18 },
+  modalInput: { paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 16, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   modalBtnRow: { flexDirection: 'row', gap: 10 },
   modalBtn: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   modalBtnCancel: { backgroundColor: '#f0f0f0' },

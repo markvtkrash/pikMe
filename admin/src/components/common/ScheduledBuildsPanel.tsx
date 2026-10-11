@@ -8,6 +8,7 @@ import UnconfirmedClickedList from './UnconfirmedClickedList';
 import {
   BUILDS_PER_RUN_OPTIONS, ChainBuildStatus, describeBuildStatus, describeSchedule, formatLastRun,
 } from '../../utils/chainMenuSources';
+import { IconText } from './AppIcon';
 
 const TONES = {
   good: { bg: '#E8F5E9', fg: '#2E7D32' },
@@ -141,7 +142,7 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
           {/* Franchises */}
           <View style={[styles.section, styles.sectionFranchise]}>
             <View style={[styles.band, styles.bandFranchise]}>
-              <Text style={styles.bandTitle}>🍔 Franchises</Text>
+              <IconText style={styles.bandTitle} emoji="🍔">Franchises</IconText>
             </View>
             <Text style={styles.sectionHint}>One shared menu for each franchise, built from its official menu page.</Text>
             <Text style={styles.line}>
@@ -168,7 +169,7 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
           {/* Independent restaurants */}
           <View style={[styles.section, styles.sectionRestaurant]}>
             <View style={[styles.band, styles.bandRestaurant]}>
-              <Text style={styles.bandTitle}>🍽️ Independent restaurants</Text>
+              <IconText style={styles.bandTitle} emoji="🍽️">Independent restaurants</IconText>
             </View>
             <Text style={styles.sectionHint}>
               Restaurants customers opened that have no confirmed menu item. Use Manage to upload a menu.

@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { signUpRestaurantOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { DataSourcesNotice } from '../../../src/components/common/DataSourcesNotice';
+import { IconText } from '../../../src/components/common/AppIcon';
+import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
 export default function RestaurantSignupScreen() {
   const router = useRouter();
@@ -17,6 +19,8 @@ export default function RestaurantSignupScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  const chain = useEnterChain(3, () => handleSignup());
 
   async function handleSignup() {
     setError('');
@@ -56,10 +60,10 @@ export default function RestaurantSignupScreen() {
         <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>🍽️ Restaurant Owner</Text>
+        <IconText style={styles.title} emoji="🍽️">Restaurant Owner</IconText>
         <Text style={styles.subtitle}>Create your account</Text>
 
-        <TextInput
+        <TextInput {...chain(0)}
           style={styles.input}
           placeholder="Business Name"
           placeholderTextColor="#999"
@@ -67,7 +71,7 @@ export default function RestaurantSignupScreen() {
           onChangeText={(t) => { setBusinessName(t); setError(''); }}
         />
 
-        <TextInput
+        <TextInput {...chain(1)}
           style={styles.input}
           placeholder="Email"
           placeholderTextColor="#999"
@@ -77,7 +81,7 @@ export default function RestaurantSignupScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput
+        <TextInput {...chain(2)}
           style={styles.input}
           placeholder="Password (min 8 characters)"
           placeholderTextColor="#999"
@@ -127,16 +131,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 32, fontWeight: '800', textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 32 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 12,
-    color: '#222',
-  },
+  input: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, marginBottom: 12, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   errorText: {
     color: '#e53e3e',
     fontSize: 14,

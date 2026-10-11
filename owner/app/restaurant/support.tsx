@@ -6,6 +6,7 @@ import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { createSupportTicket, getMyTickets, SupportTicket, TicketStatus } from '../../src/api/supportTickets';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: string }> = {
   open: { bg: '#E3F2FD', text: '#1976D2', label: 'Open' },
@@ -23,6 +24,8 @@ export default function SupportScreen() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const chain = useEnterChain(2);
 
   useFocusEffect(
     useCallback(() => {
@@ -90,7 +93,7 @@ export default function SupportScreen() {
         ListHeaderComponent={
           <View style={styles.formCard}>
             <Text style={styles.formTitle}>New Ticket</Text>
-            <TextInput
+            <TextInput {...chain(0)}
               style={styles.input}
               placeholder="Subject"
               placeholderTextColor="#999"
@@ -98,7 +101,7 @@ export default function SupportScreen() {
               onChangeText={setSubject}
               editable={!submitting}
             />
-            <TextInput
+            <TextInput {...chain(1)}
               style={[styles.input, styles.messageInput]}
               placeholder="Describe your issue..."
               placeholderTextColor="#999"
@@ -174,25 +177,22 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   list: { padding: 16 },
-  formCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 1 },
+  formCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   formTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 12 },
-  input: {
-    backgroundColor: '#f6f6f6', borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', marginBottom: 10,
-  },
+  input: { paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222', marginBottom: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   messageInput: { minHeight: 90, textAlignVertical: 'top' },
   submitBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   historyTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginTop: 20, marginBottom: 4 },
-  emptyText: { fontSize: 13, color: '#999', marginTop: 8 },
+  emptyText: { fontSize: 13, color: '#546E7A', marginTop: 8 },
 
-  ticketCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1 },
+  ticketCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   ticketHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   ticketSubject: { flex: 1, fontSize: 14, fontWeight: '700', color: '#222' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   statusText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
-  ticketDate: { fontSize: 11, color: '#999', marginTop: 4 },
+  ticketDate: { fontSize: 11, color: '#546E7A', marginTop: 4 },
 
   expandedContent: { marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   ticketMessage: { fontSize: 13, color: '#444', lineHeight: 19 },

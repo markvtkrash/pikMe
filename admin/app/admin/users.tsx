@@ -3,12 +3,16 @@ import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, TextInput, Modal,
 } from 'react-native';
-import { Alert } from '../../src/utils/alert';
+import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { adminSetOwnerActive } from '../../src/api/restaurantAuth';
 import { filterUsers } from '../../src/utils/userFilter';
 import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
+import { IconText } from '../../src/components/common/AppIcon';
+import { listRemovableOwners, deleteUserAsAdmin } from '../../src/api/ownerCleanup';
+import type { RemovableOwner } from '../../src/utils/ownerCleanup';
+import { canDeleteUser, deleteUserQuestion, activityTag, cleanupTag, TONE_COLORS } from '../../src/utils/userDelete';
 
 type UserRole = 'admin' | 'owner' | 'customer';
 type RoleFilter = 'all' | UserRole;
@@ -46,6 +50,9 @@ export default function AdminUsersScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmTarget, setConfirmTarget] = useState<AppUser | null>(null);
   const [resetTarget, setResetTarget] = useState<ResetOwnerTarget | null>(null);
+  // Which owner logins may be deleted yet (no restaurant, deactivated long enough: migration 132), and who is signed in.
+  const [ownerRules, setOwnerRules] = useState<Map<string, RemovableOwner>>(new Map());
+  const [meId, setMeId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,6 +65,14 @@ export default function AdminUsersScreen() {
       const { data, error } = await supabase.rpc('list_all_users');
       if (error) throw error;
       setUsers(data || []);
+      try {
+        const list = await listRemovableOwners();
+        setOwnerRules(new Map(list.map((r) => [r.owner_id, r])));
+      } catch (e: any) {
+        console.warn('[admin-users] Could not load the owner delete rules (is migration 132 applied?):', e?.message);
+      }
+      const { data: me } = await supabase.auth.getUser();
+      setMeId(me.user?.id ?? null);
     } catch (error: any) {
       console.error('[admin-users] Load error:', error);
       Alert.alert('Error', error.message || 'Failed to load users');
@@ -84,6 +99,24 @@ export default function AdminUsersScreen() {
     } catch (error: any) {
       console.error('[admin-users] Toggle active error:', error);
       Alert.alert('Error', error.message || 'Failed to update login status');
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDeleteUser(user: AppUser) {
+    const q = deleteUserQuestion(user.email);
+    if (!(await confirmDialog(q.title, q.message, { confirmText: 'Delete permanently', destructive: true }))) return;
+    setBusyId(user.user_id);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Admin session expired. Please log in again.');
+      await deleteUserAsAdmin(user.user_id, token);
+      setUsers((prev) => prev.filter((u) => u.user_id !== user.user_id));
+      Alert.alert('Deleted', `${user.email} was deleted.`);
+    } catch (error: any) {
+      Alert.alert('Could not delete', error.message || 'Failed to delete the user');
     } finally {
       setBusyId(null);
     }
@@ -134,7 +167,7 @@ export default function AdminUsersScreen() {
 
       {filteredUsers.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <IconText style={styles.emptyIcon} emoji="🔍" />
           <Text style={styles.emptyText}>No users found</Text>
         </View>
       ) : (
@@ -156,6 +189,15 @@ export default function AdminUsersScreen() {
                       🍽️ {[item.restaurant_name, item.restaurant_address].filter(Boolean).join(' — ')}
                     </Text>
                   ) : null}
+                  <View style={styles.tagRow}>
+                    {[cleanupTag(item.role, ownerRules.get(item.user_id)), activityTag(item.last_sign_in_at, item.created_at)]
+                      .filter((t): t is NonNullable<typeof t> => !!t)
+                      .map((t) => (
+                        <View key={t.label} style={[styles.tag, { backgroundColor: TONE_COLORS[t.tone].bg }]}>
+                          <Text style={[styles.tagText, { color: TONE_COLORS[t.tone].fg }]}>{t.label}</Text>
+                        </View>
+                      ))}
+                  </View>
                   <Text style={styles.meta}>
                     Joined {new Date(item.created_at).toLocaleDateString()}
                     {item.last_sign_in_at
@@ -166,7 +208,7 @@ export default function AdminUsersScreen() {
                 <View style={styles.userActions}>
                   <View style={[styles.roleBadge, { backgroundColor: `${ROLE_COLORS[item.role]}20` }]}>
                     <Text style={[styles.roleText, { color: ROLE_COLORS[item.role] }]}>
-                      {blocked ? 'BLOCKED' : item.role.toUpperCase()}
+                      {blocked ? 'DEACTIVATED' : item.role.toUpperCase()}
                     </Text>
                   </View>
                   {item.role === 'owner' && (
@@ -181,7 +223,17 @@ export default function AdminUsersScreen() {
                       }
                       disabled={busy}
                     >
-                      <Text style={[styles.blockBtnText, { color: '#222' }]}>🔑 Reset Password</Text>
+                      <IconText style={[styles.blockBtnText, { color: '#222' }]} emoji="🔑">Reset Password</IconText>
+                    </TouchableOpacity>
+                  )}
+                  {canDeleteUser(item, ownerRules, meId) && (
+                    <TouchableOpacity
+                      style={[styles.blockBtn, styles.deleteUserBtn, busy && styles.btnDisabled]}
+                      onPress={() => handleDeleteUser(item)}
+                      disabled={busy}
+                      accessibilityLabel={`Delete ${item.email}`}
+                    >
+                      <IconText style={styles.deleteUserText} emoji="🗑️">Delete</IconText>
                     </TouchableOpacity>
                   )}
                   {item.role === 'owner' && (
@@ -194,7 +246,7 @@ export default function AdminUsersScreen() {
                         <ActivityIndicator size="small" color={blocked ? '#1565C0' : '#e53e3e'} />
                       ) : (
                         <Text style={[styles.blockBtnText, { color: blocked ? '#1565C0' : '#e53e3e' }]}>
-                          {blocked ? 'Unblock' : 'Block'}
+                          {blocked ? 'Reactivate' : 'Deactivate'}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -212,12 +264,12 @@ export default function AdminUsersScreen() {
       <View style={styles.confirmOverlay}>
         <View style={styles.confirmCard}>
           <Text style={styles.confirmTitle}>
-            {confirmTarget?.is_active === false ? 'Unblock this owner?' : 'Block this owner?'}
+            {confirmTarget?.is_active === false ? 'Reactivate this owner?' : 'Deactivate this owner?'}
           </Text>
           <Text style={styles.confirmMessage}>
             {confirmTarget?.is_active === false
               ? `${confirmTarget?.business_name || confirmTarget?.email} will be able to log in again.`
-              : `${confirmTarget?.business_name || confirmTarget?.email} will no longer be able to log in until unblocked here. Their restaurant, menu, and coupons stay untouched.`}
+              : `${confirmTarget?.business_name || confirmTarget?.email} will no longer be able to log in until reactivated here. Their restaurant, menu, and coupons stay untouched.`}
           </Text>
           <View style={styles.confirmActions}>
             <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setConfirmTarget(null)}>
@@ -228,7 +280,7 @@ export default function AdminUsersScreen() {
               onPress={handleToggleActiveConfirm}
             >
               <Text style={styles.confirmActionText}>
-                {confirmTarget?.is_active === false ? 'Unblock' : 'Block'}
+                {confirmTarget?.is_active === false ? 'Reactivate' : 'Deactivate'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -256,10 +308,10 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#1565C0' },
 
   searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12 },
-  searchInput: { backgroundColor: '#f0f0f0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222' },
+  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
-  userRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 1 },
+  userRow: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   userInfo: { flex: 1, marginRight: 12 },
   email: { fontSize: 14, fontWeight: '700', color: '#222', marginBottom: 2 },
   businessName: { fontSize: 12, color: '#1565C0', fontWeight: '600', marginBottom: 2 },
@@ -270,6 +322,11 @@ const styles = StyleSheet.create({
 
   userActions: { alignItems: 'flex-end', gap: 6 },
   blockBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, marginBottom: 2 },
+  tag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  tagText: { fontSize: 11, fontWeight: '800' },
+  deleteUserBtn: { backgroundColor: '#C62828', borderColor: '#C62828' },
+  deleteUserText: { fontSize: 12, fontWeight: '800', color: '#fff' },
   blockBtnDanger: { borderColor: '#e53e3e', backgroundColor: '#FFEBEE' },
   unblockBtn: { borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
   resetBtn: { borderColor: '#ccc', backgroundColor: '#ECEFF1' },

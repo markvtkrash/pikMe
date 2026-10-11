@@ -17,6 +17,7 @@ import {
 import {
   toggleUnverifiedSelection, unverifiedIds, verifiableSelection, verifySelectedQuestion,
 } from '../../src/utils/menuEditSelection';
+import { IconText } from '../../src/components/common/AppIcon';
 
 const PAGE_SIZE = 50;
 
@@ -409,7 +410,7 @@ export default function AdminMenuEditScreen() {
                       <Text style={styles.clearText}>Clear ({selected.size})</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.deleteBtn} onPress={openDeleteConfirm}>
-                      <Text style={styles.deleteBtnText}>🗑 Delete {selected.size}</Text>
+                      <IconText style={styles.deleteBtnText} emoji="🗑">Delete {selected.size}</IconText>
                     </TouchableOpacity>
                   </>
                 )}
@@ -556,12 +557,12 @@ const styles = StyleSheet.create({
 
   addBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 15, fontWeight: '800', color: '#222', marginBottom: 8 },
 
   form: { marginTop: 8 },
   fieldLabel: { fontSize: 11, fontWeight: '700', color: '#555', marginBottom: 4, marginTop: 8 },
-  input: { backgroundColor: '#f0f0f0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#222', borderWidth: 1, borderColor: 'transparent' },
+  input: { paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   inputError: { borderColor: '#e53e3e', backgroundColor: '#FFEBEE' },
   errorText: { fontSize: 11, color: '#c62828', fontWeight: '600', marginTop: 2 },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
@@ -577,7 +578,7 @@ const styles = StyleSheet.create({
   saveBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   btnDisabled: { opacity: 0.45 },
 
-  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10 },
+  search: { backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13, color: '#222', marginBottom: 10, borderWidth: 1, borderColor: '#CFD8DC' },
   toolbar: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   selectAllBtn: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   selectAllText: { fontSize: 12, fontWeight: '700', color: '#1565C0' },

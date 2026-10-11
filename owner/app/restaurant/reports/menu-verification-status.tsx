@@ -5,6 +5,7 @@ import { getRestaurantMenuItems } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { FavoriteHeart } from '../../../src/components/common/FavoriteHeart';
 import { useFavoritePages } from '../../../src/hooks/useFavoritePages';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 interface MenuItem {
   item_id: string;
@@ -61,7 +62,7 @@ export default function MenuVerificationStatusReport() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>✅ Menu Verification Status</Text>
+        <IconText style={styles.title} emoji="✅">Menu Verification Status</IconText>
         <FavoriteHeart
           active={favorites.has('report-menu-verification-status')}
           onPress={() => toggleFavorite('report-menu-verification-status')}
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
-  subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
+  subtitle: { fontSize: 13, color: '#546E7A', marginBottom: 16 },
 
   snapshotRow: { flexDirection: 'row', gap: 10 },
   snapshotBox: {
@@ -142,5 +143,5 @@ const styles = StyleSheet.create({
 
   emptyList: { alignItems: 'center', paddingVertical: 40 },
   emptyListText: { fontSize: 16, fontWeight: '600', color: '#222' },
-  emptyListSubtext: { fontSize: 12, color: '#999', marginTop: 4 },
+  emptyListSubtext: { fontSize: 12, color: '#546E7A', marginTop: 4 },
 });

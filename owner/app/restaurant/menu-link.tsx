@@ -9,6 +9,7 @@ import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
 import { useIsChainRestaurant } from '../../src/hooks/useIsChainRestaurant';
 import { ChainMenuNotice } from '../../src/components/common/ChainMenuNotice';
 import { confirmAndRetryIfNeeded } from '../../src/utils/menuReplaceConfirm';
+import { IconText } from '../../src/components/common/AppIcon';
 
 export default function MenuLinkScreen() {
   const router = useRouter();
@@ -84,7 +85,7 @@ export default function MenuLinkScreen() {
 
       <View style={styles.content}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🔗 Menu Link</Text>
+          <IconText style={styles.cardTitle} emoji="🔗">Menu Link</IconText>
           <Text style={styles.cardHint}>
             Add a link to your real online menu (a webpage, not a PDF) so customers see actual dishes
             instead of AI-guessed ones. You can update this any time — saving again replaces what's
@@ -146,18 +147,15 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
-  cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
+  cardHint: { fontSize: 13, color: '#546E7A', lineHeight: 18, marginBottom: 14 },
   domainHint: { fontSize: 12, color: '#E65100', fontWeight: '600', marginBottom: 12 },
-  input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 12,
-  },
+  input: { paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: '#222', marginBottom: 12, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  currentLink: { fontSize: 12, color: '#999', marginTop: 12 },
+  currentLink: { fontSize: 12, color: '#546E7A', marginTop: 12 },
   lastSaved: { fontSize: 13, color: '#1565C0', fontWeight: '600', marginTop: 10 },
   manualLink: { alignItems: 'center', paddingVertical: 16 },
   manualLinkText: { fontSize: 14, fontWeight: '600', color: '#8E24AA' },

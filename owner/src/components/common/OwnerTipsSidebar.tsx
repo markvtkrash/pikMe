@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Platform, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { useRouter, usePathname } from 'expo-router';
+import { IconText } from './AppIcon';
+import { FavoritesPanel } from './FavoritesPanel';
 
 interface Tip {
   icon: string;
@@ -30,21 +32,26 @@ const TIPS: Tip[] = [
   { icon: '✓', title: 'Verify Items', body: "Tapping Verify opens an editable popup so you can fix a slightly-wrong AI-guessed name at the same time you confirm it's real.", href: '/restaurant/menu-items' },
   { icon: '🎟️', title: 'Manage Coupons', body: 'Filter by Active, Inactive, Expired, or Orphaned — select more than one checkbox at once to see them together.', href: '/restaurant/coupon-status' },
   { icon: '↻', title: 'Reassign Orphaned Coupons', body: 'If a coupon\'s menu item gets removed, reassign it to a current item instead of losing the coupon entirely.', href: '/restaurant/coupon-status' },
-  { icon: '🏪', title: 'Restaurant Profile', body: 'See your address and keep your website link up to date. The page we read your menu from is set on the Menu Management page.', href: '/restaurant/profile' },
+  { icon: '🏪', title: 'Restaurant Profile', body: 'See your address and tell customers what kind of place you are. The page we read your menu from is set on the Menu Management page.', href: '/restaurant/profile' },
   { icon: '👤', title: 'Usage Limit per Consumer', body: 'Set how many times the SAME customer can redeem a coupon, separate from the total redemption cap across everyone.', href: '/restaurant/menu' },
   { icon: '💬', title: 'Support Ticket', body: "Something not working right? Submit a Support Ticket and we'll follow up directly.", href: '/restaurant/support' },
 ];
 
 // Only render once there's genuinely enough room for the 900px page content
 // plus two side panels without cramping anything.
-const MIN_WIDTH_FOR_SIDEBARS = 1400;
+export const MIN_WIDTH_FOR_SIDEBARS = 1400;
+
+// True when the side panels are shown (wide web screens). The dashboard keeps Favorites on the page itself otherwise.
+export function sidebarsVisible(width: number): boolean {
+  return Platform.OS === 'web' && width >= MIN_WIDTH_FOR_SIDEBARS;
+}
 const PANEL_WIDTH = 220;
 
 function TipCard({ tip, imageIndex }: { tip: Tip; imageIndex: number }) {
   const router = useRouter();
   return (
     <TouchableOpacity style={styles.card} onPress={() => router.push(tip.href as any)} activeOpacity={0.8}>
-      <Text style={styles.icon}>{tip.icon}</Text>
+      <IconText style={styles.icon} emoji={tip.icon} iconColor="#1565C0" />
       <Text style={styles.title}>{tip.title}</Text>
       <Text style={styles.body}>{tip.body}</Text>
       <Image source={FOOD_IMAGES[imageIndex]} style={styles.image} contentFit="cover" />
@@ -67,13 +74,12 @@ export function OwnerTipsSidebar() {
   // explicit check keeps that intent clear.
   if (Platform.OS !== 'web' || width < MIN_WIDTH_FOR_SIDEBARS) return null;
 
-  const leftTip = TIPS[index];
   const rightTip = TIPS[(index + Math.floor(TIPS.length / 2)) % TIPS.length];
 
   return (
     <>
       <View style={[styles.panel, styles.panelLeft]}>
-        <TipCard tip={leftTip} imageIndex={index % FOOD_IMAGES.length} />
+        <FavoritesPanel variant="side" />
       </View>
       <View style={[styles.panel, styles.panelRight]}>
         <TipCard tip={rightTip} imageIndex={(index + 1) % FOOD_IMAGES.length} />

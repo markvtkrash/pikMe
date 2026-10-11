@@ -6,6 +6,7 @@ import {
   getSupportSnapshot, getSupportResolutionTime,
   SupportSnapshotRow, SupportResolutionTime,
 } from '../../../src/api/reports';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 const TICKET_STATUS_ORDER = ['open', 'in_progress', 'resolved', 'closed'];
 const TICKET_TYPE_LABELS: Record<string, string> = { owner: 'Owner', consumer: 'Consumer' };
@@ -57,7 +58,7 @@ export default function AdminSupportTicketsReport() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>🎧 Support Tickets</Text>
+      <IconText style={styles.title} emoji="🎧">Support Tickets</IconText>
       <Text style={styles.subtitle}>By status and submitter type, plus resolution time</Text>
 
       <View style={styles.card}>
@@ -99,7 +100,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '800', color: '#1565C0', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
 
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardSubtext: { fontSize: 12, color: '#888', marginTop: 10 },
   emptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
 

@@ -4,6 +4,7 @@ import { Alert } from '../../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { getFranchiseRestaurants, FranchiseRestaurantRow } from '../../../src/api/reports';
 import { SelectableRestaurantList } from '../../../src/components/common/SelectableRestaurantList';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 export default function AdminFranchiseMatchesReport() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +46,7 @@ export default function AdminFranchiseMatchesReport() {
       onDeleted={loadData}
       header={
         <View>
-          <Text style={styles.title}>🍔 Franchise Matches</Text>
+          <IconText style={styles.title} emoji="🍔">Franchise Matches</IconText>
           <Text style={styles.subtitle}>
             Cached restaurants that match an active entry on the Franchise Lookup, so the consumer app
             treats them as franchises.

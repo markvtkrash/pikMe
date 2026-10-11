@@ -24,6 +24,6 @@ const styles = StyleSheet.create({
   box: { backgroundColor: '#F5F7FA', borderRadius: 10, padding: 12, marginTop: 16, borderWidth: 1, borderColor: '#E1E6EC' },
   title: { fontSize: 13, fontWeight: '800', color: '#333', marginBottom: 6 },
   point: { fontSize: 12, color: '#555', lineHeight: 17, marginBottom: 4 },
-  footer: { fontSize: 11, color: '#888', marginTop: 4 },
-  caption: { fontSize: 11, color: '#888', lineHeight: 15, marginHorizontal: 16, marginBottom: 6 },
+  footer: { fontSize: 11, color: '#546E7A', marginTop: 4 },
+  caption: { fontSize: 11, color: '#546E7A', lineHeight: 15, marginHorizontal: 16, marginBottom: 6 },
 });

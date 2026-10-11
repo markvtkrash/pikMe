@@ -5,6 +5,8 @@ import {
 import { Alert } from '../../utils/alert';
 import { supabase, verifyPassword } from '../../api/supabase';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
+import { IconText } from './AppIcon';
+import { useEnterChain } from '../../hooks/useEnterChain';
 
 function validatePassword(password: string) {
   return {
@@ -33,6 +35,8 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
   const [done, setDone] = useState(false);
 
   // Fresh form every time it opens; never keep passwords in state once closed.
+  const chain = useEnterChain(3, () => handleSubmit());
+
   useEffect(() => {
     if (!visible) {
       setCurrentPassword('');
@@ -116,7 +120,7 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               <Text style={styles.title}>Change password</Text>
 
               <Text style={styles.label}>Current password</Text>
-              <TextInput
+              <TextInput {...chain(0)}
                 style={styles.input}
                 placeholder="Enter current password"
                 placeholderTextColor="#999"
@@ -128,7 +132,7 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               />
 
               <Text style={styles.label}>New password</Text>
-              <TextInput
+              <TextInput {...chain(1)}
                 style={styles.input}
                 placeholder="Enter new password"
                 placeholderTextColor="#999"
@@ -140,7 +144,7 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               />
 
               <Text style={styles.label}>Confirm new password</Text>
-              <TextInput
+              <TextInput {...chain(2)}
                 style={styles.input}
                 placeholder="Confirm new password"
                 placeholderTextColor="#999"
@@ -162,7 +166,7 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               )}
 
               {!!newPassword && !!confirmPassword && newPassword !== confirmPassword && (
-                <Text style={styles.errorText}>❌ Passwords do not match</Text>
+                <IconText style={styles.errorText} emoji="❌">Passwords do not match</IconText>
               )}
 
               <View style={styles.actions}>
@@ -191,14 +195,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 12 },
   message: { fontSize: 13, color: '#555', lineHeight: 19, marginBottom: 8 },
   label: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 6, marginTop: 6 },
-  input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 14,
-    paddingVertical: 10, fontSize: 15, marginBottom: 6, color: '#222',
-  },
+  input: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, marginBottom: 6, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   reqBox: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, marginTop: 6, gap: 4 },
   req: { fontSize: 12, fontWeight: '600' },
   reqMet: { color: '#1565C0' },
-  reqUnmet: { color: '#999' },
+  reqUnmet: { color: '#546E7A' },
   errorText: { color: '#e53e3e', fontSize: 13, fontWeight: '600', marginTop: 8 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 16 },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 10 },

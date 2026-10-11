@@ -6,6 +6,7 @@ import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRestaurantCoupons, updateCoupon } from '../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
+import { IconText } from '../../src/components/common/AppIcon';
 
 interface Coupon {
   id: string;
@@ -90,7 +91,7 @@ export default function ActiveCouponsScreen() {
 
       {coupons.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>🎟️</Text>
+          <IconText style={styles.emptyIcon} emoji="🎟️" />
           <Text style={styles.emptyText}>No active coupons</Text>
           <Text style={styles.emptySubtext}>Add one from Add Coupons</Text>
         </View>
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
   backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
-  count: { fontSize: 12, color: '#999' },
+  count: { fontSize: 12, color: '#546E7A' },
 
   list: { paddingHorizontal: 16, paddingVertical: 12 },
   couponCard: { backgroundColor: '#E3F2FD', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 2, borderLeftWidth: 4, borderLeftColor: '#1565C0', gap: 12 },
@@ -200,5 +201,5 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyIcon: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, fontWeight: '700', color: '#222' },
-  emptySubtext: { fontSize: 13, color: '#999', marginTop: 4 },
+  emptySubtext: { fontSize: 13, color: '#546E7A', marginTop: 4 },
 });

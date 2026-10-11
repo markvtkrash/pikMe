@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/api/supabase';
 import { getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
+import { IconText } from '../../../src/components/common/AppIcon';
+import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
 function validatePassword(password: string) {
   return {
@@ -24,6 +26,8 @@ export default function RestaurantChangePasswordScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const chain = useEnterChain(2, () => handleSubmit());
 
   async function handleSubmit() {
     const strength = validatePassword(newPassword);
@@ -98,13 +102,13 @@ export default function RestaurantChangePasswordScreen() {
         <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>🔐 Set a New Password</Text>
+        <IconText style={styles.title} emoji="🔐">Set a New Password</IconText>
         <Text style={styles.subtitle}>
           Your account uses a temporary password. Please choose a new one to continue.
         </Text>
 
         <Text style={styles.label}>New Password</Text>
-        <TextInput
+        <TextInput {...chain(0)}
           style={styles.input}
           placeholder="Enter new password"
           placeholderTextColor="#999"
@@ -115,7 +119,7 @@ export default function RestaurantChangePasswordScreen() {
         />
 
         <Text style={styles.label}>Confirm Password</Text>
-        <TextInput
+        <TextInput {...chain(1)}
           style={styles.input}
           placeholder="Confirm new password"
           placeholderTextColor="#999"
@@ -140,7 +144,7 @@ export default function RestaurantChangePasswordScreen() {
         )}
 
         {!!newPassword && !!confirmPassword && newPassword !== confirmPassword && (
-          <Text style={styles.errorText}>❌ Passwords do not match</Text>
+          <IconText style={styles.errorText} emoji="❌">Passwords do not match</IconText>
         )}
 
         <TouchableOpacity
@@ -165,15 +169,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '800', textAlign: 'center', marginBottom: 8, color: '#222' },
   subtitle: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 28, lineHeight: 20 },
   label: { fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 6, marginTop: 6 },
-  input: {
-    borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 16,
-    paddingVertical: 12, fontSize: 16, marginBottom: 8, color: '#222',
-  },
+  input: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, marginBottom: 8, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   reqBox: { backgroundColor: '#F5F5F5', borderRadius: 10, padding: 14, marginTop: 8, marginBottom: 8, gap: 6 },
   reqTitle: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 4 },
   req: { fontSize: 12, fontWeight: '600' },
   reqMet: { color: '#1565C0' },
-  reqUnmet: { color: '#999' },
+  reqUnmet: { color: '#546E7A' },
   errorText: { color: '#e53e3e', fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 4 },
   button: {
     backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14,

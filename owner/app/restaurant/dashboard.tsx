@@ -1,24 +1,33 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, FlatList, ScrollView,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, useWindowDimensions,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../src/api/supportTickets';
 import { useRestaurantOwnerStore } from '../../src/store/restaurantOwnerStore';
-import { getRestaurantForOwner } from '../../src/api/restaurantAuth';
-import { useFavoritePages } from '../../src/hooks/useFavoritePages';
-import { FAVORITABLE_PAGES_BY_KEY } from '../../src/constants/favoritablePages';
-import { FavoriteHeart } from '../../src/components/common/FavoriteHeart';
+import { getRestaurantForOwner, setRestaurantPaused } from '../../src/api/restaurantAuth';
+import { Alert as ModalAlert, confirmDialog } from '../../src/utils/alert';
+import { FavoritesPanel } from '../../src/components/common/FavoritesPanel';
+import { sidebarsVisible } from '../../src/components/common/OwnerTipsSidebar';
 import { MenuBuildBanner } from '../../src/components/common/MenuBuildBanner';
 import { CategoriesBanner } from '../../src/components/common/CategoriesBanner';
+import { AppIcon, IconText } from '../../src/components/common/AppIcon';
+
+// The four dashboard shortcuts, in reading order. Same card style as the import cards on Menu Management.
+const DASHBOARD_TILES: { icon: string; label: string; blurb: string; href: string; color: string; bg: string }[] = [
+  { icon: '🎟️', label: 'Coupon Management', blurb: 'Create and manage your coupons.', href: '/restaurant/coupons', color: '#1565C0', bg: '#E3F2FD' },
+  { icon: '📊', label: 'Reports', blurb: 'See how your coupons perform.', href: '/restaurant/reports', color: '#00796B', bg: '#E0F2F1' },
+  { icon: '🍽️', label: 'Menu Management', blurb: 'Edit and import your menu.', href: '/restaurant/menu-management', color: '#7B1FA2', bg: '#F3E5F5' },
+  { icon: '🏪', label: 'Profile', blurb: 'Your address, website and place type.', href: '/restaurant/profile', color: '#E65100', bg: '#FFF3E0' },
+];
 
 export default function RestaurantDashboardScreen() {
   const router = useRouter();
   const { owner, restaurant, logout, restaurantError, setRestaurant, setRestaurantError } = useRestaurantOwnerStore();
   const [retrying, setRetrying] = useState(false);
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
-  const { favorites, toggleFavorite } = useFavoritePages();
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     if (!owner) {
@@ -67,6 +76,31 @@ export default function RestaurantDashboardScreen() {
     }
   }
 
+  const [togglingPause, setTogglingPause] = useState(false);
+
+  // Pauses (hides from customers) or resumes the restaurant, after asking first.
+  async function handleTogglePause() {
+    if (!restaurant || togglingPause) return;
+    const nextPaused = !restaurant.is_paused;
+    const ok = await confirmDialog(
+      nextPaused ? 'Pause your restaurant?' : 'Resume your restaurant?',
+      nextPaused
+        ? 'Customers will not see your restaurant until you resume. Use this when you are closed for a few days. Nothing is deleted.'
+        : 'Your restaurant will show to customers again right away.',
+      { confirmText: nextPaused ? 'Pause' : 'Resume', destructive: nextPaused }
+    );
+    if (!ok) return;
+    setTogglingPause(true);
+    try {
+      await setRestaurantPaused(restaurant.id, nextPaused);
+      setRestaurant({ ...restaurant, is_paused: nextPaused, paused_at: nextPaused ? new Date().toISOString() : null });
+    } catch (error: any) {
+      ModalAlert.alert('Error', error.message || 'Failed to update');
+    } finally {
+      setTogglingPause(false);
+    }
+  }
+
   function handleLogout() {
     logout();
     router.replace('/restaurant/auth/login');
@@ -78,7 +112,7 @@ export default function RestaurantDashboardScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyIcon}>⚠️</Text>
+          <IconText style={styles.emptyIcon} emoji="⚠️" />
           <Text style={styles.emptyTitle}>Couldn't load your restaurant</Text>
           <Text style={styles.emptyBody}>{restaurantError}</Text>
           <TouchableOpacity style={styles.claimBtn} onPress={handleRetryRestaurant} disabled={retrying}>
@@ -93,7 +127,7 @@ export default function RestaurantDashboardScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyIcon}>📍</Text>
+          <IconText style={styles.emptyIcon} emoji="📍" />
           <Text style={styles.emptyTitle}>No Restaurant Claimed</Text>
           <Text style={styles.emptyBody}>Claim your restaurant to start managing coupons</Text>
           <TouchableOpacity
@@ -124,6 +158,22 @@ export default function RestaurantDashboardScreen() {
           <Text style={styles.businessName}>{owner.businessName}</Text>
           <Text style={styles.restaurantName}>{restaurant.name}</Text>
           <Text style={styles.restaurantAddress}>{restaurant.address}</Text>
+        {restaurant.status === 'approved' && (
+          <TouchableOpacity
+            onPress={handleTogglePause}
+            disabled={togglingPause}
+            style={[styles.pauseBtn, restaurant.is_paused ? styles.resumeBtn : null, togglingPause && { opacity: 0.6 }]}
+            accessibilityRole="button"
+          >
+            {togglingPause ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <IconText style={styles.pauseBtnText} emoji={restaurant.is_paused ? '🔄' : '⏸️'}>
+                {restaurant.is_paused ? 'Resume My Restaurant' : 'Pause My Restaurant'}
+              </IconText>
+            )}
+          </TouchableOpacity>
+        )}
           {restaurant.status && (
             <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
               <Text style={[styles.statusText, { color: statusTextColor }]}>
@@ -133,9 +183,11 @@ export default function RestaurantDashboardScreen() {
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+            <IconText style={styles.logoutText} emoji="🚪">Logout</IconText>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* The automatic menu build failed for this restaurant: tell the owner how to add the menu */}
@@ -144,39 +196,10 @@ export default function RestaurantDashboardScreen() {
       {/* Not told customers yet what the place is: a short nudge to the profile page */}
       <CategoriesBanner />
 
-      {/* Favorites */}
-      <View style={styles.favoritesSection}>
-        <Text style={styles.favoritesSectionTitle}>⭐ Favorites</Text>
-        {favorites.size > 0 ? (
-          <View style={styles.favoritesGrid}>
-            {Array.from(favorites)
-              .map((key) => FAVORITABLE_PAGES_BY_KEY[key])
-              .filter(Boolean)
-              .map((page) => (
-                <TouchableOpacity
-                  key={page.key}
-                  style={styles.favoriteCard}
-                  onPress={() => router.push(page.href as any)}
-                >
-                  <View style={styles.favoriteCorner}>
-                    <FavoriteHeart active onPress={() => toggleFavorite(page.key)} />
-                  </View>
-                  <Text style={styles.favoriteCardIcon}>{page.icon}</Text>
-                  <Text style={styles.favoriteCardText}>{page.label}</Text>
-                </TouchableOpacity>
-              ))}
-          </View>
-        ) : (
-          <Text style={styles.favoritesEmptyText}>
-            Tap the ❤️ heart icon on any page to pin it here.
-          </Text>
-        )}
-      </View>
-
       {/* Resolved ticket notifications */}
       {resolvedTickets.map((ticket) => (
         <View key={ticket.id} style={styles.resolvedBanner}>
-          <Text style={styles.resolvedBannerIcon}>✅</Text>
+          <IconText style={styles.resolvedBannerIcon} emoji="✅" />
           <View style={{ flex: 1 }}>
             <Text style={styles.resolvedBannerTitle}>"{ticket.subject}" has been resolved</Text>
             {ticket.resolution && (
@@ -195,53 +218,41 @@ export default function RestaurantDashboardScreen() {
       {/* Show warning if not approved */}
       {restaurant.status !== 'approved' && (
         <View style={styles.warningBox}>
-          <Text style={styles.warningIcon}>⏳</Text>
+          <IconText style={styles.warningIcon} emoji="⏳" />
           <Text style={styles.warningText}>Waiting for admin approval to manage coupons</Text>
         </View>
       )}
 
-      {/* Quick links — compact tiles, several per row */}
-      <View style={styles.quickLinksGrid}>
-        <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkBlue]}
-          onPress={() => router.push('/restaurant/menu')}
-        >
-          <Text style={styles.quickLinkIcon}>📋</Text>
-          <Text style={[styles.quickLinkText, { color: '#1565C0' }]}>Coupon Management</Text>
-        </TouchableOpacity>
+      {/* Favorites: in the left sidebar on wide screens (see OwnerTipsSidebar), here on the page otherwise */}
+      {!sidebarsVisible(width) && (
+        <View style={styles.favoritesWrap}>
+          <FavoritesPanel variant="inline" />
+        </View>
+      )}
 
-        <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkPurple]}
-          onPress={() => router.push('/restaurant/menu-management')}
-        >
-          <Text style={styles.quickLinkIcon}>🍽️</Text>
-          <Text style={[styles.quickLinkText, { color: '#8E24AA' }]}>Menu Management</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkBlue]}
-          onPress={() => router.push('/restaurant/reports')}
-        >
-          <Text style={styles.quickLinkIcon}>📊</Text>
-          <Text style={[styles.quickLinkText, { color: '#1565C0' }]}>Reports</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkTeal]}
-          onPress={() => router.push('/restaurant/preview')}
-        >
-          <Text style={styles.quickLinkIcon}>🛠️</Text>
-          <Text style={[styles.quickLinkText, { color: '#00796B' }]}>Tools</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.quickLink, styles.quickLinkOrange]}
-          onPress={() => router.push('/restaurant/profile')}
-        >
-          <Text style={styles.quickLinkIcon}>🏪</Text>
-          <Text style={[styles.quickLinkText, { color: '#E65100' }]}>Profile</Text>
-        </TouchableOpacity>
+      {/* The dashboard shortcuts */}
+      <View style={styles.dashboardCard}>
+        <Text style={styles.dashboardTitle}>Dashboard</Text>
+        <View style={styles.quickLinksGrid}>
+          {DASHBOARD_TILES.map((tile) => (
+            <TouchableOpacity
+              key={tile.label}
+              style={[styles.quickLink, { backgroundColor: tile.bg, borderColor: tile.color }]}
+              onPress={() => router.push(tile.href as any)}
+              accessibilityRole="button"
+            >
+              <View style={styles.quickLinkTop}>
+                <View style={[styles.quickLinkBadge, { backgroundColor: tile.color }]}>
+                  <AppIcon emoji={tile.icon} size={16} color="#fff" />
+                </View>
+                <Text style={[styles.quickLinkText, { color: tile.color }]} numberOfLines={2}>{tile.label}</Text>
+              </View>
+              <Text style={styles.quickLinkBlurb}>{tile.blurb}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
+
     </ScrollView>
   );
 }
@@ -259,14 +270,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     elevation: 2,
   },
-  greeting: { fontSize: 12, color: '#999' },
-  businessName: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 2 },
-  restaurantName: { fontSize: 14, color: '#666', marginBottom: 2 },
-  restaurantAddress: { fontSize: 12, color: '#999', fontStyle: 'italic', marginBottom: 8 },
+  greeting: { fontSize: 13, fontWeight: '700', color: '#1565C0' },
+  businessName: { fontSize: 19, fontWeight: '800', color: '#111', marginBottom: 2 },
+  restaurantName: { fontSize: 15, fontWeight: '700', color: '#263238', marginBottom: 2 },
+  restaurantAddress: { fontSize: 13, fontWeight: '600', color: '#263238', marginBottom: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start' },
   statusText: { fontSize: 12, fontWeight: '700' },
-  logoutBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 6, backgroundColor: '#f0f0f0' },
-  logoutText: { fontSize: 12, color: '#e53e3e', fontWeight: '600' },
+  headerActions: { alignItems: 'flex-end', gap: 8 },
+  pauseBtn: { alignSelf: 'flex-start', backgroundColor: '#C62828', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 10, marginBottom: 8, alignItems: 'center', justifyContent: 'center' },
+  resumeBtn: { backgroundColor: '#2E7D32' },
+  pauseBtnText: { color: '#fff', fontSize: 11.5, fontWeight: '800' },
+  logoutBtn: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 8, backgroundColor: '#37474F' },
+  logoutText: { fontSize: 13, color: '#fff', fontWeight: '800' },
 
   resolvedBanner: {
     backgroundColor: '#E3F2FD', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12,
@@ -278,35 +293,16 @@ const styles = StyleSheet.create({
   resolvedBannerDismiss: { backgroundColor: '#1565C0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 },
   resolvedBannerDismissText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 
-  favoritesSection: { paddingHorizontal: 16, paddingTop: 12 },
-  favoritesSectionTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginBottom: 8 },
-  favoritesEmptyText: { fontSize: 13, color: '#999', fontStyle: 'italic' },
-  favoritesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  favoriteCard: {
-    flexBasis: '30%', flexGrow: 1, minWidth: 100,
-    alignItems: 'center', gap: 4, paddingVertical: 12, paddingHorizontal: 8,
-    borderRadius: 12, backgroundColor: '#FFFDE7', borderWidth: 1.5, borderColor: '#FBC02D',
-    position: 'relative',
-  },
-  favoriteCorner: { position: 'absolute', top: 4, right: 4 },
-  favoriteCardIcon: { fontSize: 20 },
-  favoriteCardText: { fontSize: 12, fontWeight: '700', color: '#333', textAlign: 'center' },
+  dashboardCard: { backgroundColor: '#fff', marginHorizontal: 16, marginTop: 12, borderRadius: 14, padding: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
+  dashboardTitle: { fontSize: 14, fontWeight: '800', color: '#222', marginBottom: 10 },
+  favoritesWrap: { marginHorizontal: 16, marginTop: 14 },
 
-  quickLinksGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    paddingHorizontal: 16, marginTop: 12,
-  },
-  quickLink: {
-    flexBasis: '18%', flexGrow: 1, minWidth: 92,
-    alignItems: 'center', gap: 3, paddingVertical: 9, paddingHorizontal: 6,
-    borderRadius: 10, borderLeftWidth: 3,
-  },
-  quickLinkBlue: { backgroundColor: '#E3F2FD', borderLeftColor: '#1565C0' },
-  quickLinkPurple: { backgroundColor: '#F3E5F5', borderLeftColor: '#8E24AA' },
-  quickLinkTeal: { backgroundColor: '#E0F2F1', borderLeftColor: '#00796B' },
-  quickLinkOrange: { backgroundColor: '#FFF3E0', borderLeftColor: '#E65100' },
-  quickLinkIcon: { fontSize: 18 },
-  quickLinkText: { fontSize: 11.5, fontWeight: '800', textAlign: 'center' },
+  quickLinksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  quickLink: { width: '48.8%', minWidth: 240, minHeight: 92, padding: 12, borderRadius: 12, borderWidth: 2, gap: 6 },
+  quickLinkTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  quickLinkBadge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  quickLinkText: { flex: 1, fontSize: 14, fontWeight: '800' },
+  quickLinkBlurb: { fontSize: 12, color: '#37474F', lineHeight: 16 },
 
   warningBox: { backgroundColor: '#FFF3E0', marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#E65100', flexDirection: 'row', alignItems: 'center', gap: 10 },
   warningIcon: { fontSize: 20 },

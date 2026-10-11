@@ -10,6 +10,7 @@ import { supabase } from '../../../src/api/supabase';
 import { extractMenuFromImage, extractMenuFromText } from '../../../src/api/restaurantAuth';
 import { confirmAndRetryIfNeeded } from '../../../src/utils/menuReplaceConfirm';
 import PlaceMenuLinkBox from '../../../src/components/common/PlaceMenuLinkBox';
+import { IconText } from '../../../src/components/common/AppIcon';
 
 interface RestaurantInfo {
   // A claimed restaurant has an id; one no owner has claimed is named by its Google place ID instead.
@@ -58,12 +59,11 @@ export default function AdminMenuManagementRestaurantScreen() {
     if (!id && !placeId) return;
     try {
       if (placeId) {
-        const { data, error } = await supabase
-          .from('cached_restaurants')
-          .select('place_id, name, address')
-          .eq('place_id', placeId)
-          .maybeSingle();
+        // The Google cache, else the customer's click record or the saved menu items (migration 131), so a place that is not in
+        // the cache can still be managed.
+        const { data: info, error } = await supabase.rpc('admin_get_place_info', { p_place_id: placeId });
         if (error) throw error;
+        const data = Array.isArray(info) ? info[0] : info;
         if (data) {
           setRestaurant({ placeId: data.place_id, name: data.name, address: data.address ?? '' });
           return;
@@ -224,7 +224,7 @@ export default function AdminMenuManagementRestaurantScreen() {
 
         {/* Photo */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📷 Update Menu Items Using a Photo</Text>
+          <IconText style={styles.cardTitle} emoji="📷">Update Menu Items Using a Photo</IconText>
           <Text style={styles.cardHint}>
             Upload a clear photo of the restaurant's printed menu. This reads the real dish names
             directly from it — it never invents items that aren't in the photo. Adds to the existing
@@ -271,7 +271,7 @@ export default function AdminMenuManagementRestaurantScreen() {
 
         {/* Text */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📋 Update Menu Items From Text</Text>
+          <IconText style={styles.cardTitle} emoji="📋">Update Menu Items From Text</IconText>
           <Text style={styles.cardHint}>
             Paste the restaurant's real menu text from anywhere — a PDF, an email, a document, a site
             that's hard to link. This reads the real dish names directly from it — it never invents
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666' },
 
   content: { padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, marginBottom: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, elevation: 1, marginBottom: 16, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: '#222', marginBottom: 8 },
   cardHint: { fontSize: 13, color: '#888', lineHeight: 18, marginBottom: 14 },
 
