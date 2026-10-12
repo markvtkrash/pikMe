@@ -9,6 +9,7 @@ import {
 const LOGIN = ['restaurant', 'auth', 'login'];
 const SIGNUP = ['restaurant', 'auth', 'signup'];
 const CHANGE_PASSWORD = ['restaurant', 'auth', 'change-password'];
+const FORGOT_PASSWORD = ['restaurant', 'auth', 'forgot-password'];
 const DASHBOARD = ['restaurant', 'dashboard'];
 const MENU = ['restaurant', 'menu'];
 
@@ -128,5 +129,16 @@ describe('signed in but not an owner', () => {
     expect(
       resolveOwnerRoute(state({ isRestaurantOwner: false, mustChangePassword: true, segments: DASHBOARD }))
     ).toBe(OWNER_LOGIN_PATH);
+  });
+});
+
+describe('forgot password page', () => {
+  it('is reachable without a session', () => {
+    expect(resolveOwnerRoute(state({ segments: FORGOT_PASSWORD, hasSession: false, isRestaurantOwner: false, hasStoreOwner: false }))).toBeNull();
+  });
+  it('is not left once the emailed code has signed the owner in', () => {
+    expect(resolveOwnerRoute(state({ segments: FORGOT_PASSWORD, hasStoreOwner: true }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: FORGOT_PASSWORD, hasStoreOwner: true, mustChangePassword: true }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: FORGOT_PASSWORD, roleCheckComplete: false }))).toBeNull();
   });
 });

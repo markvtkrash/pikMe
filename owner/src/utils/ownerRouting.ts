@@ -4,6 +4,8 @@
 // Rules (in order):
 //  1. Entry-point routes (the bare root and /owner) handle their own redirects.
 //  2. No session and not on an auth page -> owner login.
+//     Exception: the forgot-password page is left alone once signed in — checking the
+//     emailed code signs the person in, and they must stay there to set the new password.
 //  3. Role check still running -> wait (null): don't guess.
 //  4. A signed-in OWNER:
 //     a. whose password must be changed (admin reset / admin-created account) is
@@ -16,6 +18,7 @@
 export const OWNER_LOGIN_PATH = '/restaurant/auth/login';
 export const OWNER_DASHBOARD_PATH = '/restaurant/dashboard';
 export const OWNER_CHANGE_PASSWORD_PATH = '/restaurant/auth/change-password';
+export const OWNER_FORGOT_PASSWORD_PATH = '/restaurant/auth/forgot-password';
 
 export interface OwnerRouteState {
   hasSession: boolean;
@@ -36,6 +39,8 @@ export function resolveOwnerRoute(state: OwnerRouteState): string | null {
   const isAuthPage = segments[0] === 'restaurant' && segments[1] === 'auth';
 
   if (!hasSession && !isAuthPage) return OWNER_LOGIN_PATH;
+
+  if (isAuthPage && segments[2] === 'forgot-password') return null;
 
   if (!roleCheckComplete) return null;
 

@@ -188,7 +188,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     console.log('[AuthGate] segments:', segments, 'session:', !!session);
 
     // Allow unauthenticated access to auth pages
-    const isCustomerAuthPage = segments.includes('sign-in') || segments.includes('sign-up');
+    const isCustomerAuthPage = segments.includes('sign-in') || segments.includes('sign-up') || segments.includes('forgot-password');
+
+    // Forgot password: checking the emailed code signs the person in, but they must stay on this screen to set the new password.
+    if (segments.includes('forgot-password')) return;
 
     if (!session && !isCustomerAuthPage) {
       console.log('[AuthGate] No session and not on auth page, redirecting to /(auth)/sign-in');
@@ -225,7 +228,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [session, onboardingComplete, segments]);
 
-  if (session === undefined || (hasSession && faceIdStatus === 'checking')) {
+  // The forgot-password screen must not be swapped for the spinner / lock screen when the emailed code signs the person in mid-reset.
+  const onResetPage = segments.includes('forgot-password');
+
+  if (session === undefined || (hasSession && !onResetPage && faceIdStatus === 'checking')) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#1565C0" />
@@ -233,7 +239,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (hasSession && faceIdStatus === 'locked') {
+  if (hasSession && !onResetPage && faceIdStatus === 'locked') {
     return <FaceIdLockScreen onRetry={unlockWithFaceId} />;
   }
 

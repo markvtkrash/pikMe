@@ -3,11 +3,13 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { LegalDocumentModal, type DocumentType } from '../../src/components/common/LegalDocumentModal';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
 
 export default function SignInScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -177,6 +179,12 @@ export default function SignInScreen() {
               </Text>
           }
         </TouchableOpacity>
+
+        {mode === 'sign-in' && (
+          <TouchableOpacity style={styles.switchMode} onPress={() => router.push('/(auth)/forgot-password')}>
+            <Text style={styles.switchText}>Forgot password?</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.switchMode}

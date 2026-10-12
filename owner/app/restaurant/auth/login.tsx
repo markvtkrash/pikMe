@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert, Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loginRestaurantOwner, getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { supabase } from '../../../src/api/supabase';
@@ -13,6 +13,7 @@ import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
+  const { reset } = useLocalSearchParams<{ reset?: string }>();
   const { setOwner, setRestaurant, setSession, setRestaurantError, setMustChangePassword } = useRestaurantOwnerStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -119,6 +120,7 @@ export default function RestaurantLoginScreen() {
         />
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        {!error && reset === '1' ? <Text style={styles.noticeText}>Your password was changed. Sign in with the new password.</Text> : null}
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -131,7 +133,12 @@ export default function RestaurantLoginScreen() {
           }
         </TouchableOpacity>
 
+        <TouchableOpacity onPress={() => router.push('/restaurant/auth/forgot-password')}>
+          <Text style={styles.linkText}>Forgot password?</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
+          style={styles.secondLink}
           onPress={() => router.push('/restaurant/auth/signup')}
         >
           <Text style={styles.linkText}>Don't have an account? Sign up</Text>
@@ -172,6 +179,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     minHeight: 48,
   },
+  noticeText: { color: '#2E7D32', fontSize: 14, marginBottom: 10, textAlign: 'center' },
+  secondLink: { marginTop: -6 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   linkText: { color: '#1565C0', fontSize: 14, textAlign: 'center', marginTop: 20, fontWeight: '600' },
