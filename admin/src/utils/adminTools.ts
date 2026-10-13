@@ -29,6 +29,15 @@ export const ADMIN_TOOLS: AdminTool[] = [
     href: '/admin/announcements',
   },
   {
+    key: 'city-imports',
+    icon: '🏙️',
+    title: 'City Imports',
+    subtitle: 'Add a city and how many independent restaurants to find; their menus are imported from their websites',
+    color: '#EF6C00',
+    bg: '#FFF3E0',
+    href: '/admin/crawl-cities',
+  },
+  {
     key: 'restaurant-categories',
     icon: '🏷️',
     title: 'Restaurant Categories',

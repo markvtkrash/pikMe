@@ -7,10 +7,21 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Alert } from '../../src/utils/alert';
 import { getRestaurantsWithMenuCounts, RestaurantMenuSummary } from '../../src/api/menuAdmin';
 import { IconText } from '../../src/components/common/AppIcon';
+import { OptionPickerModal } from '../../src/components/common/OptionPickerModal';
+import {
+  buildCityOptions, buildStateOptions, countWithoutLocation, filterButtonLabel, matchesLocation, validCity,
+} from '../../src/utils/menuLocation';
 
 const PAGE_SIZE = 50;
 
-type SourceFilter = 'all' | 'claimed' | 'cached';
+type SourceFilter = 'all' | 'claimed' | 'cached' | 'city';
+const SOURCE_FILTERS: { value: SourceFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'claimed', label: 'Claimed' },
+  { value: 'cached', label: 'Cached' },
+  { value: 'city', label: 'City imports' },
+];
+const SOURCE_BADGE_LABEL: Record<string, string> = { claimed: 'Claimed', cached: 'Cached', city: 'City import' };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   pending: { bg: '#FFF3E0', text: '#E65100', label: 'Pending' },
@@ -31,6 +42,9 @@ export default function AdminMenuManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<SourceFilter>('all');
+  const [stateFilter, setStateFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [picker, setPicker] = useState<'state' | 'city' | null>(null);
   const [page, setPage] = useState(0);
 
   useFocusEffect(
@@ -50,10 +64,29 @@ export default function AdminMenuManagementScreen() {
     }
   }
 
+  // The Region and City choices come from what is in the list (the City list narrows to the chosen region).
+  const stateOptions = useMemo(() => buildStateOptions(rows), [rows]);
+  const cityOptions = useMemo(() => buildCityOptions(rows, stateFilter), [rows, stateFilter]);
+  const hiddenByLocation = useMemo(() => (stateFilter || cityFilter ? countWithoutLocation(rows) : 0), [rows, stateFilter, cityFilter]);
+
+  function chooseState(value: string) {
+    setStateFilter(value);
+    setCityFilter(validCity(rows, value, cityFilter));   // a city outside the new region is dropped
+    setPicker(null);
+    setPage(0);
+  }
+
+  function chooseCity(value: string) {
+    setCityFilter(value);
+    setPicker(null);
+    setPage(0);
+  }
+
   const filtered = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return rows.filter((r) => {
       if (filter !== 'all' && r.source !== filter) return false;
+      if (!matchesLocation(r, stateFilter, cityFilter)) return false;
       if (!query) return true;
       return (
         r.restaurant_name.toLowerCase().includes(query) ||
@@ -62,7 +95,7 @@ export default function AdminMenuManagementScreen() {
         (r.owner_email ?? '').toLowerCase().includes(query)
       );
     });
-  }, [rows, searchQuery, filter]);
+  }, [rows, searchQuery, filter, stateFilter, cityFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -112,23 +145,60 @@ export default function AdminMenuManagementScreen() {
           onChangeText={(text) => { setSearchQuery(text); setPage(0); }}
         />
         <View style={styles.filterRow}>
-          {(['all', 'claimed', 'cached'] as SourceFilter[]).map((f) => (
+          {SOURCE_FILTERS.map((f) => (
             <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
-              onPress={() => { setFilter(f); setPage(0); }}
+              key={f.value}
+              style={[styles.filterChip, filter === f.value && styles.filterChipActive]}
+              onPress={() => { setFilter(f.value); setPage(0); }}
             >
-              <Text style={[styles.filterChipText, filter === f && styles.filterChipTextActive]}>
-                {f === 'all' ? 'All' : f === 'claimed' ? 'Claimed' : 'Cached'}
-              </Text>
+              <Text style={[styles.filterChipText, filter === f.value && styles.filterChipTextActive]}>{f.label}</Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            style={[styles.filterChip, styles.pickerChip, !!stateFilter && styles.filterChipActive]}
+            onPress={() => setPicker('state')}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.filterChipText, !!stateFilter && styles.filterChipTextActive]}>{filterButtonLabel('Region', stateFilter, stateOptions)} ▾</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, styles.pickerChip, !!cityFilter && styles.filterChipActive]}
+            onPress={() => setPicker('city')}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.filterChipText, !!cityFilter && styles.filterChipTextActive]}>{filterButtonLabel('City', cityFilter, cityOptions)} ▾</Text>
+          </TouchableOpacity>
+          {!!(stateFilter || cityFilter) && (
+            <TouchableOpacity style={styles.filterChip} onPress={() => { setStateFilter(''); setCityFilter(''); setPage(0); }} accessibilityRole="button">
+              <Text style={styles.filterChipText}>Clear</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
       <Text style={styles.rangeText}>
         {filtered.length === 0 ? '0 results' : `Showing ${firstShown}–${lastShown} of ${filtered.length}`}
+        {hiddenByLocation > 0 ? ` · ${hiddenByLocation} without a city or state are hidden (franchises and unreadable addresses)` : ''}
       </Text>
+
+      <OptionPickerModal
+        visible={picker === 'state'}
+        title="Region (state)"
+        options={stateOptions}
+        selected={stateFilter}
+        allLabel="All regions"
+        onSelect={chooseState}
+        onClose={() => setPicker(null)}
+      />
+      <OptionPickerModal
+        visible={picker === 'city'}
+        title={stateFilter ? `City (in ${stateOptions.find((o) => o.value === stateFilter.trim().toLowerCase())?.label ?? stateFilter})` : 'City'}
+        options={cityOptions}
+        selected={cityFilter}
+        allLabel="All cities"
+        onSelect={chooseCity}
+        onClose={() => setPicker(null)}
+      />
 
       {filtered.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -149,7 +219,7 @@ export default function AdminMenuManagementScreen() {
                     <Text style={styles.restaurantName}>{item.restaurant_name}</Text>
                     <View style={[styles.sourceBadge, claimed ? styles.sourceClaimed : styles.sourceCached]}>
                       <Text style={[styles.sourceBadgeText, claimed ? styles.sourceClaimedText : styles.sourceCachedText]}>
-                        {claimed ? 'Claimed' : 'Cached'}
+                        {SOURCE_BADGE_LABEL[item.source] ?? 'Cached'}
                       </Text>
                     </View>
                     {claimed && statusInfo && (
@@ -242,7 +312,8 @@ const styles = StyleSheet.create({
 
   searchContainer: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10 },
   searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
-  filterRow: { flexDirection: 'row', gap: 8 },
+  filterRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  pickerChip: { borderWidth: 1, borderColor: '#B0BEC5' },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#f0f0f0' },
   filterChipActive: { backgroundColor: '#1565C0' },
   filterChipText: { fontSize: 12, fontWeight: '700', color: '#555' },

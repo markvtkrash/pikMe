@@ -4,7 +4,8 @@ import { fetchAllPages } from './reports';
 export interface RestaurantMenuSummary {
   restaurant_name: string;
   address: string | null;
-  source: 'claimed' | 'cached';
+  // 'city' (migration 136): a restaurant a City Imports search found, not claimed or cached.
+  source: 'claimed' | 'cached' | 'city';
   restaurant_id: string | null;
   status: string | null;
   owner_business_name: string | null;
@@ -17,6 +18,9 @@ export interface RestaurantMenuSummary {
   // Migration 108: independents are listed one row per location (their place ID); franchises one row per name.
   place_id?: string | null;
   is_franchise?: boolean;
+  // Migration 136: read from the address (or entered on City Imports); null for franchises and unreadable addresses.
+  city?: string | null;
+  state?: string | null;
 }
 
 export interface AdminMenuItem {

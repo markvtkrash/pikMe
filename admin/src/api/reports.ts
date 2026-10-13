@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { HealthLocationRow } from '../utils/menuHealth';
 
 export interface ClaimsOverTimeRow {
   week_start: string;
@@ -97,13 +98,26 @@ export interface MenuHealthSnapshot {
   verified_count: number;
   unverified_count: number;
   restaurants_with_no_items_count: number;
+  // Migration 137: how many restaurants the filter covers.
+  restaurant_count: number;
 }
 
 export interface RestaurantNoMenuItems {
-  restaurant_id: string;
+  total_count: number;
+  // Null for a city-imported restaurant (no owner); use place_id to tell rows apart.
+  restaurant_id: string | null;
   restaurant_name: string;
-  status: string;
-  claimed_at: string;
+  // The claim status for a claimed restaurant; null for a city import (see read_status).
+  status: string | null;
+  // When it was claimed, or when the city search found it.
+  claimed_at: string | null;
+  place_id: string | null;
+  address: string | null;
+  is_franchise: boolean;
+  // Migration 138.
+  source: 'claimed' | 'city';
+  // For a city import: what the menu crawler did (pending / crawling / done / no_items / error / needs_attention), else null.
+  read_status: string | null;
 }
 
 export interface SupportSnapshotRow {
@@ -130,16 +144,36 @@ export async function getOwnersNeedingAttention(): Promise<OwnerNeedingAttention
   return data || [];
 }
 
-export async function getMenuHealthSnapshot(): Promise<MenuHealthSnapshot | null> {
-  const { data, error } = await supabase.rpc('admin_report_menu_health_snapshot');
+// The Menu Data Health report is filtered on the server by region (state) and city (migration 137). A blank region means every
+// region, and '__none__' means restaurants whose address has no readable state.
+export interface MenuHealthFilter {
+  state: string;
+  city: string;
+  // Migration 138: '' = claimed and city-imported restaurants, 'claimed', or 'city'.
+  source?: string;
+}
+
+function filterArgs(filter: MenuHealthFilter) {
+  return { p_state: filter.state || null, p_city: filter.city || null, p_source: filter.source || null };
+}
+
+export async function getMenuHealthSnapshot(filter: MenuHealthFilter): Promise<MenuHealthSnapshot | null> {
+  const { data, error } = await supabase.rpc('admin_report_menu_health_snapshot', filterArgs(filter));
   if (error) throw error;
   return data?.[0] || null;
 }
 
-export async function getRestaurantsNoMenuItems(): Promise<RestaurantNoMenuItems[]> {
-  const { data, error } = await supabase.rpc('admin_report_restaurants_no_menu_items');
+export async function getRestaurantsNoMenuItems(filter: MenuHealthFilter, limit: number, offset: number): Promise<RestaurantNoMenuItems[]> {
+  const { data, error } = await supabase.rpc('admin_report_restaurants_no_menu_items', { ...filterArgs(filter), p_limit: limit, p_offset: offset });
   if (error) throw error;
   return data || [];
+}
+
+// The regions and cities that have restaurants, with counts, for the report's filter.
+export async function getMenuHealthLocations(): Promise<HealthLocationRow[]> {
+  const { data, error } = await supabase.rpc('admin_menu_health_locations');
+  if (error) throw error;
+  return (data ?? []) as HealthLocationRow[];
 }
 
 export async function getSupportSnapshot(): Promise<SupportSnapshotRow[]> {
@@ -155,14 +189,22 @@ export async function getSupportResolutionTime(): Promise<SupportResolutionTime 
 }
 
 export interface MenuHealthByRestaurantRow {
-  restaurant_id: string;
+  total_count: number;
+  // Null for a city-imported restaurant (no owner); use place_id to tell rows apart.
+  restaurant_id: string | null;
   restaurant_name: string;
   verified_count: number;
   unverified_count: number;
+  place_id: string | null;
+  address: string | null;
+  is_franchise: boolean;
+  // Migration 138.
+  source: 'claimed' | 'city';
 }
 
-export async function getMenuHealthByRestaurant(): Promise<MenuHealthByRestaurantRow[]> {
-  const { data, error } = await supabase.rpc('admin_report_menu_health_by_restaurant');
+// A page of restaurants with at least one menu item (total_count is the whole filtered count).
+export async function getMenuHealthByRestaurant(filter: MenuHealthFilter, limit: number, offset: number): Promise<MenuHealthByRestaurantRow[]> {
+  const { data, error } = await supabase.rpc('admin_report_menu_health_by_restaurant', { ...filterArgs(filter), p_limit: limit, p_offset: offset });
   if (error) throw error;
   return data || [];
 }

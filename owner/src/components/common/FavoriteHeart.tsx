@@ -1,5 +1,6 @@
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Heart } from 'lucide-react-native';
+import { favoriteHeartRole } from '../../utils/favoriteHeartRole';
 
 interface Props {
   active: boolean;
@@ -16,7 +17,7 @@ export function FavoriteHeart({ active, onPress, size = 'small' }: Props) {
       style={[styles.btn, size === 'large' && styles.btnLarge]}
       onPress={(e: any) => { e?.stopPropagation?.(); onPress(); }}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      accessibilityRole="button"
+      accessibilityRole={favoriteHeartRole(Platform.OS)}
       accessibilityState={{ selected: active }}
       accessibilityLabel={active ? 'Remove from favorites' : 'Add to favorites'}
     >

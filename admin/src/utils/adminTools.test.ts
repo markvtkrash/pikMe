@@ -2,11 +2,12 @@ import { ADMIN_TOOLS } from './adminTools';
 import { NAV_ITEMS } from './adminNav';
 
 describe('ADMIN_TOOLS', () => {
-  it('lists Scheduled Builds, Announcements, Restaurant Categories and App Config', () => {
-    expect(ADMIN_TOOLS.map((t) => t.title)).toEqual(['Scheduled Builds', 'Announcements', 'Restaurant Categories', 'App Config']);
+  it('lists Scheduled Builds, Announcements, City Imports, Restaurant Categories and App Config', () => {
+    expect(ADMIN_TOOLS.map((t) => t.title)).toEqual(['Scheduled Builds', 'Announcements', 'City Imports', 'Restaurant Categories', 'App Config']);
     const byTitle = Object.fromEntries(ADMIN_TOOLS.map((t) => [t.title, t.href]));
     expect(byTitle['Scheduled Builds']).toBe('/admin/scheduled-builds');
     expect(byTitle['Announcements']).toBe('/admin/announcements');
+    expect(byTitle['City Imports']).toBe('/admin/crawl-cities');
     expect(byTitle['Restaurant Categories']).toBe('/admin/restaurant-categories');
     expect(byTitle['App Config']).toBe('/admin/config');
   });

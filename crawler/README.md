@@ -33,6 +33,7 @@ every admin override save ─┴─> place_menu_crawl ─> │    1. asks for wo
 | File | What it is |
 |---|---|
 | `crawl_places.py` | the worker you run |
+| `crawl_cities.py` | the city import program (see "City imports" below): finds independent restaurants in the cities an admin added and queues their websites for `crawl_places.py`. No browser |
 | `menu_reader.py` | the page reader, copied from `crawl_menus.py` (finds the menu by how it looks on screen; handles tabs, "load more", embedded data, API calls, PDFs). Two edits: an optional address guard, and nothing else changes its reading |
 | `egress_proxy.py` | a local filtering proxy; the **security boundary**: all browser and HTTP traffic goes through it and it only connects to public internet addresses (redirects and DNS tricks cannot get around it) |
 | `safety.py` | address checks (early, friendly refusals) |
@@ -118,6 +119,73 @@ from place_menu_crawl where status in ('error', 'needs_attention', 'no_items') o
 
 To read a link again, save it again (an owner or admin saving the same link is enough), or:
 `update place_menu_crawl set status='pending', attempts=0, next_attempt_at=now() where place_id='...';`
+
+## City imports (`crawl_cities.py`)
+
+An admin adds a city and how many independent restaurants to find on the admin page **Tools -> City Imports**. This
+second, much lighter program (no browser) does the finding, and the worker above reads the menus.
+
+```
+admin City Imports page ─> crawl_cities (table, migration 134)
+                                    │  cron, crawl_cities.py asks for the next waiting city
+                                    ▼
+                          city-crawl edge function ──> Google Places (New) text search, ONE request per call
+                                    │                  (the function holds the key; the program holds none)
+                                    │  drops franchises, closed places, places with no website and places that
+                                    │  already have a verified menu; counts every Google request for the city
+                                    ▼
+                          place_menu_crawl (link_source 'city')  ──>  crawl_places.py reads each website as usual
+```
+
+* **No owner is needed.** A menu is tied to the restaurant's Google place ID, the same as an owner's or admin's link.
+* **Owners and admins always win.** A city link never replaces an existing owner, admin or found link, and when the owner or
+  an admin saves a link for the place, theirs replaces the city's. `claim_place_crawls` hands out city rows **last**, so a
+  city's backlog never makes an owner's link wait. Reading them is limited by the same `menuCrawlMaxPerRun` setting as
+  everything else: a city of 100 restaurants takes two daily runs at the default of 50.
+* **Searches.** One general search ("restaurants in Austin, TX") then one per kind of food (about 30), each read page by page
+  (20 a page, about 60 results at most per search), until the number the admin asked for is found, Google has nothing more,
+  or the city's request limit is reached. A city can be spread over several runs: its position is saved after every request.
+* **Request limit.** `cityCrawlMaxCalls` (app_config, default 60): the most Google requests one city may use in one run. The
+  admin page shows each city's total and latest-run request counts. Google's own billing page is the number you are charged by.
+* **Run again / raising the number.** On the admin page, Run again continues a stopped search where it stopped, or searches
+  again from the start if Google had run out of results. Raising a city's number does the same for one that stopped at its target.
+* **Status.** waiting -> searching -> reading menus -> done. A failed search is retried after 6 hours and flagged
+  needs attention after `menuBuildMaxAttempts` failures.
+
+### One-time setup
+
+Uses the same secret and `.env` file as `crawl_places.py` (`/etc/pikme-crawler.env`). Add one line if you like (otherwise the
+address is `CRAWLER_URL` with `/menu-crawl` changed to `/city-crawl`):
+
+```
+CITY_CRAWLER_URL=http://localhost:8000/functions/v1/city-crawl
+```
+
+Deploy the `city-crawl` edge function and give it the Google key it needs: the same `GOOGLE_PLACES_KEY` secret the nearby
+search uses, **with "Places API (New)" enabled for that key** in Google Cloud (the nearby search uses the older Places API,
+so this may be a new switch to turn on).
+
+### Try it, then schedule it
+
+```bash
+# 1. one search, nothing recorded: checks the Google key and shows what comes back (name | address | website)
+./venv/bin/python crawl_cities.py --env-file /etc/pikme-crawler.env --preview Austin --region TX
+
+# 2. add a small city (target 5) on the admin City Imports page, then run it by hand
+./venv/bin/python crawl_cities.py --env-file /etc/pikme-crawler.env --verbose
+```
+
+```
+# every 30 minutes (it exits at once when no city is waiting; never runs twice at the same time)
+*/30 * * * * cd /opt/pikme/crawler && ./venv/bin/python crawl_cities.py --env-file /etc/pikme-crawler.env >> /var/log/pikme-cities.log 2>&1
+```
+
+Options: `--max-cities 5` (cities per run), `--max-minutes 60`, `--verbose`.
+
+```sql
+select name, region, status, max_restaurants, google_calls, google_calls_last_run, stop_reason, last_detail from crawl_cities;
+select outcome, count(*) from city_places where city_id = '...' group by 1;
+```
 
 ## Safety notes
 

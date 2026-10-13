@@ -47,3 +47,6 @@ crawler/venv/
 crawler/work/
 crawler/__pycache__/
 crawler/tests/__pycache__/
+
+# browser test screenshots
+admin/e2e/screenshots/
