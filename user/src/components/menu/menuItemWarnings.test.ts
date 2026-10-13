@@ -21,71 +21,113 @@ function makeItem(overrides: Partial<MenuItem> = {}): MenuItem {
   };
 }
 
-describe('getItemWarnings', () => {
-  it('returns no warnings when the user has no allergens or restrictions', () => {
-    const result = getItemWarnings(makeItem(), [], []);
-    expect(result).toEqual({ allergenWarnings: [], restrictionWarnings: [] });
+const warnings = (name: string, allergens: string[] = [], restrictions: string[] = []) =>
+  getItemWarnings(makeItem({ name }), allergens, restrictions);
+
+describe('getItemWarnings: wording', () => {
+  it('returns no warnings when the person has no allergens or restrictions', () => {
+    expect(warnings('Grilled Chicken Salad')).toEqual({ allergenWarnings: [], restrictionWarnings: [] });
   });
 
-  it('flags a matching custom allergen by keyword', () => {
-    const item = makeItem({ name: 'Peanut Noodle Bowl' });
-    const result = getItemWarnings(item, ['peanut'], []);
-    expect(result.allergenWarnings).toEqual(['Contains: peanut']);
+  it('says the NAME SUGGESTS something, never that the dish contains it, and always tells the person to ask', () => {
+    const all = [
+      ...warnings('Peanut Noodle Bowl', ['peanut']).allergenWarnings,
+      ...warnings('Grilled Chicken Salad', [], ['vegan']).restrictionWarnings,
+      ...warnings('Grilled Chicken Salad', [], ['vegetarian']).restrictionWarnings,
+      ...warnings('Turkey Sandwich', [], ['gluten_free']).restrictionWarnings,
+    ];
+    expect(all).toHaveLength(4);
+    for (const text of all) {
+      expect(text).toMatch(/The name suggests/);
+      expect(text).toMatch(/[Aa]sk the restaurant/);
+      expect(text).not.toMatch(/Contains|contains|Not vegan \(|Not vegetarian \(/);
+    }
+  });
+});
+
+describe('getItemWarnings: allergens', () => {
+  it('flags a matching allergen by keyword', () => {
+    expect(warnings('Peanut Noodle Bowl', ['peanut']).allergenWarnings).toEqual(['The name suggests peanut. Not confirmed: ask the restaurant.']);
   });
 
-  it('matches allergens via their keyword synonym list, not just literal substring', () => {
-    const item = makeItem({ name: 'Classic Cheeseburger' });
-    const result = getItemWarnings(item, ['beef'], []);
-    expect(result.allergenWarnings).toEqual(['Contains: beef']);
+  it('matches an allergen through its synonym list, not just the literal word', () => {
+    expect(warnings('Classic Cheeseburger', ['beef']).allergenWarnings).toHaveLength(1);
   });
 
-  it('falls back to a literal substring match for an allergen with no keyword list', () => {
-    const item = makeItem({ name: 'Mango Smoothie' });
-    const result = getItemWarnings(item, ['mango'], []);
-    expect(result.allergenWarnings).toEqual(['Contains: mango']);
+  it('falls back to a literal match for an allergen with no word list', () => {
+    expect(warnings('Mango Smoothie', ['mango']).allergenWarnings).toHaveLength(1);
   });
 
-  it('does not flag an allergen that is absent from the item name', () => {
-    const item = makeItem({ name: 'Garden Salad' });
-    const result = getItemWarnings(item, ['peanut'], []);
-    expect(result.allergenWarnings).toEqual([]);
+  it('does not flag an allergen that the name does not suggest (the card says separately that ingredients are not verified)', () => {
+    expect(warnings('Garden Salad', ['peanut']).allergenWarnings).toEqual([]);
   });
 
-  it('flags a vegan violation for meat', () => {
-    const item = makeItem({ name: 'Grilled Chicken Salad' });
-    const result = getItemWarnings(item, [], ['vegan']);
-    expect(result.restrictionWarnings).toEqual(['Not vegan (contains meat)']);
+  it.each([
+    ['Pad Thai', 'peanut'],
+    ['Chicken Satay', 'peanut'],
+    ['Caesar Salad', 'fish'],
+    ['Spaghetti Carbonara', 'egg'],
+    ['Teriyaki Bowl', 'soy'],
+    ['Hummus Plate', 'sesame'],
+    ['Pesto Pasta', 'tree nut'],
+    ['Crawfish Etouffee', 'shellfish'],
+    ['Alfredo Pasta', 'milk'],
+    ['Birria Tacos', 'beef'],
+    ['Chorizo Breakfast Burrito', 'pork'],
+  ])('%s is flagged for %s', (name, allergen) => {
+    expect(warnings(name, [allergen]).allergenWarnings).toHaveLength(1);
+  });
+});
+
+describe('getItemWarnings: vegetarian and vegan, leaning toward over-warning', () => {
+  it('flags meat for a vegetarian and a vegan', () => {
+    expect(warnings('Grilled Chicken Salad', [], ['vegetarian']).restrictionWarnings).toHaveLength(1);
+    expect(warnings('Grilled Chicken Salad', [], ['vegan']).restrictionWarnings).toEqual(['The name suggests meat or fish, so it may not be vegan. Ask the restaurant.']);
   });
 
-  it('flags a vegan violation for dairy when there is no meat', () => {
-    const item = makeItem({ name: 'Cheese Pizza' });
-    const result = getItemWarnings(item, [], ['vegan']);
-    expect(result.restrictionWarnings).toEqual(['Contains dairy']);
+  it('flags FISH for a vegetarian (fish is not vegetarian)', () => {
+    expect(warnings('Grilled Salmon', [], ['vegetarian']).restrictionWarnings).toHaveLength(1);
+    expect(warnings('Shrimp Tacos', [], ['vegetarian']).restrictionWarnings).toHaveLength(1);
   });
 
-  it('does not double-flag dairy once a meat violation is already found for vegan', () => {
-    const item = makeItem({ name: 'Chicken Alfredo with Cream Sauce' });
-    const result = getItemWarnings(item, [], ['vegan']);
-    expect(result.restrictionWarnings).toEqual(['Not vegan (contains meat)']);
+  it('flags dishes that often hide meat, such as stock, broth, lard and rice cooked in stock', () => {
+    for (const name of ['Mexican Rice', 'Refried Beans', 'French Onion Soup', 'Chicken-free Broth Bowl', 'Chili', 'Vegetable Stew', 'Jambalaya', 'Caesar Salad']) {
+      expect(warnings(name, [], ['vegetarian']).restrictionWarnings).toHaveLength(1);
+    }
   });
 
-  it('flags a vegetarian violation for meat but ignores dairy', () => {
-    const item = makeItem({ name: 'Cheese Pizza' });
-    const result = getItemWarnings(item, [], ['vegetarian']);
-    expect(result.restrictionWarnings).toEqual([]);
+  it('does not flag cheese for a vegetarian', () => {
+    expect(warnings('Cheese Pizza', [], ['vegetarian']).restrictionWarnings).toEqual([]);
   });
 
-  it('flags a gluten-free violation', () => {
-    const item = makeItem({ name: 'Turkey Sandwich' });
-    const result = getItemWarnings(item, [], ['gluten_free']);
-    expect(result.restrictionWarnings).toEqual(['Contains gluten']);
+  it('flags dairy and egg for a vegan when there is no meat word', () => {
+    expect(warnings('Cheese Pizza', [], ['vegan']).restrictionWarnings).toEqual(['The name suggests dairy or egg, so it may not be vegan. Ask the restaurant.']);
+    expect(warnings('Egg Sandwich', [], ['vegan']).restrictionWarnings).toHaveLength(1);
+    expect(warnings('Honey Glazed Carrots', [], ['vegan']).restrictionWarnings).toHaveLength(1);
   });
 
+  it('gives one warning, not two, when both meat and dairy are suggested', () => {
+    expect(warnings('Chicken Alfredo with Cream Sauce', [], ['vegan']).restrictionWarnings).toHaveLength(1);
+  });
+});
+
+describe('getItemWarnings: gluten free', () => {
+  it('flags a gluten-free violation, including burgers, wraps, noodles and fried food', () => {
+    for (const name of ['Turkey Sandwich', 'Cheeseburger', 'Chicken Wrap', 'Chicken Ramen', 'Crispy Chicken', 'Beer Battered Fish', 'Soy Glazed Salmon']) {
+      expect(warnings(name, [], ['gluten_free']).restrictionWarnings).toHaveLength(1);
+    }
+  });
+
+  it('does not flag a name with no gluten words', () => {
+    expect(warnings('Grilled Salmon', [], ['gluten_free']).restrictionWarnings).toEqual([]);
+  });
+});
+
+describe('getItemWarnings: independent warnings', () => {
   it('combines allergen and restriction warnings independently', () => {
-    const item = makeItem({ name: 'Peanut Chicken Wrap' });
-    const result = getItemWarnings(item, ['peanut'], ['vegan']);
-    expect(result.allergenWarnings).toEqual(['Contains: peanut']);
-    expect(result.restrictionWarnings).toEqual(['Not vegan (contains meat)']);
+    const result = warnings('Peanut Chicken Wrap', ['peanut'], ['vegan']);
+    expect(result.allergenWarnings).toHaveLength(1);
+    expect(result.restrictionWarnings).toHaveLength(1);
   });
 });
 

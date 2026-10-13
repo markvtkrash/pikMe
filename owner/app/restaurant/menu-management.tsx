@@ -190,8 +190,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 14,
     borderBottomWidth: 1, borderBottomColor: '#EEF1F5', flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  backBtn: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: '#F1F3F7' },
-  backBtnText: { fontSize: 13, fontWeight: '700', color: '#455A64' },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#e53e3e', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   title: { fontSize: 22, fontWeight: '800', color: '#1F2A44' },
   subtitle: { fontSize: 13.5, color: '#78909C', marginTop: 1 },
 

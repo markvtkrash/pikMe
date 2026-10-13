@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as LocalAuthentication from 'expo-local-authentication';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../src/api/supabase';
-import { getUserProfile, getSavedItems } from '../src/api/functions';
+import { getUserProfile, getSavedItems, upsertUserProfile } from '../src/api/functions';
 import { useUserProfileStore } from '../src/store/userProfileStore';
 import { useSavedStore } from '../src/store/savedStore';
 import { useFaceIdStore } from '../src/store/faceIdStore';
@@ -15,6 +15,9 @@ import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
 import { UpdateGate } from '../src/components/common/UpdateGate';
 import { AnnouncementModal } from '../src/components/common/AnnouncementModal';
+import { ProfileReminder } from '../src/components/common/ProfileReminder';
+import { resolveCustomerRoute } from '../src/utils/customerRouting';
+import { minimalProfile } from '../src/utils/profileDefaults';
 import { Alert } from '../src/utils/alert';
 import { BRAND_NAME } from '../src/constants/brandTheme';
 
@@ -150,8 +153,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     getUserProfile()
-      .then((profile) => {
+      .then(async (profile) => {
         console.log('[AuthGate] Profile loaded:', !!profile, 'onboardingComplete:', profile?.onboardingComplete);
+        if (!profile) {
+          // Signing up needs only an email and a password, so a new person has no profile yet. Saved restaurants and other per-person
+          // data point at the profile row, so create an empty one now (onboarding marked unfinished: the app reminds them later).
+          try {
+            await upsertUserProfile(minimalProfile(session.user.email));
+          } catch (createErr) {
+            console.warn('[AuthGate] Could not create the starter profile:', createErr);
+          }
+        }
         setOnboardingComplete(profile?.onboardingComplete ?? false);
       })
       .catch((err) => {
@@ -181,51 +193,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       });
   }, [session]);
 
-  // Routing guard — runs whenever session or onboarding state or segment changes
+  // Routing guard — runs whenever session or onboarding state or segment changes. The decision itself lives in resolveCustomerRoute (tested in
+  // customerRouting.test.ts). Signing up needs only an email and a password, so a person whose food-preferences setup is not finished goes
+  // straight into the app (ProfileReminder invites them to finish it) and is never forced into the onboarding screens.
   useEffect(() => {
     if (session === undefined) return;
 
-    console.log('[AuthGate] segments:', segments, 'session:', !!session);
-
-    // Allow unauthenticated access to auth pages
-    const isCustomerAuthPage = segments.includes('sign-in') || segments.includes('sign-up') || segments.includes('forgot-password');
-
-    // Forgot password: checking the emailed code signs the person in, but they must stay on this screen to set the new password.
-    if (segments.includes('forgot-password')) return;
-
-    if (!session && !isCustomerAuthPage) {
-      console.log('[AuthGate] No session and not on auth page, redirecting to /(auth)/sign-in');
-      router.replace('/(auth)/sign-in');
-      return;
-    }
-
-    if (onboardingComplete === null) {
-      console.log('[AuthGate] onboardingComplete is null, waiting for profile to load...');
-      return; // profile still loading
-    }
-
-    console.log('[AuthGate] onboardingComplete:', onboardingComplete, 'segments:', segments);
-
-    // Any screen in the (onboarding) group counts as onboarding — otherwise the
-    // AuthGate bounces the user back to welcome the moment they advance a step.
-    const inOnboarding = segments.includes('(onboarding)');
-    const inAuth = segments.includes('sign-in') || segments.includes('sign-up');
-
-    console.log('[AuthGate] Routing decision - inOnboarding:', inOnboarding, 'inAuth:', inAuth);
-
-    if (!onboardingComplete && !inOnboarding) {
-      console.log('[AuthGate] Not onboarded and not on onboarding page, redirecting to welcome');
-      router.replace('/(onboarding)/welcome');
-    } else if (onboardingComplete && (inOnboarding || inAuth)) {
-      console.log('[AuthGate] Onboarded but on onboarding/auth page, redirecting to tabs');
-      router.replace('/(main)/(tabs)');
-    } else if (onboardingComplete && !inOnboarding && !inAuth) {
-      console.log('[AuthGate] Onboarded and on correct page, no redirect needed');
-    } else if (!onboardingComplete && inOnboarding) {
-      console.log('[AuthGate] Not onboarded but on onboarding page, no redirect needed');
-    } else {
-      console.log('[AuthGate] No routing action taken. State:', { onboardingComplete, inOnboarding, inAuth, currentRoute: segments[0] });
-    }
+    const target = resolveCustomerRoute({ hasSession: !!session, onboardingComplete, segments: segments as string[] });
+    console.log('[AuthGate] segments:', segments, 'session:', !!session, 'onboardingComplete:', onboardingComplete, '->', target ?? 'stay');
+    if (target) router.replace(target as any);
   }, [session, onboardingComplete, segments]);
 
   // The forgot-password screen must not be swapped for the spinner / lock screen when the emailed code signs the person in mid-reset.
@@ -243,7 +219,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return <FaceIdLockScreen onRetry={unlockWithFaceId} />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <ProfileReminder />
+    </>
+  );
 }
 
 function FaceIdLockScreen({ onRetry }: { onRetry: () => void }) {

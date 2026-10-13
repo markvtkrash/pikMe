@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OnboardingProgress } from '../../src/components/common/OnboardingProgress';
+import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { CUISINE_OPTIONS } from '../../src/constants/dietaryOptions';
 
@@ -23,9 +24,12 @@ export default function CuisinePrefsScreen() {
 
   return (
     <View style={styles.container}>
-      <OnboardingProgress step={5} />
+      <OnboardingProgress step={4} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Cuisine Preferences</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Cuisine Preferences</Text>
+          <TopContinue onPress={handleContinue} label={selected.length === 0 ? 'Skip →' : 'Next →'} />
+        </View>
         <Text style={styles.subtitle}>
           What cuisines do you love?{' '}
           <Text style={styles.optional}>(select any)</Text>
@@ -49,24 +53,20 @@ export default function CuisinePrefsScreen() {
             );
           })}
         </View>
-
-        <TouchableOpacity style={styles.button} onPress={handleContinue}>
-          <Text style={styles.buttonText}>
-            {selected.length === 0 ? 'Skip, continue →' : `Continue with ${selected.length} selected →`}
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
+      <ContinueBar onPress={handleContinue} label={selected.length === 0 ? 'Skip, continue →' : `Continue with ${selected.length} selected →`} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '700', color: '#222', marginBottom: 6, marginTop: 8 },
-  subtitle: { fontSize: 15, color: '#666', marginBottom: 28 },
+  subtitle: { fontSize: 15, color: '#666', marginBottom: 18 },
   optional: { color: '#aaa', fontStyle: 'italic' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 32 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   card: {
     width: '47%',
     borderWidth: 1.5,

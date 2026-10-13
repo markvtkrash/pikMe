@@ -76,7 +76,6 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile> | null>(null);
-  const [allergenInput, setAllergenInput] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [faceIdAvailable, setFaceIdAvailable] = useState(false);
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
@@ -125,7 +124,6 @@ export default function ProfileScreen() {
         cuisinePreferences: profile.cuisinePreferences,
         nutritionTargets: profile.nutritionTargets,
       });
-      setAllergenInput(profile.allergens.join(', '));
       setIsEditing(true);
     }
   };
@@ -133,7 +131,6 @@ export default function ProfileScreen() {
   const cancelEdit = () => {
     setIsEditing(false);
     setEditForm(null);
-    setAllergenInput('');
   };
 
   const handleSave = async () => {
@@ -147,6 +144,7 @@ export default function ProfileScreen() {
         allergens: editForm.allergens || profile.allergens,
         cuisinePreferences: editForm.cuisinePreferences || profile.cuisinePreferences,
         nutritionTargets: editForm.nutritionTargets || profile.nutritionTargets,
+        // Allergens are no longer collected or edited here; whatever is already stored is passed through unchanged.
         // Not editable here (nothing reads it); the stored value is passed through unchanged.
         searchRadiusMeters: profile.searchRadiusMeters,
         onboardingComplete: true,
@@ -221,6 +219,22 @@ export default function ProfileScreen() {
       return found ? `${found.emoji} ${found.label}` : v;
     });
 
+  // Edit / Save / Cancel are shown at the top AND the bottom of the profile, so nobody has to scroll for them.
+  const actionButtons = (top: boolean) => isEditing ? (
+    <>
+      <TouchableOpacity style={[styles.btn, styles.saveBtn, top && styles.btnTop]} onPress={handleSave} disabled={isSaving}>
+        <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.btn, styles.cancelBtn, top && styles.btnTop]} onPress={cancelEdit}>
+        <Text style={styles.cancelBtnText}>Cancel</Text>
+      </TouchableOpacity>
+    </>
+  ) : (
+    <TouchableOpacity style={[styles.btn, styles.editBtn, top && styles.btnTop]} onPress={startEdit}>
+      <Text style={styles.editBtnText}>Edit Profile</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
@@ -241,6 +255,8 @@ export default function ProfileScreen() {
           <Text style={styles.displayName}>{form.displayName}</Text>
         )}
       </View>
+
+      <View style={styles.topActions}>{actionButtons(true)}</View>
 
       {/* Resolved ticket notifications */}
       {resolvedTickets.map((ticket) => (
@@ -302,37 +318,6 @@ export default function ProfileScreen() {
         )}
       </View>
 
-      {/* Allergens */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Allergens</Text>
-        {isEditing ? (
-          <TextInput
-            style={styles.allergenInput}
-            value={allergenInput}
-            onChangeText={(text) => {
-              setAllergenInput(text);
-              let parsed: string[] = [];
-              if (text.includes(',')) {
-                parsed = text.split(',').map((a) => a.trim()).filter((a) => a);
-              } else {
-                parsed = text.split(/\s+/).filter((a) => a);
-              }
-              setEditForm({
-                ...form,
-                allergens: parsed,
-              });
-            }}
-            placeholder="e.g., peanuts, shellfish or peanuts shellfish"
-            placeholderTextColor="#aaa"
-            multiline
-            scrollEnabled
-            returnKeyType="done"
-          />
-        ) : (
-          <LabelRow items={form.allergens} emptyText="None reported" />
-        )}
-      </View>
-
       {/* Cuisine Preferences */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cuisine Preferences</Text>
@@ -353,26 +338,7 @@ export default function ProfileScreen() {
       </View>
 
       {/* Buttons */}
-      <View style={styles.buttonGroup}>
-        {isEditing ? (
-          <>
-            <TouchableOpacity
-              style={[styles.btn, styles.saveBtn]}
-              onPress={handleSave}
-              disabled={isSaving}
-            >
-              <Text style={styles.saveBtnText}>{isSaving ? 'Saving...' : 'Save'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={cancelEdit}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <TouchableOpacity style={[styles.btn, styles.editBtn]} onPress={startEdit}>
-            <Text style={styles.editBtnText}>Edit Profile</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      <View style={styles.buttonGroup}>{actionButtons(false)}</View>
 
       {/* Security */}
       {faceIdAvailable && (
@@ -485,19 +451,12 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 13, color: '#666', fontWeight: '500' },
   chipTextSelected: { color: '#fff' },
-  allergenInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    minHeight: 60,
-  },
   emptyText: { fontSize: 14, color: '#bbb', fontStyle: 'italic' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   switchLabel: { fontSize: 14, color: '#444', fontWeight: '500', flex: 1, marginRight: 12 },
   errorText: { fontSize: 15, color: '#999', marginBottom: 24 },
+  btnTop: { flex: 1, paddingVertical: 10 },
+  topActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   buttonGroup: { flexDirection: 'column', gap: 10, marginTop: 28, marginBottom: 20 },
   btn: {
     borderRadius: 10,
@@ -506,7 +465,7 @@ const styles = StyleSheet.create({
   },
   editBtn: { backgroundColor: '#1565C0' },
   editBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  saveBtn: { backgroundColor: '#1565C0' },
+  saveBtn: { backgroundColor: '#E65100' },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   cancelBtn: { borderWidth: 1, borderColor: '#999' },
   cancelBtnText: { color: '#666', fontSize: 15, fontWeight: '600' },

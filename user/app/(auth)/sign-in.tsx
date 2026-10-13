@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { isValidEmail } from '../../src/utils/passwordReset';
 import { LegalDocumentModal, type DocumentType } from '../../src/components/common/LegalDocumentModal';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
 
@@ -30,8 +31,13 @@ export default function SignInScreen() {
       return;
     }
 
+    if (!isValidEmail(email)) {
+      setError('Please enter a valid email address, like name@example.com.');
+      return;
+    }
+
     if (mode === 'sign-up' && !agreedToLegal) {
-      setError('You must agree to the Terms of Service and Privacy Policy.');
+      setError('You must agree to the Terms of Service, Privacy Policy and Food Disclaimer.');
       return;
     }
 
@@ -64,6 +70,11 @@ export default function SignInScreen() {
             });
             await supabase.rpc('record_user_agreement', {
               p_agreement_type: 'terms_of_service',
+              p_version: '1.0',
+            });
+            // The food disclaimer used to be acknowledged at the end of the food-preferences setup, which is optional now.
+            await supabase.rpc('record_user_agreement', {
+              p_agreement_type: 'food_disclaimer',
               p_version: '1.0',
             });
             console.log('[PikMe auth] Agreements recorded for user', data.user.id);
@@ -103,6 +114,11 @@ export default function SignInScreen() {
         <Text style={styles.subtitle}>
           {mode === 'sign-in' ? 'Sign in to your account' : 'Create an account'}
         </Text>
+        {mode === 'sign-up' && (
+          <Text style={styles.reassure}>
+            That's all you need to start using the app: just an email and a password. You can add your food preferences later.
+          </Text>
+        )}
 
         <TextInput
           style={styles.input}
@@ -154,12 +170,19 @@ export default function SignInScreen() {
                   >
                     Privacy Policy
                   </Text>
-                  {' '}and{' '}
+                  {', '}
                   <Text
                     style={styles.link}
                     onPress={() => { setCurrentDocument('terms_of_service'); setShowLegalModal(true); }}
                   >
                     Terms of Service
+                  </Text>
+                  {' '}and{' '}
+                  <Text
+                    style={styles.link}
+                    onPress={() => { setCurrentDocument('food_disclaimer'); setShowLegalModal(true); }}
+                  >
+                    Food Disclaimer
                   </Text>
                 </Text>
               </View>
@@ -181,21 +204,31 @@ export default function SignInScreen() {
         </TouchableOpacity>
 
         {mode === 'sign-in' && (
-          <TouchableOpacity style={styles.switchMode} onPress={() => router.push('/(auth)/forgot-password')}>
-            <Text style={styles.switchText}>Forgot password?</Text>
+          <TouchableOpacity style={styles.switchMode} onPress={() => router.push('/(auth)/forgot-password')} accessibilityRole="button">
+            <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={styles.switchMode}
-          onPress={() => { setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); setError(''); setSuccessMsg(''); setAgreedToLegal(false); }}
-        >
-          <Text style={styles.switchText}>
-            {mode === 'sign-in'
-              ? "Don't have an account? Sign up"
-              : 'Already have an account? Sign in'}
-          </Text>
-        </TouchableOpacity>
+        {mode === 'sign-in' ? (
+          // New here: the note sits right beside the Register button, so it is clear that an email and a password is all it takes.
+          <View style={styles.registerRow}>
+            <Text style={styles.registerNote}>New here? It's quick: all you need is an email and a password.</Text>
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={() => { setMode('sign-up'); setError(''); setSuccessMsg(''); setAgreedToLegal(false); }}
+              accessibilityRole="button"
+            >
+              <Text style={styles.registerButtonText}>Register</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.switchMode}
+            onPress={() => { setMode('sign-in'); setError(''); setSuccessMsg(''); setAgreedToLegal(false); }}
+          >
+            <Text style={styles.switchText}>Already have an account? Sign in</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Legal Document Modal */}
@@ -218,6 +251,7 @@ const styles = StyleSheet.create({
   },
   logo: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8, color: '#1565C0' },
   subtitle: { fontSize: 16, color: '#555', textAlign: 'center', marginBottom: 32 },
+  reassure: { fontSize: 13, color: '#2E7D32', textAlign: 'center', lineHeight: 19, marginTop: -22, marginBottom: 22 },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -276,6 +310,14 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   switchMode: { marginTop: 20, alignItems: 'center' },
   switchText: { color: '#1565C0', fontSize: 14 },
+  forgotText: { color: '#1565C0', fontSize: 15, fontWeight: '800' },
+  registerRow: {
+    flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+    marginTop: 24, paddingTop: 18, borderTopWidth: 1, borderTopColor: '#eee',
+  },
+  registerNote: { flex: 1, minWidth: 180, fontSize: 13, color: '#2E7D32', fontWeight: '600', lineHeight: 19 },
+  registerButton: { borderWidth: 2, borderColor: '#1565C0', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 22 },
+  registerButtonText: { color: '#1565C0', fontSize: 15, fontWeight: '800' },
 
   legalContainer: { marginBottom: 16, marginTop: 8 },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

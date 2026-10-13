@@ -50,3 +50,4 @@ crawler/tests/__pycache__/
 
 # browser test screenshots
 admin/e2e/screenshots/
+user/e2e/screenshots/

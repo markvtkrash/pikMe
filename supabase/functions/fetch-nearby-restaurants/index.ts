@@ -139,6 +139,28 @@ async function isStaffCaller(supabase: any, userId: string): Promise<boolean> {
   return !!(owner && owner.length > 0);
 }
 
+// ── Listing eligibility (migration 139) ───────────────────────────────────
+// A restaurant marked "not eligible" is hidden from customers while the server switch (app_config enforceListingEligibility) is on. The
+// database answers it in one call (ineligible_place_ids returns nothing while the switch is off), so the rule lives in one place. Staff always
+// get the full list. Any problem asking means "show everything".
+// deno-lint-ignore no-explicit-any
+async function applyListingEligibility(supabase: any, userId: string, restaurants: any[]): Promise<any[]> {
+  try {
+    if (restaurants.length === 0) return restaurants;
+    const { data, error } = await supabase.rpc('ineligible_place_ids', { p_place_ids: restaurants.map((r) => r.placeId) });
+    if (error) throw error;
+    const blocked = new Set<string>((data ?? []).map((row: { google_place_id: string }) => row.google_place_id));
+    if (blocked.size === 0) return restaurants;
+    if (await isStaffCaller(supabase, userId)) return restaurants;
+    const kept = restaurants.filter((r) => !blocked.has(r.placeId));
+    console.log('[fetch-nearby-restaurants] Hid', restaurants.length - kept.length, 'restaurant(s) that are not eligible for listing');
+    return kept;
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not apply listing eligibility, showing everything:', e instanceof Error ? e.message : e);
+    return restaurants;
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 async function applyKindFlags(supabase: any, userId: string, restaurants: any[]): Promise<any[]> {
   try {
@@ -604,6 +626,9 @@ Deno.serve(async (req) => {
 
     // Customers do not see a kind of restaurant an admin has switched off (franchise / independent).
     restaurants = await applyKindFlags(supabase, userData.user.id, restaurants);
+
+    // Nor a restaurant that is not eligible for listing (only enforced while the server switch is on).
+    restaurants = await applyListingEligibility(supabase, userData.user.id, restaurants);
 
     // What each restaurant is, how you get the food and what it serves (owner's choice, else Google's guess).
     restaurants = await addCategories(supabase, restaurants);

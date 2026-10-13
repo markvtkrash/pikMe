@@ -136,8 +136,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8, elevation: 2, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: '#f0f0f0' },
-  backBtnText: { fontSize: 13, fontWeight: '600', color: '#e53e3e' },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#e53e3e', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   title: { fontSize: 20, fontWeight: '800', color: '#222' },
   subtitle: { fontSize: 13, color: '#546E7A' },
 

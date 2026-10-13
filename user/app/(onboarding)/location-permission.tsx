@@ -90,7 +90,7 @@ export default function LocationPermissionScreen() {
 
   return (
     <View style={styles.container}>
-      <OnboardingProgress step={6} />
+      <OnboardingProgress step={5} />
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.icon}>📍</Text>
         <Text style={styles.title}>Find restaurants near you</Text>

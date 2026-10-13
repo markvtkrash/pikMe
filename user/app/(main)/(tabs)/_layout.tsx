@@ -1,19 +1,25 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, useWindowDimensions } from 'react-native';
 import type { ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Tabs } from 'expo-router';
 
+// The tab bar's own height (icon, dot, label and padding), not counting the bottom safe area.
+const TAB_BAR_HEIGHT = 72;
+
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  // on a very narrow screen six labels do not fit at the normal size
+  const narrow = useWindowDimensions().width < 350;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: [styles.tabBar, { paddingBottom: insets.bottom + 8 }],
+        // the height includes the phone's bottom safe area: a fixed height with that area added as padding left no room for the icons and labels
+        tabBarStyle: [styles.tabBar, { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom + 8 }],
         tabBarActiveTintColor: '#141414',
         tabBarInactiveTintColor: '#AEAEB2',
-        tabBarLabelStyle: styles.label,
+        tabBarLabelStyle: [styles.label, narrow && styles.labelNarrow],
         tabBarItemStyle: styles.item,
       }}
     >
@@ -77,7 +83,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    height: 64,
     paddingBottom: 8,
     paddingTop: 6,
     shadowColor: '#000',
@@ -86,12 +91,14 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 12,
   },
-  item: { paddingTop: 4 },
+  // six tabs share the width, so the items have no side padding and the labels are a little smaller ("Quick Fix" was cut to "Quick Fi…" on a phone)
+  item: { paddingTop: 4, paddingHorizontal: 0 },
   label: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
-    letterSpacing: 0.1,
+    letterSpacing: 0,
   },
+  labelNarrow: { fontSize: 8.5 },
   iconWrap: { alignItems: 'center', width: 36 },
   activeDot: {
     width: 4,

@@ -42,3 +42,31 @@ describe('quick switches', () => {
     expect(quickSwitchQuestion(QUICK_SWITCHES[1], 'false')).toMatch(/^Show independent restaurants to customers again\?/);
   });
 });
+
+import { LISTING_SWITCH_KEY, listingSwitchText, typedConfirmationMatches } from './configValues';
+
+describe('listing eligibility switch', () => {
+  it('is the enforceListingEligibility key', () => {
+    expect(LISTING_SWITCH_KEY).toBe('enforceListingEligibility');
+  });
+
+  it('needs the exact phrase typed (spaces at the ends are ignored)', () => {
+    expect(typedConfirmationMatches('enforceListingEligibility', LISTING_SWITCH_KEY)).toBe(true);
+    expect(typedConfirmationMatches('  enforceListingEligibility ', LISTING_SWITCH_KEY)).toBe(true);
+    expect(typedConfirmationMatches('enforcelistingeligibility', LISTING_SWITCH_KEY)).toBe(false);
+    expect(typedConfirmationMatches('enforceListing', LISTING_SWITCH_KEY)).toBe(false);
+    expect(typedConfirmationMatches('', LISTING_SWITCH_KEY)).toBe(false);
+  });
+
+  it('words the card, button and window for each state', () => {
+    const off = listingSwitchText('false');
+    expect(off.on).toBe(false);
+    expect(off.button).toBe('Turn ON');
+    expect(off.message).toMatch(/HIDDEN/);
+    const on = listingSwitchText('true');
+    expect(on.on).toBe(true);
+    expect(on.button).toBe('Turn OFF');
+    expect(on.message).toMatch(/shown to customers again/);
+    expect(listingSwitchText(undefined).on).toBe(false);
+  });
+});

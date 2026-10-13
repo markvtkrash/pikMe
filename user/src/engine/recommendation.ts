@@ -144,7 +144,7 @@ function buildRecommendation(
 
   // ── Warnings (negative) ──
   // Personalized to the user's goals & nutrition targets so the chips agree with
-  // the AI "Should I get this?" analysis (e.g. flag sodium for a low-sodium diet
+  // the AI Verdict analysis (e.g. flag sodium for a low-sodium diet
   // even when it's below the generic "high" threshold).
   const goals = profile.healthGoals ?? [];
   const hasGoal = (g: UserProfile['healthGoals'][number]) => goals.includes(g);

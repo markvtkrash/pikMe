@@ -131,6 +131,12 @@ serve(async (req) => {
       }
     }
 
+    // A restaurant that is not listed (not eligible, closed, paused) gets no menu guess. Any problem asking means "carry on".
+    if (typeof placeId === 'string' && placeId.length > 0) {
+      const { data: listed, error: listedError } = await supabase.rpc('restaurant_is_listed', { p_place_id: placeId });
+      if (!listedError && listed === false) return ok([]);
+    }
+
     // ── An independent restaurant's guess belongs to ITS place, never to every restaurant with the name ──
     // (A franchise, or a call with no place, keeps the old name-keyed behaviour below.)
     let ownPlaceId: string | null = null;

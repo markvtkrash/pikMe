@@ -57,7 +57,7 @@ export async function fetchMenuItemsAi(restaurantName: string, placeId?: string)
   return data as MenuItem[];
 }
 
-// ─── AI item analysis ("Should I get this?") ─────────────────────────────────
+// ─── AI item analysis ("AI Verdict") ─────────────────────────────────
 
 export async function getItemAnalysis(
   itemId: string,

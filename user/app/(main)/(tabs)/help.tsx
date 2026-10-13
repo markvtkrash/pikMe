@@ -107,7 +107,7 @@ function LegalLink({
     } else if (action === 'version') {
       Alert.alert('App Version', `${BRAND_NAME} v1.0.0\n\nBuild: 1\nReleased: June 2026`);
     } else if (action === 'about') {
-      Alert.alert('Elevator Pitch', `Tell ${BRAND_NAME} your allergies, diet, and health goals once — it finds nearby restaurants and the exact menu items that actually fit you, so you stop guessing what's safe to order.`);
+      Alert.alert('Elevator Pitch', `Tell ${BRAND_NAME} your diet and health goals once — it finds nearby restaurants and menu items that may match, so you know what to ask about. Dish names and AI estimates don't show every ingredient, so always confirm with the restaurant before you order.`);
     }
   };
 

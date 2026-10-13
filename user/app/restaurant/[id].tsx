@@ -12,6 +12,10 @@ import { useRestaurantStore } from '../../src/store/restaurantStore';
 import { formatDistance } from '../../src/utils/geo';
 import { useMenuRecommendations } from '../../src/hooks/useMenuRecommendations';
 import { MenuItemCardSwipeable } from '../../src/components/menu/MenuItemCardSwipeable';
+import { MenuItemCard } from '../../src/components/menu/MenuItemCard';
+import { useMenuLayoutStore } from '../../src/store/menuLayoutStore';
+import { resolveLayout, withGridSpacer, type Spacer } from '../../src/utils/menuLayout';
+import { unverifiedListNote, INGREDIENT_BANNER, FILTER_CAPTION } from '../../src/utils/menuItemNotices';
 import { MenuItemSkeleton } from '../../src/components/menu/MenuItemSkeleton';
 import { useSavedStore } from '../../src/store/savedStore';
 import { useSaved } from '../../src/hooks/useSaved';
@@ -77,6 +81,12 @@ export default function RestaurantDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isWide = useWindowDimensions().width > 760;
+  // List (one compact card per row) or grid (two tiles per row: the name, with a dropdown for the details). Remembered on this device; the
+  // grid is the default on a wide screen and the list on a phone.
+  const savedLayout = useMenuLayoutStore((s) => s.layout);
+  const setSavedLayout = useMenuLayoutStore((s) => s.setLayout);
+  const layout = resolveLayout(savedLayout);
+  const isGrid = layout === 'grid';
   const restaurants = useRestaurantStore((s) => s.restaurants);
   const restaurant = restaurants.find((r) => r.placeId === id) ?? null;
   const isSaved = useSavedStore((s) => s.restaurantIds.has(id ?? ''));
@@ -211,11 +221,21 @@ export default function RestaurantDetailScreen() {
     }
   }
 
-  const renderItem: ListRenderItem<Recommendation | { _skeleton: true }> = ({ item }) => {
+  const renderItem: ListRenderItem<Recommendation | { _skeleton: true } | Spacer> = ({ item }) => {
+    if ('_spacer' in item) {
+      return <View style={styles.gridCell} />;
+    }
     if ('_skeleton' in item) {
-      return <MenuItemSkeleton />;
+      return isGrid ? <View style={styles.gridCell}><MenuItemSkeleton /></View> : <MenuItemSkeleton />;
     }
     const itemCoupons = coupons.filter(c => c.menu_item_id === item.menuItem.itemId);
+    if (isGrid) {
+      return (
+        <View style={styles.gridCell}>
+          <MenuItemCard variant="tile" recommendation={item} itemCoupons={itemCoupons} onCouponClosed={removeCouponFromList} />
+        </View>
+      );
+    }
     return (
       <MenuItemCardSwipeable
         recommendation={item}
@@ -226,6 +246,8 @@ export default function RestaurantDetailScreen() {
   };
 
   const displayData = isLoading ? Array(5).fill({ _skeleton: true }) : filteredRecommendations ?? [];
+  // In the grid an odd last tile gets a spacer, so it keeps its half width.
+  const listData: (Recommendation | { _skeleton: true } | Spacer)[] = isGrid ? withGridSpacer(displayData, 2) : displayData;
 
   return (
     <View style={styles.backdrop}>
@@ -233,8 +255,11 @@ export default function RestaurantDetailScreen() {
     <Pressable style={StyleSheet.absoluteFill} onPress={() => router.back()} />
     <View style={[styles.sheet, isWide && styles.sheetWide]}>
     <FlatList
-      data={displayData}
-      keyExtractor={(r, idx) => ('_skeleton' in r ? `skeleton-${idx}` : r.menuItem.itemId)}
+      key={layout}
+      data={listData}
+      numColumns={isGrid ? 2 : 1}
+      columnWrapperStyle={isGrid ? styles.gridRow : undefined}
+      keyExtractor={(r, idx) => ('_spacer' in r ? `spacer-${idx}` : '_skeleton' in r ? `skeleton-${idx}` : r.menuItem.itemId)}
       renderItem={renderItem}
       style={styles.list}
       contentContainerStyle={styles.content}
@@ -250,7 +275,7 @@ export default function RestaurantDetailScreen() {
 
             {/* Heart button */}
             <TouchableOpacity
-              style={[styles.heroHeart, { top: insets.top + 58 }]}
+              style={[styles.heroHeart, { top: insets.top + 12 }]}
               onPress={() => toggleRestaurant(restaurant.placeId, restaurant)}
               hitSlop={8}
             >
@@ -261,14 +286,7 @@ export default function RestaurantDetailScreen() {
           {/* Info card */}
           <View style={styles.infoCardContainer}>
             <View style={styles.infoCard}>
-              <View style={styles.nameAddressRow}>
-                <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
-                {restaurant.location.address ? (
-                  <View style={styles.addressBox}>
-                    <Text style={styles.addressBoxText} numberOfLines={1} ellipsizeMode="tail">{restaurant.location.address}</Text>
-                  </View>
-                ) : null}
-              </View>
+              <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
 
               <View style={styles.metaRow}>
                 {!restaurant.openNow
@@ -301,7 +319,11 @@ export default function RestaurantDetailScreen() {
                 ) : null}
               </View>
 
-              {cuisineDisplay ? <Text style={styles.cuisine}>{cuisineDisplay}</Text> : null}
+              {(restaurant.location.address || cuisineDisplay) ? (
+                <Text style={styles.addressLine} numberOfLines={1} ellipsizeMode="tail">
+                  {[restaurant.location.address, cuisineDisplay].filter(Boolean).join('  ·  ')}
+                </Text>
+              ) : null}
 
               {/* Disclaimer — a single left-to-right line (icon then text)
                   instead of a separate padded box beside the card, to save
@@ -313,59 +335,74 @@ export default function RestaurantDetailScreen() {
             </View>
           </View>
 
-          {/* Menu header */}
+          {/* Menu header: the title and the List / Grid choice on one line (they wrap on a very narrow screen) */}
           <View style={styles.menuHeader}>
-            <Text style={styles.menuTitle}>
-              📋 Top {isLoading ? LOADING_EMOJIS[loadingEmojiIndex] : recommendations?.length ?? 0} Menu Items For You
-            </Text>
-            <Text style={styles.menuSub}>Curated based on your dietary preferences, health goals & allergies</Text>
+            <View style={styles.menuTitleRow}>
+              <Text style={styles.menuTitle}>
+                Top {isLoading ? LOADING_EMOJIS[loadingEmojiIndex] : recommendations?.length ?? 0} menu items for you
+              </Text>
+              {!isLoading && (recommendations?.length ?? 0) > 0 && (
+                <View style={styles.layoutToggle}>
+                  {(['list', 'grid'] as const).map((mode) => (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[styles.layoutChip, layout === mode && styles.layoutChipActive]}
+                      onPress={() => setSavedLayout(mode)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: layout === mode }}
+                      accessibilityLabel={mode === 'list' ? 'Detailed view: one dish per row, with all the details' : 'Quick view: two dishes per row, less scrolling'}
+                    >
+                      <Text style={[styles.layoutChipText, layout === mode && styles.layoutChipTextActive]}>
+                        {mode === 'list' ? '📃 Detailed' : '⚡ Quick view'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
           </View>
 
-          {/* Search bar */}
+          {/* Search bar, with the coupons button beside it */}
           {!isLoading && (recommendations?.length ?? 0) > 0 && (
             <View>
-              <View style={styles.searchContainer}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search menu items..."
-                  placeholderTextColor="#ccc"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery ? (
-                  <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
-                    <Text style={styles.clearButton}>✕</Text>
+              <View style={styles.searchRow}>
+                {!couponsLoading && !isLoading && totalCouponCount > 0 && (
+                  <TouchableOpacity
+                    style={[styles.couponsButton, couponsOnly && styles.couponsButtonActive]}
+                    onPress={handleCouponsButtonPress}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel="Coupons only"
+                  >
+                    <Text style={styles.couponsButtonIcon}>🎟️</Text>
+                    <Text style={[styles.couponsButtonText, couponsOnly && styles.couponsButtonTextActive]}>
+                      {couponsOnly ? '✓ ' : ''}Coupons
+                    </Text>
+                    <View style={styles.couponsCountBadge}>
+                      <Text style={styles.couponsCountBadgeText}>{totalCouponCount}</Text>
+                    </View>
                   </TouchableOpacity>
-                ) : null}
+                )}
+
+                <View style={styles.searchContainer}>
+                  <Text style={styles.searchIcon}>🔍</Text>
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search menu items..."
+                    placeholderTextColor="#777"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  {searchQuery ? (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={10}>
+                      <Text style={styles.clearButton}>✕</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
               </View>
 
-              {/* Coupons button — moved out of the category row and given
-                  its own line, with a count badge, instead of the inline
-                  chips-heavy section this used to be. */}
-              {!couponsLoading && !isLoading && totalCouponCount > 0 && (
-                <TouchableOpacity
-                  style={[styles.couponsButton, couponsOnly && styles.couponsButtonActive]}
-                  onPress={handleCouponsButtonPress}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.couponsButtonIcon}>🎟️</Text>
-                  <Text style={[styles.couponsButtonText, couponsOnly && styles.couponsButtonTextActive]}>
-                    {couponsOnly ? '✓ ' : ''}Coupons only
-                  </Text>
-                  <View style={styles.couponsCountBadge}>
-                    <Text style={styles.couponsCountBadgeText}>{totalCouponCount}</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-
               {/* Keyword filters */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.keywordScroll}
-                contentContainerStyle={styles.keywordContainer}
-              >
+              <View style={styles.keywordContainer}>
                 <TouchableOpacity
                   onPress={() => setSelectedKeywords([])}
                   style={[
@@ -404,7 +441,8 @@ export default function RestaurantDetailScreen() {
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
+              <Text style={styles.filterCaption}>{FILTER_CAPTION}</Text>
             </View>
           )}
 
@@ -413,6 +451,11 @@ export default function RestaurantDetailScreen() {
             <Text style={styles.resultsCount}>
               {displayData.length} {displayData.length === 1 ? 'item' : 'items'} found
             </Text>
+          )}
+
+          {/* One line explaining the Unconfirmed / AI-estimated tags on the cards below */}
+          {!isLoading && unverifiedListNote((recommendations ?? []).map((r) => r.menuItem)) && (
+            <Text style={styles.tagNote}>{unverifiedListNote((recommendations ?? []).map((r) => r.menuItem))}</Text>
           )}
 
           {isLoading && (
@@ -473,6 +516,12 @@ export default function RestaurantDetailScreen() {
       }
     />
 
+    {/* For everyone: a dish name does not show every ingredient. Pinned to the bottom of the sheet, outside the scrolling list, so it is
+        always visible however far the menu is scrolled. */}
+    <View style={[styles.stickyNotice, { paddingBottom: Math.max(insets.bottom, 7) }]}>
+      <Text style={styles.stickyNoticeText}>⚠️ {INGREDIENT_BANNER}</Text>
+    </View>
+
     {/* Sticky close button — stays fixed on screen regardless of scroll position. */}
     <TouchableOpacity
       style={[styles.closeBtn, { top: insets.top + 12 }]}
@@ -514,11 +563,7 @@ export default function RestaurantDetailScreen() {
           </View>
 
           {genericCoupons.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.couponChipRow}
-            >
+            <View style={styles.couponChipRow}>
               {genericCoupons.map((coupon) => (
                 <TouchableOpacity
                   key={coupon.id}
@@ -542,7 +587,7 @@ export default function RestaurantDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           )}
 
           {itemCouponCount > 0 && (
@@ -616,8 +661,8 @@ const styles = StyleSheet.create({
   // Shrunk from 260 — this is always a generic placeholder photo (never the
   // real restaurant), so it's pure decoration competing for scroll distance
   // against the "Top N Menu Items For You" section below, not information.
-  hero: { height: 150, position: 'relative' },
-  heroImg: { width: '100%', height: 150 },
+  hero: { height: 80, position: 'relative' },
+  heroImg: { width: '100%', height: 80 },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.18)',
@@ -643,7 +688,7 @@ const styles = StyleSheet.create({
   backIcon: { fontSize: 24, color: '#141414', lineHeight: 28, marginLeft: -2 },
   heroHeart: {
     position: 'absolute',
-    right: 16,
+    right: 62,
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -653,115 +698,75 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  infoCardContainer: {
-    marginHorizontal: 16,
-    marginTop: -20,
-    marginBottom: 10,
-  },
+  infoCardContainer: { marginHorizontal: 16, marginTop: -16, marginBottom: 8 },
   infoCard: {
     flex: 1,
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 14,
+    padding: 12,
     elevation: 5,
   },
   // flexWrap so a long name + address never squeeze each other down to
   // illegible widths on a narrow phone — the address box drops to its own
   // line below the name instead of getting clipped mid-word.
-  nameAddressRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 6 },
-  restaurantName: { fontSize: 20, fontWeight: '800', color: '#141414', letterSpacing: -0.3 },
-  addressBox: {
-    maxWidth: '100%', backgroundColor: '#F6F6F6', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
-  },
-  addressBoxText: { fontSize: 11, color: '#666', fontWeight: '600' },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
-  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  restaurantName: { fontSize: 19, fontWeight: '800', color: '#141414', letterSpacing: -0.3, marginBottom: 4 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   openDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#1565C0' },
   statusOpenTxt: { fontSize: 12, color: '#1565C0', fontWeight: '700' },
-  statusClosed: { backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statusClosed: { backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   statusClosedTxt: { fontSize: 12, color: '#C62828', fontWeight: '700' },
-  metaPill: { backgroundColor: '#F6F6F6', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  metaPill: { backgroundColor: '#F6F6F6', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   metaPillTxt: { fontSize: 12, color: '#444', fontWeight: '600' },
-  cuisine: { fontSize: 13, color: '#6B6B6B', marginBottom: 5 },
-  directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  addressLine: { fontSize: 11.5, color: '#6B6B6B' },
+  directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
   directionsPillTxt: { fontSize: 12, fontWeight: '700', color: BRAND_COLORS.primary },
   disclaimerRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F0F0F0',
+    marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F0F0F0',
   },
 
-  menuHeader: { paddingHorizontal: 16, paddingBottom: 4 },
-  menuTitle: { fontSize: 18, fontWeight: '800', color: '#141414' },
-  menuSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  menuHeader: { paddingHorizontal: 16, paddingBottom: 12 },
+  menuTitle: { fontSize: 15, fontWeight: '800', color: '#141414', flexShrink: 1 },
+  menuTitleRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  layoutToggle: { flexDirection: 'row', gap: 6 },
+  layoutChip: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 999, backgroundColor: '#f0f0f0' },
+  layoutChipActive: { backgroundColor: '#1565C0' },
+  layoutChipText: { fontSize: 10.5, fontWeight: '700', color: '#555' },
+  layoutChipTextActive: { color: '#fff' },
+  gridRow: { paddingHorizontal: 12, gap: 8, alignItems: 'stretch' },
+  gridCell: { flex: 1, marginBottom: 8 },
 
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#E8E8E8',
-  },
-  searchIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-    paddingVertical: 4,
-  },
+  searchContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 2, borderColor: '#1565C0' },
+  searchRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginHorizontal: 16, marginBottom: 8 },
+  searchIcon: { fontSize: 15, marginRight: 6 },
+  searchInput: { flex: 1, fontSize: 13.5, color: '#141414', paddingVertical: 3 },
   clearButton: {
     fontSize: 16,
     color: '#ccc',
     padding: 4,
   },
 
-  couponsButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-    backgroundColor: '#FFF9C4', borderRadius: 20, borderWidth: 1.5, borderColor: '#FFB74D',
-    paddingHorizontal: 14, paddingVertical: 8, marginHorizontal: 16, marginBottom: 10,
-    position: 'relative',
-  },
+  couponsButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'stretch', backgroundColor: '#FFF9C4', borderRadius: 10, borderWidth: 1.5, borderColor: '#FFB74D', paddingHorizontal: 8, position: 'relative' },
   couponsButtonActive: { backgroundColor: '#E65100', borderColor: '#E65100' },
-  couponsButtonIcon: { fontSize: 16 },
-  couponsButtonText: { fontSize: 13, fontWeight: '800', color: '#D84315' },
+  couponsButtonIcon: { fontSize: 13 },
+  couponsButtonText: { fontSize: 11.5, fontWeight: '800', color: '#D84315' },
   couponsButtonTextActive: { color: '#fff' },
   // Overlaps the button's top-right corner like a notification badge,
   // instead of sitting inline with the label — separates "how many" from
   // the button's own text at a glance.
-  couponsCountBadge: {
-    position: 'absolute', top: -8, right: -8,
-    backgroundColor: '#FF6F00', borderRadius: 10, minWidth: 20, height: 20,
-    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5,
-    borderWidth: 2, borderColor: '#fff', elevation: 3,
-  },
-  couponsCountBadgeText: { fontSize: 11, fontWeight: '900', color: '#fff' },
+  couponsCountBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: '#FF6F00', borderRadius: 8, minWidth: 16, height: 16, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#fff', elevation: 3 },
+  couponsCountBadgeText: { fontSize: 10, fontWeight: '900', color: '#fff' },
 
-  keywordScroll: {
-    marginBottom: 8,
-  },
-  keywordContainer: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  keywordButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  keywordText: {
-    fontSize: 13,
-    fontWeight: '700',
-  },
+  // the filter chips wrap onto as many lines as the screen needs
+  keywordContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 2, gap: 4 },
+  keywordButton: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  keywordText: { fontSize: 11, fontWeight: '700' },
+  // pinned at the bottom of the sheet, below the scrolling list
+  stickyNotice: { backgroundColor: '#E65100', paddingHorizontal: 12, paddingTop: 7, alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.2, shadowRadius: 4 },
+  stickyNoticeText: { fontSize: 12, fontWeight: '800', color: '#fff', lineHeight: 16, textAlign: 'center' },
+  filterCaption: { fontSize: 10.5, color: '#888', marginHorizontal: 16, marginTop: 0, marginBottom: 4 },
+  tagNote: { fontSize: 11, color: '#7A4A00', backgroundColor: '#FFF8E1', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 16, marginBottom: 6, lineHeight: 15 },
   resultsCount: {
     fontSize: 12,
     color: '#888',
@@ -867,7 +872,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 12, marginTop: 14,
   },
   couponsModalItemBtnText: { fontSize: 13, fontWeight: '800', color: '#E65100', textAlign: 'center' },
-  couponChipRow: { gap: 10, paddingRight: 4 },
+  couponChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   couponChip: {
     backgroundColor: '#FFF9C4', borderRadius: 12, borderWidth: 2, borderColor: '#FFB74D',
     paddingHorizontal: 14, paddingVertical: 10, minWidth: 128, alignItems: 'center', elevation: 2,

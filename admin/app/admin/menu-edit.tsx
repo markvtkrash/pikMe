@@ -545,8 +545,8 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, paddingBottom: 32 },
 
-  backBtn: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 8 },
-  backBtnText: { color: '#1565C0', fontWeight: '700', fontSize: 13 },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   title: { fontSize: 22, fontWeight: '800', color: '#222' },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 12 },
 
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   infoBanner: { backgroundColor: '#E3F2FD', borderRadius: 8, padding: 12, marginBottom: 12 },
   infoText: { fontSize: 12, color: '#0D47A1', lineHeight: 17 },
 
-  addBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
+  addBtn: { backgroundColor: '#E65100', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },
   cardTitle: { fontSize: 15, fontWeight: '800', color: '#222', marginBottom: 8 },
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   formActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 14 },
   cancelBtn: { paddingHorizontal: 14, paddingVertical: 10 },
   cancelBtnText: { fontSize: 13, fontWeight: '700', color: '#666' },
-  saveBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 18, paddingVertical: 10, minWidth: 110, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#E65100', borderRadius: 8, paddingHorizontal: 18, paddingVertical: 10, minWidth: 110, alignItems: 'center' },
   saveBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   btnDisabled: { opacity: 0.45 },
 

@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   linkRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 18, gap: 10 },
-  linkText: { color: '#1565C0', fontSize: 14, fontWeight: '600' },
+  linkText: { color: '#1565C0', fontSize: 14, fontWeight: '700' },
   linkDisabled: { color: '#999' },
   linkSeparator: { color: '#999', fontSize: 14 },
-  backRow: { marginTop: 14, alignItems: 'center' },
+  backRow: { marginTop: 14, alignSelf: 'center', paddingVertical: 9, paddingHorizontal: 18, borderRadius: 10, borderWidth: 1.5, borderColor: '#1565C0', backgroundColor: '#E3F2FD' },
 });

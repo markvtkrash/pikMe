@@ -6,7 +6,10 @@ import {
 import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
-import { isBooleanValue, nextBooleanValue, switchQuestion, QUICK_SWITCHES, quickSwitchQuestion } from '../../src/utils/configValues';
+import {
+  isBooleanValue, nextBooleanValue, switchQuestion, QUICK_SWITCHES, quickSwitchQuestion, LISTING_SWITCH_KEY, listingSwitchText,
+} from '../../src/utils/configValues';
+import { TypeToConfirmModal } from '../../src/components/common/TypeToConfirmModal';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
 
 interface ConfigRow {
@@ -33,6 +36,8 @@ export default function AdminConfigScreen() {
   // Everything is read-only until Edit is pressed on a row (one row at a time); Add opens its own window.
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // the listing-eligibility switch asks for its key to be typed before it changes
+  const [listingConfirmOpen, setListingConfirmOpen] = useState(false);
 
   const chain = useEnterChain(4, () => handleAdd());
 
@@ -104,6 +109,29 @@ export default function AdminConfigScreen() {
     } catch (error: any) {
       console.error('[admin-config] Toggle error:', error);
       Alert.alert('Error', error.message || 'Failed to change the value');
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  // Turns the listing-eligibility switch on or off. Only reached after the key has been typed in the window.
+  async function handleListingSwitch() {
+    const row = rows.find((x) => x.key === LISTING_SWITCH_KEY);
+    if (!row || savingKey) return;
+    const nextValue = nextBooleanValue(row.value);
+    setSavingKey(LISTING_SWITCH_KEY);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .update({ value: nextValue, updated_at: new Date().toISOString() })
+        .eq('key', LISTING_SWITCH_KEY);
+      if (error) throw error;
+      setRows((prev) => prev.map((x) => (x.key === LISTING_SWITCH_KEY ? { ...x, value: nextValue } : x)));
+      setDrafts((prev) => ({ ...prev, [LISTING_SWITCH_KEY]: nextValue }));
+      setListingConfirmOpen(false);
+    } catch (error: any) {
+      console.error('[admin-config] Listing switch error:', error);
+      Alert.alert('Error', error.message || 'Failed to change the listing switch');
     } finally {
       setSavingKey(null);
     }
@@ -184,13 +212,15 @@ export default function AdminConfigScreen() {
         </Text>
 
         <FlatList
-          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key))}
+          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key) && r.key !== LISTING_SWITCH_KEY)}
           keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <>
             <View style={styles.switchCard}>
               <Text style={styles.addTitle}>What customers see</Text>
+              <Text style={styles.rowDescription}>A restaurant is shown to customers only when BOTH of these allow it.</Text>
+              <Text style={styles.groupLabel}>1. A whole kind of restaurant</Text>
               <View style={styles.switchRow}>
                 {QUICK_SWITCHES.map((sw) => {
                   const row = rows.find((r) => r.key === sw.key);
@@ -223,6 +253,31 @@ export default function AdminConfigScreen() {
                   );
                 })}
               </View>
+              <View style={styles.divider} />
+              <Text style={styles.groupLabel}>2. Individual restaurants (listing eligibility)</Text>
+              {(() => {
+                const row = rows.find((x) => x.key === LISTING_SWITCH_KEY);
+                const text = listingSwitchText(row?.value);
+                const busy = savingKey === LISTING_SWITCH_KEY;
+                return (
+                  <>
+                    <Text style={styles.listingState}>
+                      {row ? text.state : 'Not set up yet (run migration 139).'}
+                    </Text>
+                    <Text style={styles.rowDescription}>
+                      Restaurants can be marked "not eligible" for listing. While this is OFF the marks are ignored and every restaurant is shown.
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.listingBtn, text.on ? styles.listingBtnOff : styles.listingBtnOn, (!row || busy) && styles.btnDisabled]}
+                      disabled={!row || busy}
+                      onPress={() => setListingConfirmOpen(true)}
+                      accessibilityRole="button"
+                    >
+                      {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.listingBtnText}>{text.button}</Text>}
+                    </TouchableOpacity>
+                  </>
+                );
+              })()}
             </View>
             <TouchableOpacity style={styles.openAddBtn} onPress={() => setAddOpen(true)} accessibilityRole="button">
               <Text style={styles.addBtnText}>+ Add new value</Text>
@@ -310,6 +365,23 @@ export default function AdminConfigScreen() {
         />
       </View>
 
+      {(() => {
+        const text = listingSwitchText(rows.find((x) => x.key === LISTING_SWITCH_KEY)?.value);
+        return (
+          <TypeToConfirmModal
+            visible={listingConfirmOpen}
+            title={text.title}
+            message={text.message}
+            phrase={LISTING_SWITCH_KEY}
+            confirmLabel={text.button}
+            destructive={!text.on}
+            busy={savingKey === LISTING_SWITCH_KEY}
+            onConfirm={handleListingSwitch}
+            onCancel={() => setListingConfirmOpen(false)}
+          />
+        );
+      })()}
+
       <Modal visible={addOpen} transparent animationType="fade" onRequestClose={() => setAddOpen(false)}>
         <View style={styles.confirmOverlay}>
           <View style={styles.addModalCard}>
@@ -391,6 +463,13 @@ const styles = StyleSheet.create({
   switchOn: { backgroundColor: '#2E7D32' },
   switchOff: { backgroundColor: '#78909C' },
   switchMissing: { backgroundColor: '#B0BEC5' },
+  groupLabel: { fontSize: 12, fontWeight: '800', color: '#455A64', marginTop: 6, textTransform: 'uppercase', letterSpacing: 0.4 },
+  divider: { height: 1, backgroundColor: '#E0E6EA', marginVertical: 8 },
+  listingState: { fontSize: 13, fontWeight: '800', color: '#222' },
+  listingBtn: { alignSelf: 'flex-start', borderRadius: 10, paddingVertical: 11, paddingHorizontal: 22, minWidth: 130, alignItems: 'center', marginTop: 4 },
+  listingBtnOn: { backgroundColor: '#C62828' },
+  listingBtnOff: { backgroundColor: '#78909C' },
+  listingBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
   switchTitle: { color: '#fff', fontSize: 15, fontWeight: '800' },
   switchState: { color: '#fff', fontSize: 12, fontWeight: '600' },
   addCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, gap: 8, elevation: 1, borderWidth: 1, borderColor: '#CFD8DC' },

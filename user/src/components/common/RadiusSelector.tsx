@@ -52,6 +52,8 @@ const styles = StyleSheet.create({
   },
   pills: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    flex: 1,
     gap: 6,
   },
   pill: {

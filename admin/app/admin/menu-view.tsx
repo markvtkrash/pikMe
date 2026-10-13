@@ -168,8 +168,8 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, paddingBottom: 32 },
 
-  backBtn: { alignSelf: 'flex-start', paddingVertical: 6, marginBottom: 8 },
-  backBtnText: { color: '#1565C0', fontWeight: '700', fontSize: 13 },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
   title: { fontSize: 22, fontWeight: '800', color: '#222' },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 14 },
 

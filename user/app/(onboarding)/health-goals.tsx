@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OnboardingProgress } from '../../src/components/common/OnboardingProgress';
+import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { HEALTH_GOALS } from '../../src/constants/dietaryOptions';
 
@@ -36,7 +37,7 @@ export default function HealthGoalsScreen() {
         maxMealCalories: maxMealCalories ? parseInt(maxMealCalories) : undefined,
       },
     });
-    router.push('/(onboarding)/allergies');
+    router.push('/(onboarding)/cuisine-prefs');
   }
 
   return (
@@ -46,7 +47,10 @@ export default function HealthGoalsScreen() {
     >
       <OnboardingProgress step={3} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Health Goals</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Health Goals</Text>
+          <TopContinue onPress={handleContinue} />
+        </View>
         <Text style={styles.subtitle}>What are you working towards?</Text>
 
         <View style={styles.list}>
@@ -103,21 +107,19 @@ export default function HealthGoalsScreen() {
             />
           </View>
         )}
-
-        <TouchableOpacity style={styles.button} onPress={handleContinue}>
-          <Text style={styles.buttonText}>Continue →</Text>
-        </TouchableOpacity>
       </ScrollView>
+      <ContinueBar onPress={handleContinue} label="Continue →" />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   flex: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '700', color: '#222', marginBottom: 6, marginTop: 8 },
-  subtitle: { fontSize: 15, color: '#666', marginBottom: 24 },
-  list: { gap: 10, marginBottom: 24 },
+  subtitle: { fontSize: 15, color: '#666', marginBottom: 16 },
+  list: { gap: 8, marginBottom: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

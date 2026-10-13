@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable, Platform, Modal, ScrollView } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, FadeIn, SlideInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS, BRAND_SHADOWS, BRAND_TYPOGRAPHY } from '../../constants/brandTheme';
@@ -15,27 +15,43 @@ import { CouponActivationModal } from '../coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
 import { NutritionInfoModal } from './NutritionInfoModal';
 import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../utils/couponDisplay';
+import {
+  unverifiedNotice, hasDietOrAllergen, ingredientCaution, AI_DISCLAIMER, VERDICT_GOOD, VERDICT_NOT_GOOD,
+} from '../../utils/menuItemNotices';
+import { tileIcons } from '../../utils/menuLayout';
+import { Alert } from '../../utils/alert';
 
 interface Props {
   recommendation: Recommendation;
   itemCoupons?: Coupon[];
   onCouponClosed?: (couponId: string) => void;
+  // 'list': the compact card. 'tile': half-width, shows only the name and a few tiny icons, with a dropdown for the details.
+  variant?: 'list' | 'tile';
 }
 
-function ScoreBadge({ score }: { score: number }) {
+// Every card has the same color. It is never chosen by what the dish is called: a name does not say what is in a dish (a "cheese burger" may have
+// beef, "Mexican rice" may be cooked in chicken or beef stock), and a color by dish type would read as a claim about its ingredients.
+const CARD_ACCENT = '#2E7D32';
+const CARD_TINT = '#E8F5E9';
+// the card outline: thicker and a deeper green than the accent, so each card stands out from the page
+const CARD_BORDER = '#1B5E20';
+
+// The score as a small rounded chip, tinted by how good it is.
+function ScoreChip({ score }: { score: number }) {
   const isGood = score >= 75;
   const isMid  = score >= 50;
   const color  = isGood ? '#1565C0' : isMid ? '#e65100' : '#c62828';
   const bg     = isGood ? '#E3F2FD' : isMid ? '#FFF3E0' : '#FFEBEE';
   return (
-    <View style={[styles.scoreBadge, { backgroundColor: bg }]}>
-      <Text style={[styles.scoreNum, { color }]}>{score}</Text>
-      <Text style={[styles.scoreLabel, { color }]}>score</Text>
+    <View style={[styles.scoreChip, { backgroundColor: bg }]} accessibilityLabel={`Score ${score}`}>
+      <Text style={[styles.scoreChipText, { color }]}>★ {score}</Text>
     </View>
   );
 }
 
-export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed }: Props) {
+export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed, variant = 'list' }: Props) {
+  const isTile = variant === 'tile';
+  const [expanded, setExpanded] = useState(false);
   const { menuItem: item, score, reasons, warnings } = recommendation;
   const n = item.nutrition;
   const { data: isFranchise = false } = useIsFranchise(recommendation.restaurant?.name);
@@ -79,12 +95,15 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
   );
   const isSafe = getSafeIndicator(item, score);
   const hasWarnings = allergenWarnings.length > 0 || restrictionWarnings.length > 0;
-  // The name-keyword warning check can't see hidden ingredients, so when the user
-  // has allergens/restrictions set, nudge them to the full AI check before trusting
-  // the nutrition-only "good" signal.
-  const hasDietaryProfile =
-    (profile?.allergens?.length ?? 0) > 0 ||
-    (profile?.dietaryRestrictions?.length ?? 0) > 0;
+  // A tap on a tile opens its details in a popup (closed by a tap outside it or the X). In the list, a tap anywhere on the card that is not a
+  // button (Nutrition, AI Verdict, the heart, a tag or a coupon) collapses an open AI Verdict answer.
+  function handleCardPress() {
+    if (isTile) {
+      setExpanded(true);
+    } else if (analysisOpen) {
+      handleAskAi();
+    }
+  }
 
   async function handleAskAi() {
     if (analysisOpen) {
@@ -114,70 +133,51 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
   const goodChips = reasons.slice(0, 2);
   const warnChips = warnings.slice(0, 1);
 
-  return (
+  const notice = unverifiedNotice(item, isFranchise);
+  const showFit = isSafe && !hasWarnings && !analysisText.startsWith('No');
+  // A name never proves what is in a dish, so EVERY card says its ingredients are not verified: a visible tag for a person with a diet or an allergen set,
+  // a small quiet line for everyone else. A card with no warning is "not checked", never "fine".
+  const caution = ingredientCaution(hasDietOrAllergen(profile));
+  const cautionEl = caution.strong ? (
+    <View style={[styles.tag, styles.cautionTag]}>
+      <View style={[styles.marker, { borderColor: '#E65100', backgroundColor: '#E65100' }]} />
+      <Text style={[styles.tagText, { color: '#BF360C' }]}>{caution.text}</Text>
+    </View>
+  ) : (
+    <Text style={styles.cautionQuiet}>{caution.text}</Text>
+  );
+
+  const detailsView = (
     <>
-    <View style={styles.card}>
-      {/* Header row */}
-      <View style={styles.headerRow}>
-        <ScoreBadge score={score} />
-        <View style={styles.titleBlock}>
-          <View style={styles.nameRow}>
-            <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+      {!isTile && <View style={styles.cautionRow}>{cautionEl}</View>}
+
+      {/* Small marker tags: not verified (tap for the full wording), may fit, and the top reasons. The menu list explains the tags once. */}
+      {(notice || showFit || goodChips.length > 0 || warnChips.length > 0) && (
+        <View style={styles.pillRow}>
+          {notice && (
             <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                toggleMenuItem(item.itemId, item);
-              }}
-              hitSlop={10}
+              style={[styles.tag, { borderColor: notice.tag.startsWith('⚠') ? '#E65100' : '#1565C0' }]}
+              onPress={() => Alert.alert(notice.title, notice.message)}
+              accessibilityRole="button"
+              accessibilityLabel={`${notice.title}. Tap for details.`}
             >
-              <Text style={styles.heart}>{isSaved ? '❤️' : '🤍'}</Text>
+              <View style={[styles.marker, { borderColor: notice.tag.startsWith('⚠') ? '#E65100' : '#1565C0' }]} />
+              <Text style={[styles.tagText, { color: notice.tag.startsWith('⚠') ? '#BF360C' : '#0D47A1' }]}>{notice.tag.replace(/^\S+\s+/, '')}</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {!item.isVerified && isFranchise && (
-        <View style={styles.estimatedBadge}>
-          <Text style={styles.estimatedBadgeText}>
-            🤖 AI-estimated — based on typical menu for this chain. Confirm ingredients and allergens with the restaurant.
-          </Text>
-        </View>
-      )}
-
-      {!item.isVerified && !isFranchise && (
-        <View style={styles.unverifiedBanner}>
-          <Text style={styles.unverifiedIcon}>⚠️</Text>
-          <Text style={styles.unverifiedText}>
-            <Text style={styles.unverifiedTextBold}>Unconfirmed item — </Text>
-            AI estimate, not verified by the restaurant. Details, including whether this dish is actually offered, may be inaccurate.
-          </Text>
-        </View>
-      )}
-
-      {/* Divider */}
-      <View style={styles.divider} />
-
-      {/* Nutrition is shown on request, not up front — see NutritionInfoModal
-          for why only qualitative "High X" flags are shown, never exact
-          numbers or a "Low X" claim. */}
-      <TouchableOpacity
-        style={styles.nutritionBtn}
-        onPress={() => setNutritionModalOpen(true)}
-        activeOpacity={0.85}
-      >
-        <Text style={styles.nutritionBtnText}>📊 Nutrition Info ›</Text>
-      </TouchableOpacity>
-
-      {/* Chips */}
-      {(goodChips.length > 0 || warnChips.length > 0) && (
-        <View style={styles.chipRow}>
+          )}
+          {showFit && (
+            <View style={[styles.tag, { borderColor: '#2E7D32' }]}>
+              <View style={[styles.marker, { borderColor: '#2E7D32', backgroundColor: '#2E7D32' }]} />
+              <Text style={[styles.tagText, { color: '#1B5E20' }]}>Calories & macros: may fit your goals</Text>
+            </View>
+          )}
           {goodChips.map((r) => (
-            <View key={`good-${r}`} style={styles.chipGood}>
+            <View key={`good-${r}`} style={[styles.pill, styles.chipGood]}>
               <Text style={styles.chipGoodText}>✓ {r}</Text>
             </View>
           ))}
           {warnChips.map((w) => (
-            <View key={`warn-${w}`} style={styles.chipWarn}>
+            <View key={`warn-${w}`} style={[styles.pill, styles.chipWarn]}>
               <Text style={styles.chipWarnText}>⚠ {w}</Text>
             </View>
           ))}
@@ -210,87 +210,30 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
         </View>
       )}
 
-      {/* Nutrition-fit indicator (scoped to calories & macros, not allergen/diet safety) */}
-      {isSafe && !hasWarnings && !analysisText.startsWith('No') && (
-        <View style={styles.safeBox}>
-          <View style={styles.safeHeaderRow}>
-            <Text style={styles.safeIconLarge}>✅</Text>
-            <Text style={styles.safeText}>Fits your nutrition goals</Text>
-          </View>
-          {hasDietaryProfile && (
-            <Text style={styles.safeCaveat}>
-              Based on calories & macros. Tap “🤔 Should I get this?” below to check it against your allergies & dietary restrictions.
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Item-Specific Coupons - PROMINENT BANNER */}
-      {itemCoupons.length > 0 && (
-        <View style={styles.couponBannerContainer}>
-          {itemCoupons.map((coupon) => (
-            <TouchableOpacity
-              key={coupon.id}
-              style={styles.couponBannerBox}
-              onPress={() => couponActivation.handlePress(coupon)}
-              activeOpacity={0.85}
-            >
-              <View style={styles.couponBannerLeft}>
-                <Text style={styles.couponSaveLabel}>SAVE</Text>
-                <View style={styles.couponAmountBox}>
-                  <Text style={styles.couponAmount}>
-                    {coupon.discount_value}
-                  </Text>
-                  <Text style={styles.couponUnit}>
-                    {coupon.coupon_type.includes('percent') ? '%' : '$'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.couponBannerDivider} />
-              <View style={styles.couponBannerRight}>
-                <Text style={styles.couponCode}>Code: {coupon.coupon_code}</Text>
-                <Text style={styles.couponType}>
-                  {coupon.coupon_type.includes('percent')
-                    ? `${coupon.discount_value}% off`
-                    : `$${coupon.discount_value} off`}
-                </Text>
-                <View style={styles.couponBottomRow}>
-                  <View style={[styles.couponTapHintPill, coupon.activated_at && styles.couponTapHintPillActive]}>
-                    <Text style={styles.couponTapHintText}>
-                      {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
-                    </Text>
-                  </View>
-                  <View style={styles.usesLeftPill}>
-                    <Text style={styles.usesLeftText}>
-                      🔁 {remainingPersonalUses(coupon)} more {remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'}
-                    </Text>
-                  </View>
-                  {isLowStock(coupon) && (
-                    <View style={styles.lowStockPill}>
-                      <Text style={styles.lowStockText}>🔥 {remainingTotalUses(coupon)} left</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <Text style={styles.couponStarRight}>⭐</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
-      {/* AI button */}
-      <Animated.View style={[styles.aiBtn, analysisOpen && styles.aiBtnOpen, buttonAnimStyle]}>
+      {/* Nutrition as a quiet link, and the AI verdict as an outlined button on the right */}
+      <View style={[styles.actionRow, isTile && styles.actionRowStacked]}>
         <TouchableOpacity
-          onPress={handleButtonPress}
-          disabled={analysisLoading}
-          activeOpacity={1}
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+          style={[styles.nutritionLink, isTile && styles.tileBtn]}
+          onPress={() => setNutritionModalOpen(true)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
         >
-          <Text style={[styles.aiBtnText, analysisOpen && styles.aiBtnTextOpen]}>
-            {analysisOpen ? 'Close ▲' : '🤔💭  Should I get this?'}
-          </Text>
+          <Text style={[styles.nutritionLinkText, { color: CARD_ACCENT }]}>📊 Nutrition ›</Text>
         </TouchableOpacity>
-      </Animated.View>
+        <Animated.View style={[styles.aiBtn, analysisOpen && { backgroundColor: '#D84315' }, isTile && styles.tileBtn, buttonAnimStyle]}>
+          <TouchableOpacity
+            onPress={handleButtonPress}
+            disabled={analysisLoading}
+            activeOpacity={1}
+            style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.aiBtnText}>
+              {analysisOpen ? 'Close ▲' : '🤖  AI Verdict'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
 
       {/* Analysis panel */}
       {analysisOpen && (
@@ -309,8 +252,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
               </View>
             : analysisText.startsWith('Yes')
             ? <Animated.View style={styles.analysisPositiveContainer} entering={FadeIn.duration(500)}>
-                <Text style={styles.yesEmoji}>✅</Text>
-                <Text style={styles.yesText}>YES</Text>
+                <Text style={styles.yesText}>{VERDICT_GOOD}</Text>
                 <Text style={[
                   styles.analysisText,
                   styles.analysisPositiveText
@@ -318,8 +260,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
               </Animated.View>
             : analysisText.startsWith('No')
             ? <Animated.View style={styles.analysisNegativeContainer} entering={FadeIn.duration(500)}>
-                <Text style={styles.noEmoji}>❌</Text>
-                <Text style={styles.noText}>NO</Text>
+                <Text style={styles.noText}>{VERDICT_NOT_GOOD}</Text>
                 <Text style={[
                   styles.analysisText,
                   styles.analysisNegativeText
@@ -327,9 +268,121 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
               </Animated.View>
             : <Animated.View entering={FadeIn.duration(500)}><Text style={styles.analysisText}>{analysisText}</Text></Animated.View>
           }
+          {!analysisLoading && <Text style={styles.aiDisclaimer}>{AI_DISCLAIMER}</Text>}
         </Animated.View>
       )}
-    </View>
+
+      {/* Coupons: a thin strip each, so a coupon does not take a whole banner */}
+      {itemCoupons.length > 0 && (
+        <View style={styles.couponStripContainer}>
+          {itemCoupons.map((coupon) => (
+            <TouchableOpacity
+              key={coupon.id}
+              style={styles.couponStrip}
+              onPress={() => couponActivation.handlePress(coupon)}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+            >
+              <Text style={styles.couponStripSave}>
+                ⭐ SAVE {coupon.discount_value}{coupon.coupon_type.includes('percent') ? '%' : '$'}
+              </Text>
+              <Text style={styles.couponStripCode} numberOfLines={1}>Code: {coupon.coupon_code}</Text>
+              <View style={styles.couponTapHintPill}>
+                <Text style={styles.couponTapHintText}>
+                  {coupon.activated_at ? '⏱ Active — tap to view' : '👉 Tap to activate'}
+                </Text>
+              </View>
+              <View style={styles.usesLeftPill}>
+                <Text style={styles.usesLeftText}>
+                  🔁 {remainingPersonalUses(coupon)} more {remainingPersonalUses(coupon) === 1 ? 'use' : 'uses'}
+                </Text>
+              </View>
+              {isLowStock(coupon) && (
+                <View style={styles.lowStockPill}>
+                  <Text style={styles.lowStockText}>🔥 {remainingTotalUses(coupon)} left</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </>
+  );
+
+  const icons = tileIcons({ warnings: hasWarnings, noticeTag: notice?.tag ?? null, fit: showFit, coupons: itemCoupons.length });
+
+  const heartButton = (
+    <TouchableOpacity
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        toggleMenuItem(item.itemId, item);
+      }}
+      hitSlop={10}
+      style={[styles.heartWrap, !isSaved && styles.heartWrapEmpty]}
+    >
+      {isSaved ? <Text style={styles.heart}>❤️</Text> : <Text style={styles.heartEmpty}>♡</Text>}
+    </TouchableOpacity>
+  );
+
+  return (
+    <>
+    <Pressable
+      style={[styles.card, isTile && styles.tileCard, { borderColor: CARD_BORDER }]}
+      onPress={handleCardPress}
+    >
+      {isTile ? (
+        <>
+          {/* A tile: the score and the heart on one line, the name, then tiny status icons and a hint; a tap opens the details. */}
+          <View style={[styles.nameBand, styles.tileBand]}>
+            <View style={styles.tileTopRow}>
+              <ScoreChip score={score} />
+              {heartButton}
+            </View>
+            <Text style={[styles.name, styles.tileName, styles.nameOnBand]} numberOfLines={2}>{item.name}</Text>
+          </View>
+          <View style={styles.tileCaution}>{cautionEl}</View>
+          <View style={styles.tileFooter}>
+            <View style={styles.tileIcons}>
+              {icons.map((i) => (
+                <Text key={i.icon} style={styles.tileIcon} accessibilityLabel={i.label}>{i.icon}</Text>
+              ))}
+            </View>
+            <Text style={[styles.tileHint, { color: CARD_ACCENT }]}>Tap for details ▾</Text>
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={[styles.headerRow, styles.nameBand]}>
+            <Text style={[styles.name, styles.nameOnBand]} numberOfLines={2}>{item.name}</Text>
+            <ScoreChip score={score} />
+            {heartButton}
+          </View>
+          {detailsView}
+        </>
+      )}
+    </Pressable>
+    {/* A tile's details: a popup over a dimmed background; a tap outside it, or the X, closes it. It is a sibling of the tile, not inside it, so a tap in
+        the popup never reaches the tile. */}
+    {isTile && (
+      <Modal visible={expanded} transparent animationType="fade" onRequestClose={() => setExpanded(false)}>
+        <Pressable style={styles.popupBackdrop} onPress={() => setExpanded(false)} accessibilityLabel="Close details">
+          <Pressable style={styles.popupCard} onPress={() => {}}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.popupContent}>
+              <View style={[styles.headerRow, styles.nameBand]}>
+                <Text style={[styles.name, styles.nameOnBand]}>{item.name}</Text>
+                <ScoreChip score={score} />
+                {heartButton}
+              </View>
+              <View style={styles.cautionRow}>{cautionEl}</View>
+              {detailsView}
+            </ScrollView>
+            <TouchableOpacity style={styles.popupClose} onPress={() => setExpanded(false)} accessibilityRole="button" accessibilityLabel="Close">
+              <Text style={styles.popupCloseText}>✕</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    )}
     <CouponActivationModal
       visible={!!couponActivation.activeCoupon}
       coupon={couponActivation.activeCoupon}
@@ -352,158 +405,122 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed 
 }
 
 const styles = StyleSheet.create({
+  popupBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  popupCard: { width: '100%', maxWidth: 440, maxHeight: '85%', backgroundColor: '#fff', borderRadius: 20, borderWidth: 3, borderColor: '#1B5E20', overflow: 'hidden' },
+  popupContent: { padding: 14, paddingTop: 22 },
+  popupClose: { position: 'absolute', top: 4, right: 6, width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#BDBDBD' },
+  popupCloseText: { fontSize: 13, fontWeight: '900', color: '#444' },
   card: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    borderWidth: 2,
+    borderRadius: 20,
+    borderWidth: 3,
     borderColor: BRAND_COLORS.primary,
     marginHorizontal: 16,
     marginBottom: 12,
-    padding: 16,
+    padding: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 12 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, minHeight: 58 },
+  // minWidth 0 lets the name shrink in its row, and on the web a single very long word breaks instead of pushing the score and heart out
+  name: { flex: 1, minWidth: 0, fontSize: 16, fontWeight: '700', color: '#141414', lineHeight: 21, ...(Platform.OS === 'web' ? ({ overflowWrap: 'anywhere' } as any) : {}) },
+  heart: { fontSize: 16 },
+  // not saved: a red outline heart in a red-ringed circle, so it shows clearly on the white circle and the green name band
+  heartEmpty: { fontSize: 20, lineHeight: 24, fontWeight: '900', color: '#D32F2F' },
+  heartWrapEmpty: { borderWidth: 2, borderColor: '#D32F2F' },
+  heartWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 
-  scoreBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  scoreNum: { fontSize: 18, fontWeight: '800', lineHeight: 20 },
-  scoreLabel: { fontSize: 9, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
+  // the name sits on a green band, whatever the dish
+  nameBand: { backgroundColor: '#2E7D32', borderRadius: 12, paddingVertical: 8, paddingHorizontal: 10 },
+  nameOnBand: { color: '#fff' },
 
-  titleBlock: { flex: 1 },
-  nameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  name: { flex: 1, fontSize: 15, fontWeight: '700', color: '#141414', lineHeight: 21 },
-  heart: { fontSize: 19, marginTop: 1 },
+  scoreChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  scoreChipText: { fontSize: 12.5, fontWeight: '800' },
 
-  estimatedBadge: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#1565C0',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  estimatedBadgeText: { fontSize: 11.5, color: '#0D47A1', lineHeight: 16, fontWeight: '600' },
+  // tile (two per row): the score and heart, the name, and a hint; the details open on a tap
+  // every tile is at least this tall and fills its grid cell, so the tiles in a row are the same height
+  tileCard: { flex: 1, minHeight: 176, marginHorizontal: 0, marginBottom: 0, padding: 12, borderRadius: 16 },
+  tileTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  tileBand: { borderRadius: 10, padding: 8, marginBottom: 8 },
+  tileName: { flex: 0, fontSize: 14, lineHeight: 18, minHeight: 36 },
+  tileFooter: { marginTop: 'auto', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
+  tileIcons: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, flexShrink: 1 },
+  tileIcon: { fontSize: 14 },
+  tileHint: { fontSize: 11.5, fontWeight: '800' },
+  tileDetails: { marginTop: 10 },
+  actionRowStacked: { flexDirection: 'column', alignItems: 'stretch', gap: 6 },
+  tileBtn: { flex: 0, alignSelf: 'stretch' },
 
-  unverifiedBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-    backgroundColor: '#FFF3E0',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#E65100',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  unverifiedIcon: { fontSize: 13, lineHeight: 16 },
-  unverifiedText: { flex: 1, fontSize: 11.5, color: '#7A4A00', lineHeight: 16 },
-  unverifiedTextBold: { fontWeight: '800', color: '#E65100' },
-
-  divider: { height: 1, backgroundColor: '#F3F3F3', marginBottom: 12 },
-
-  nutritionBtn: {
-    backgroundColor: '#E3F2FD',
-    borderWidth: 1.5,
-    borderColor: '#1565C0',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  nutritionBtnText: { fontSize: 13, fontWeight: '700', color: '#1565C0' },
-
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  chipGood: { backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  // small marker tags in one wrapping row: a thin outline with a small square marker
+  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
+  pill: { borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, maxWidth: '100%' },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.5, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#fff', maxWidth: '100%' },
+  marker: { width: 9, height: 9, borderRadius: 2, borderWidth: 1.5, backgroundColor: '#fff' },
+  tagText: { fontSize: 11.5, fontWeight: '700', flexShrink: 1 },
+  cautionRow: { marginBottom: 8 },
+  cautionTag: { backgroundColor: '#FFF3E0', borderColor: '#E65100', alignSelf: 'flex-start' },
+  cautionQuiet: { fontSize: 11, color: '#757575', flexShrink: 1 },
+  tileCaution: { marginBottom: 8 },
+  chipGood: { backgroundColor: '#E3F2FD' },
   chipGoodText: { fontSize: 11, color: '#1565C0', fontWeight: '600' },
-  chipWarn: { backgroundColor: '#FFF8E1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  chipWarn: { backgroundColor: '#FFF8E1' },
   chipWarnText: { fontSize: 11, color: '#E65100', fontWeight: '600' },
 
   warningsContainer: {
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 0,
   },
 
   restrictionWarningBox: {
-    backgroundColor: '#FF1744',
+    backgroundColor: '#FDECEA',
+    borderWidth: 1.5,
+    borderColor: '#E57373',
     borderRadius: 12,
-    padding: 14,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    shadowColor: '#FF1744',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    gap: 8,
   },
-  warningIconLarge: { fontSize: 24, marginTop: 2 },
-  restrictionWarningText: { fontSize: 13, color: '#fff', fontWeight: '700', lineHeight: 18 },
+  warningIconLarge: { fontSize: 20, marginTop: 1 },
+  restrictionWarningText: { fontSize: 13, color: '#B71C1C', fontWeight: '700', lineHeight: 18 },
 
   allergenWarningBox: {
-    backgroundColor: '#FF6F00',
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1.5,
+    borderColor: '#FFB74D',
     borderRadius: 12,
-    padding: 14,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
-    shadowColor: '#FF6F00',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  allergenIconLarge: { fontSize: 22, marginTop: 2 },
-  allergenWarningText: { fontSize: 13, color: '#fff', fontWeight: '700', lineHeight: 18 },
-
-  safeBox: {
-    backgroundColor: '#1565C0',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    flexDirection: 'column',
     gap: 8,
-    shadowColor: '#1565C0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
   },
-  safeHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  safeIconLarge: { fontSize: 22 },
-  safeText: { fontSize: 13, color: '#fff', fontWeight: '700', flex: 1 },
-  safeCaveat: { fontSize: 11.5, color: 'rgba(255,255,255,0.95)', fontWeight: '600', lineHeight: 16 },
+  allergenIconLarge: { fontSize: 20, marginTop: 1 },
+  allergenWarningText: { fontSize: 13, color: '#A84300', fontWeight: '700', lineHeight: 18 },
 
+  // Nutrition is a quiet link on the left; the AI Verdict is an outlined button on the right
+  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  nutritionLink: { flex: 1, paddingVertical: 8 },
+  nutritionLinkText: { fontSize: 13.5, fontWeight: '800' },
+
+  // the one orange accent on a card: the main action
   aiBtn: {
-    backgroundColor: BRAND_COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    backgroundColor: '#E65100',
+    borderWidth: 1.5,
+    borderColor: '#BF360C',
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    marginVertical: 8,
   },
-  aiBtnOpen: { backgroundColor: BRAND_COLORS.primaryDark },
-  aiBtnText: { fontSize: 15, color: '#fff', fontWeight: '700', letterSpacing: 0.3 },
-  aiBtnTextOpen: { color: '#fff' },
+  aiBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2, color: '#fff' },
 
   analysisBox: {
-    marginTop: 10,
+    marginTop: 8,
     backgroundColor: '#F6F6F6',
     borderRadius: 12,
     padding: 14,
@@ -526,136 +543,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  yesEmoji: {
-    fontSize: 48,
-  },
   yesText: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '800',
     color: '#1565C0',
-    letterSpacing: 1,
-  },
-  noEmoji: {
-    fontSize: 48,
+    textAlign: 'center',
   },
   noText: {
-    fontSize: 28,
+    fontSize: 18,
     fontWeight: '800',
     color: '#C62828',
-    letterSpacing: 1,
+    textAlign: 'center',
   },
+  aiDisclaimer: { fontSize: 11, color: '#666', marginTop: 10, lineHeight: 15, textAlign: 'center' },
   analysingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   analysingText: { fontSize: 13, color: '#888' },
   analysisText: { fontSize: 13, color: '#333', lineHeight: 21 },
   analysisPositiveText: { color: '#1565C0', fontWeight: '600' },
   analysisNegativeText: { color: '#C62828', fontWeight: '600' },
 
-  couponBannerContainer: { gap: 10, marginBottom: 12, marginHorizontal: -16, marginLeft: -16, marginRight: -16, paddingHorizontal: 16 },
-  couponBannerBox: {
-    backgroundColor: '#FFD54F',
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FBC02D',
-    shadowColor: '#FFD54F',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  couponBannerLeft: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingRight: 12,
-  },
-  couponSaveLabel: {
-    fontSize: 11,
-    fontWeight: '900',
-    color: '#E65100',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  couponAmountBox: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  couponAmount: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#D84315',
-  },
-  couponUnit: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#D84315',
-    marginLeft: 2,
-  },
-  couponBannerDivider: {
-    width: 2,
-    height: 56,
-    backgroundColor: '#D84315',
-    marginHorizontal: 12,
-  },
-  couponBannerRight: {
-    flex: 1,
-  },
-  couponCode: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#D84315',
-    marginBottom: 3,
-  },
-  couponType: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#E65100',
-    textTransform: 'capitalize',
-  },
-  couponTapHintPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1565C0',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  couponTapHintPillActive: {
-    backgroundColor: '#1565C0',
-  },
-  couponTapHintText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#fff',
-  },
-  couponBottomRow: {
+  couponStripContainer: { gap: 4, marginTop: 6, alignItems: 'flex-start' },
+  couponStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
+    gap: 5,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#2E7D32',
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+  },
+  couponStripSave: { fontSize: 12.5, fontWeight: '900', color: '#1B5E20', letterSpacing: 0.3 },
+  couponStripCode: { fontSize: 11, fontWeight: '800', color: '#2E7D32', flexShrink: 1 },
+  couponTapHintPill: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#2E7D32',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  couponTapHintPillActive: {
+    backgroundColor: '#2E7D32',
+  },
+  couponTapHintText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#fff',
   },
   usesLeftPill: {
     alignSelf: 'flex-start',
     backgroundColor: '#E3F2FD',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: '#1565C0',
   },
   usesLeftText: {
-    fontSize: 11.5,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#1565C0',
   },
   lowStockPill: {
     alignSelf: 'flex-start',
     backgroundColor: '#FFEBEE',
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderWidth: 1,
     borderColor: '#e53e3e',
   },
@@ -663,9 +621,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#c62828',
-  },
-  couponStarRight: {
-    fontSize: 24,
-    marginLeft: 8,
   },
 });

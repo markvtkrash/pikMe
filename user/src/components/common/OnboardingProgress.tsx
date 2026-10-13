@@ -8,7 +8,7 @@ interface Props {
   showBack?: boolean;
 }
 
-export function OnboardingProgress({ step, total = 6, showBack = true }: Props) {
+export function OnboardingProgress({ step, total = 5, showBack = true }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

@@ -65,7 +65,7 @@ function getSuggestions(profile: any): string[] {
 
   // 3. Based on allergens
   if (profile?.allergens && profile.allergens.length > 0) {
-    questions.push('What meals are safe for me?');
+    questions.push('What meals might suit my goals?');
   }
 
   // 4. Based on cuisine preferences

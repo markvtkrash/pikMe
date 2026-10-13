@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { OnboardingProgress } from '../../src/components/common/OnboardingProgress';
+import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { DIETARY_RESTRICTIONS } from '../../src/constants/dietaryOptions';
 
@@ -32,7 +33,10 @@ export default function DietaryScreen() {
     <View style={styles.container}>
       <OnboardingProgress step={2} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Dietary Restrictions</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>Dietary Restrictions</Text>
+          <TopContinue onPress={handleContinue} />
+        </View>
         <Text style={styles.subtitle}>Select all that apply</Text>
 
         <View style={styles.grid}>
@@ -52,21 +56,19 @@ export default function DietaryScreen() {
             );
           })}
         </View>
-
-        <TouchableOpacity style={styles.button} onPress={handleContinue}>
-          <Text style={styles.buttonText}>Continue →</Text>
-        </TouchableOpacity>
       </ScrollView>
+      <ContinueBar onPress={handleContinue} label="Continue →" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '700', color: '#222', marginBottom: 6, marginTop: 8 },
   subtitle: { fontSize: 15, color: '#666', marginBottom: 28 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 36 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

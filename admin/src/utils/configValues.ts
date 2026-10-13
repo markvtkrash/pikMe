@@ -35,3 +35,32 @@ export function quickSwitchQuestion(sw: QuickSwitch, currentValue: string): stri
     ? `Hide all ${sw.title.toLowerCase()} from customers? The customer app picks the change up within a few minutes.`
     : `Show ${sw.title.toLowerCase()} to customers again? The customer app picks the change up within a few minutes.`;
 }
+
+// The listing-eligibility master switch (migration 139). It is NOT a plain true/false row on the list: turning it on or off affects every
+// customer, so it has its own card and a window that asks for the key to be typed before the change is made.
+export const LISTING_SWITCH_KEY = 'enforceListingEligibility';
+
+// The text that must be typed to confirm (exact, spaces at the ends ignored).
+export function typedConfirmationMatches(typed: string, phrase: string): boolean {
+  return typed.trim() === phrase;
+}
+
+// The wording of the card, the window and the button for the current value.
+export function listingSwitchText(value: string | undefined): { on: boolean; state: string; button: string; title: string; message: string } {
+  const on = value === 'true';
+  return on
+    ? {
+        on,
+        state: 'ON: restaurants marked "not eligible" are hidden from customers.',
+        button: 'Turn OFF',
+        title: 'Turn OFF listing eligibility?',
+        message: 'Every restaurant will be shown to customers again, even those marked "not eligible". The apps pick the change up within a few minutes.',
+      }
+    : {
+        on,
+        state: 'OFF: every restaurant is shown to customers, whatever its eligibility flag says.',
+        button: 'Turn ON',
+        title: 'Turn ON listing eligibility?',
+        message: 'Restaurants marked "not eligible" will be HIDDEN from customers: from search, Saved, menus, coupons and the AI menu guess. The apps pick the change up within a few minutes.',
+      };
+}

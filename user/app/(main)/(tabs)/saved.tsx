@@ -93,7 +93,7 @@ export default function SavedScreen() {
             <EmptyState
               icon="🥗"
               title="No saved menu items yet"
-              body='Tap "Should I get this?" on a menu item, then heart it to save.'
+              body='Tap "AI Verdict" on a menu item, then heart it to save.'
             />
           }
         />

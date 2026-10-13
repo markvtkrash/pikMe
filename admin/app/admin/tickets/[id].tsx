@@ -149,8 +149,8 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: 640, alignSelf: 'center' },
 
-  backBtn: { alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 6, backgroundColor: '#E3F2FD', marginBottom: 16 },
-  backBtnText: { fontSize: 13, fontWeight: '600', color: '#1565C0' },
+  backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
+  backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 
   typeBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginBottom: 10 },
   typeBadgeOwner: { backgroundColor: '#F3E5F5' },
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   resolutionInput: { paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: '#222', minHeight: 120, textAlignVertical: 'top', marginBottom: 8, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   hint: { fontSize: 12, color: '#999', marginBottom: 20 },
 
-  saveBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  saveBtn: { backgroundColor: '#E65100', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
   saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 });
