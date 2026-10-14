@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
-import { BRAND_NAME } from '../../src/constants/brand';
+import { BrandBar } from '../../src/components/common/BrandBar';
 import { IconText } from '../../src/components/common/AppIcon';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
+import { PasswordInput } from '../../src/components/common/PasswordInput';
 
 export default function AdminLoginScreen() {
   const router = useRouter();
@@ -72,10 +73,9 @@ export default function AdminLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topLeftBar}>
-        <Image source={require('../../assets/logo.png')} style={styles.topLeftLogo} />
+        <BrandBar />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.brand}>{BRAND_NAME}</Text>
         <IconText style={styles.title} emoji="🔐">Admin Portal</IconText>
 
         <TextInput {...chain(0)}
@@ -88,11 +88,10 @@ export default function AdminLoginScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput {...chain(1)}
+        <PasswordInput {...chain(1)}
           style={styles.input}
           placeholder="Password"
           placeholderTextColor="#999"
-          secureTextEntry
           value={password}
           onChangeText={(t) => { setPassword(t); setError(''); }}
         />

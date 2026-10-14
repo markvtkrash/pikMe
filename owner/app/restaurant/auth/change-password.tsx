@@ -10,6 +10,7 @@ import { getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
+import { PasswordInput } from '../../../src/components/common/PasswordInput';
 
 function validatePassword(password: string) {
   return {
@@ -109,22 +110,20 @@ export default function RestaurantChangePasswordScreen() {
         </Text>
 
         <Text style={styles.label}>New Password</Text>
-        <TextInput {...chain(0)}
+        <PasswordInput {...chain(0)}
           style={styles.input}
           placeholder="Enter new password"
           placeholderTextColor="#999"
-          secureTextEntry
           value={newPassword}
           onChangeText={setNewPassword}
           editable={!saving}
         />
 
         <Text style={styles.label}>Confirm Password</Text>
-        <TextInput {...chain(1)}
+        <PasswordInput {...chain(1)}
           style={styles.input}
           placeholder="Confirm new password"
           placeholderTextColor="#999"
-          secureTextEntry
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           editable={!saving}

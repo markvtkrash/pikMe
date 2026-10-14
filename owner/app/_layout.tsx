@@ -12,6 +12,10 @@ import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
 import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
 import { AnnouncementModal } from '../src/components/common/AnnouncementModal';
+import { hideNativePasswordReveal } from '../src/utils/hideNativePasswordReveal';
+
+// the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
+hideNativePasswordReveal();
 
 const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 

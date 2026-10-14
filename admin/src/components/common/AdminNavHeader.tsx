@@ -21,7 +21,8 @@ export function AdminHeaderLeft() {
   return (
     <View style={styles.leftRow}>
       <Image source={require('../../../assets/logo.png')} style={styles.logo} />
-      {width >= 420 && <Text style={styles.brandName}>{BRAND_NAME}</Text>}
+      {/* the logo is always followed by the name; on a narrow screen it is a little smaller so the buttons still fit */}
+      <Text style={[styles.brandName, width < 420 && styles.brandNameNarrow]} numberOfLines={1}>{BRAND_NAME}</Text>
       {!onDashboard && (
         <TouchableOpacity onPress={() => router.push('/admin')} style={styles.headerBtn}>
           <IconText style={styles.headerBtnText} emoji="🏠">Dashboard</IconText>
@@ -108,7 +109,8 @@ const styles = StyleSheet.create({
   leftRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 16 },
   rightRow: { marginRight: 16 },
   logo: { width: 32, height: 32, borderRadius: 16 },
-  brandName: { color: '#fff', fontSize: 19, fontWeight: '900', letterSpacing: 0.4, marginRight: 6 },
+  brandName: { color: '#fff', fontSize: 19, fontWeight: '900', letterSpacing: 0.4, marginRight: 6, flexShrink: 1 },
+  brandNameNarrow: { fontSize: 15, letterSpacing: 0.2, marginRight: 2 },
   headerBtn: { paddingHorizontal: 12, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6 },
   headerBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   headerBtnActive: { backgroundColor: '#fff' },

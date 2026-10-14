@@ -10,6 +10,7 @@ import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore
 import { DataSourcesNotice } from '../../../src/components/common/DataSourcesNotice';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
+import { PasswordInput } from '../../../src/components/common/PasswordInput';
 
 export default function RestaurantSignupScreen() {
   const router = useRouter();
@@ -82,11 +83,10 @@ export default function RestaurantSignupScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput {...chain(2)}
+        <PasswordInput {...chain(2)}
           style={styles.input}
           placeholder="Password (min 8 characters)"
           placeholderTextColor="#999"
-          secureTextEntry
           value={password}
           onChangeText={(t) => { setPassword(t); setError(''); }}
         />

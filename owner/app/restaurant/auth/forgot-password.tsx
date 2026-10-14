@@ -14,6 +14,7 @@ import {
 import { BrandBar } from '../../../src/components/common/BrandBar';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
+import { PasswordInput } from '../../../src/components/common/PasswordInput';
 
 // Forgot password: (1) enter the email, (2) enter the 6-digit code from the email plus a new password. Checking the code signs the
 // person in briefly so the new password can be saved; the route guard (resolveOwnerRoute) leaves this page alone while that happens.
@@ -170,11 +171,10 @@ export default function RestaurantForgotPasswordScreen() {
               onChangeText={(t) => { setCode(normalizeResetCode(t)); setError(''); }}
               editable={!busy}
             />
-            <TextInput {...codeChain(1)}
+            <PasswordInput {...codeChain(1)}
               style={styles.input}
               placeholder="New password"
               placeholderTextColor="#999"
-              secureTextEntry
               autoCapitalize="none"
               value={password}
               onChangeText={(t) => { setPassword(t); setError(''); }}
@@ -187,11 +187,10 @@ export default function RestaurantForgotPasswordScreen() {
                 </Text>
               ))}
             </View>
-            <TextInput {...codeChain(2)}
+            <PasswordInput {...codeChain(2)}
               style={styles.input}
               placeholder="Confirm new password"
               placeholderTextColor="#999"
-              secureTextEntry
               autoCapitalize="none"
               value={confirm}
               onChangeText={(t) => { setConfirm(t); setError(''); }}

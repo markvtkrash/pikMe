@@ -7,6 +7,7 @@ import { supabase, verifyPassword } from '../../api/supabase';
 import { useRestaurantOwnerStore } from '../../store/restaurantOwnerStore';
 import { IconText } from './AppIcon';
 import { useEnterChain } from '../../hooks/useEnterChain';
+import { PasswordInput } from './PasswordInput';
 
 function validatePassword(password: string) {
   return {
@@ -120,11 +121,10 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               <Text style={styles.title}>Change password</Text>
 
               <Text style={styles.label}>Current password</Text>
-              <TextInput {...chain(0)}
+              <PasswordInput {...chain(0)}
                 style={styles.input}
                 placeholder="Enter current password"
                 placeholderTextColor="#999"
-                secureTextEntry
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
                 editable={!saving}
@@ -132,11 +132,10 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               />
 
               <Text style={styles.label}>New password</Text>
-              <TextInput {...chain(1)}
+              <PasswordInput {...chain(1)}
                 style={styles.input}
                 placeholder="Enter new password"
                 placeholderTextColor="#999"
-                secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
                 editable={!saving}
@@ -144,11 +143,10 @@ export function ChangePasswordModal({ visible, onClose }: Props) {
               />
 
               <Text style={styles.label}>Confirm new password</Text>
-              <TextInput {...chain(2)}
+              <PasswordInput {...chain(2)}
                 style={styles.input}
                 placeholder="Confirm new password"
                 placeholderTextColor="#999"
-                secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 editable={!saving}

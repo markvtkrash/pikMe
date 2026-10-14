@@ -1,0 +1,364 @@
+rank,name,category
+1,McDonald's,Burgers
+2,Starbucks,Coffee
+3,Chick-fil-A,Chicken
+4,Taco Bell,Mexican
+5,Wendy's,Burgers
+6,Burger King,Burgers
+7,Dunkin',Coffee & Bakery
+8,Subway,Sandwiches
+9,Domino's,Pizza
+10,Chipotle Mexican Grill,Mexican
+11,Sonic Drive-In,Burgers
+12,Panera Bread,Bakery Cafe
+13,Pizza Hut,Pizza
+14,Popeyes,Chicken
+15,Panda Express,Asian
+16,KFC,Chicken
+17,Arby's,Sandwiches
+18,Little Caesars,Pizza
+19,Jack in the Box,Burgers
+20,Whataburger,Burgers
+21,Raising Cane's,Chicken
+22,Dairy Queen,Burgers & Dessert
+23,Papa John's,Pizza
+24,Zaxby's,Chicken
+25,Wingstop,Wings
+26,Jimmy John's,Sandwiches
+27,Culver's,Burgers
+28,Five Guys,Burgers
+29,Texas Roadhouse,Steakhouse
+30,Applebee's,Casual Dining
+31,Chili's,Casual Dining
+32,Olive Garden,Italian
+33,Buffalo Wild Wings,Wings & Sports Bar
+34,Outback Steakhouse,Steakhouse
+35,IHOP,Breakfast
+36,Denny's,Family Dining
+37,Cracker Barrel,Family Dining
+38,Red Lobster,Seafood
+39,Dutch Bros,Coffee
+40,Tim Hortons,Coffee & Bakery
+41,Carl's Jr.,Burgers
+42,Hardee's,Burgers
+43,Bojangles,Chicken
+44,Jersey Mike's Subs,Sandwiches
+45,Firehouse Subs,Sandwiches
+46,Qdoba,Mexican
+47,Moe's Southwest Grill,Mexican
+48,Del Taco,Mexican
+49,El Pollo Loco,Chicken
+50,In-N-Out Burger,Burgers
+51,Shake Shack,Burgers
+52,Checkers,Burgers
+53,Rally's,Burgers
+54,Krispy Kreme,Bakery & Dessert
+55,Baskin-Robbins,Ice Cream
+56,Tropical Smoothie Cafe,Smoothies
+57,Marco's Pizza,Pizza
+58,Papa Murphy's,Pizza
+59,Hungry Howie's,Pizza
+60,Jet's Pizza,Pizza
+61,Cici's Pizza,Pizza
+62,Round Table Pizza,Pizza
+63,Godfather's Pizza,Pizza
+64,Church's Texas Chicken,Chicken
+65,Golden Corral,Buffet
+66,Waffle House,Breakfast
+67,Perkins,Family Dining
+68,Bob Evans,Family Dining
+69,Cheddar's Scratch Kitchen,Casual Dining
+70,LongHorn Steakhouse,Steakhouse
+71,Red Robin,Burgers & Casual Dining
+72,TGI Fridays,Casual Dining
+73,Ruby Tuesday,Casual Dining
+74,Logan's Roadhouse,Steakhouse
+75,Bar Louie,Bar & Grill
+76,Hooters,Wings & Sports Bar
+77,Twin Peaks,Wings & Sports Bar
+78,Dave & Buster's,Entertainment Dining
+79,BJ's Restaurant & Brewhouse,Casual Dining
+80,The Cheesecake Factory,Casual Dining
+81,P.F. Chang's,Asian
+82,Carrabba's Italian Grill,Italian
+83,Bonefish Grill,Seafood
+84,Bahama Breeze,Caribbean
+85,Yard House,Casual Dining
+86,Seasons 52,Casual Dining
+87,Maggiano's Little Italy,Italian
+88,Buca di Beppo,Italian
+89,Fazoli's,Italian
+90,Sbarro,Pizza
+91,Nathan's Famous,Hot Dogs
+92,Portillo's,Hot Dogs & Beef
+93,Steak 'n Shake,Burgers
+94,A&W,Burgers
+95,Freddy's Frozen Custard & Steakburgers,Burgers & Dessert
+96,Smashburger,Burgers
+97,The Habit Burger Grill,Burgers
+98,Fatburger,Burgers
+99,Wayback Burgers,Burgers
+100,Krystal,Burgers
+101,White Castle,Burgers
+102,Slim Chickens,Chicken
+103,Pollo Tropical,Chicken
+104,Golden Chick,Chicken
+105,Mrs. Winner's,Chicken
+106,Lee's Famous Recipe Chicken,Chicken
+107,Pluckers Wing Bar,Wings
+108,Tender Greens,Fast Casual
+109,Sweetgreen,Salads
+110,Cava,Mediterranean
+111,Noodles & Company,Noodles
+112,Pei Wei Asian Diner,Asian
+113,Pollo Campero,Chicken
+114,Taco John's,Mexican
+115,Taco Cabana,Mexican
+116,Taco Bueno,Mexican
+117,Tijuana Flats,Mexican
+118,Baja Fresh,Mexican
+119,Chuy's,Mexican
+120,On The Border,Mexican
+121,Taco Time,Mexican
+122,Torchy's Tacos,Mexican
+123,Salsarita's,Mexican
+124,Barberitos,Mexican
+125,Bubba Gump Shrimp Co.,Seafood
+126,Joe's Crab Shack,Seafood
+127,Captain D's,Seafood
+128,Long John Silver's,Seafood
+129,Arthur Treacher's,Seafood
+130,Legal Sea Foods,Seafood
+131,McCormick & Schmick's,Seafood
+132,Ruth's Chris Steak House,Steakhouse
+133,Morton's The Steakhouse,Steakhouse
+134,The Capital Grille,Steakhouse
+135,Fogo de Chão,Brazilian Steakhouse
+136,Texas de Brazil,Brazilian Steakhouse
+137,Smith & Wollensky,Steakhouse
+138,Fleming's Prime Steakhouse,Steakhouse
+139,Del Frisco's,Steakhouse
+140,Lone Star Steakhouse,Steakhouse
+141,Saltgrass Steak House,Steakhouse
+142,Sizzler,Steakhouse
+143,Ponderosa Steakhouse,Steakhouse
+144,Bonanza Steakhouse,Steakhouse
+145,Western Sizzlin,Steakhouse
+146,Black Angus Steakhouse,Steakhouse
+147,Famous Dave's,BBQ
+148,Dickey's Barbecue Pit,BBQ
+149,Sonny's BBQ,BBQ
+150,Smokey Bones,BBQ
+151,Jim 'N Nick's Bar-B-Q,BBQ
+152,Fuddruckers,Burgers
+153,Johnny Rockets,Burgers
+154,Burgerfi,Burgers
+155,Blaze Pizza,Pizza
+156,MOD Pizza,Pizza
+157,Pieology,Pizza
+158,&pizza,Pizza
+159,Pizza Inn,Pizza
+160,Mazzio's,Pizza
+161,Chuck E. Cheese,Entertainment Dining
+162,Peter Piper Pizza,Pizza
+163,Mellow Mushroom,Pizza
+164,Donatos Pizza,Pizza
+165,Pizza Ranch,Pizza
+166,Giordano's,Pizza
+167,Lou Malnati's,Pizza
+168,Uno Pizzeria & Grill,Pizza
+169,Potbelly Sandwich Shop,Sandwiches
+170,Which Wich,Sandwiches
+171,Jason's Deli,Deli
+172,McAlister's Deli,Deli
+173,Schlotzsky's,Deli
+174,Penn Station East Coast Subs,Sandwiches
+175,Capriotti's Sandwich Shop,Sandwiches
+176,Quiznos,Sandwiches
+177,Blimpie,Sandwiches
+178,Charleys Philly Steaks,Sandwiches
+179,Cousins Subs,Sandwiches
+180,Togo's,Sandwiches
+181,Erbert & Gerbert's,Sandwiches
+182,Primo Hoagies,Sandwiches
+183,Which Wich Superior Sandwiches,Sandwiches
+184,Au Bon Pain,Bakery Cafe
+185,Corner Bakery Cafe,Bakery Cafe
+186,Einstein Bros. Bagels,Bagels
+187,Bruegger's Bagels,Bagels
+188,Manhattan Bagel,Bagels
+189,La Madeleine,Bakery Cafe
+190,Paris Baguette,Bakery Cafe
+191,Nothing Bundt Cakes,Bakery & Dessert
+192,Crumbl Cookies,Bakery & Dessert
+193,Insomnia Cookies,Bakery & Dessert
+194,Great American Cookies,Bakery & Dessert
+195,Mrs. Fields,Bakery & Dessert
+196,Tiff's Treats,Bakery & Dessert
+197,Cinnabon,Bakery & Dessert
+198,Auntie Anne's,Pretzels
+199,Wetzel's Pretzels,Pretzels
+200,Pretzelmaker,Pretzels
+201,Sweet Frog,Frozen Yogurt
+202,Yogurtland,Frozen Yogurt
+203,Menchie's,Frozen Yogurt
+204,Pinkberry,Frozen Yogurt
+205,TCBY,Frozen Yogurt
+206,Orange Julius,Dessert
+207,Cold Stone Creamery,Ice Cream
+208,Marble Slab Creamery,Ice Cream
+209,Rita's Italian Ice,Ice Cream
+210,Bruster's Real Ice Cream,Ice Cream
+211,Carvel,Ice Cream
+212,Friendly's,Family Dining & Ice Cream
+213,Braum's,Ice Cream & Burgers
+214,Kona Ice,Dessert
+215,Rocky Mountain Chocolate Factory,Dessert
+216,Smoothie King,Smoothies
+217,Jamba,Smoothies
+218,Clean Juice,Juice
+219,Playa Bowls,Healthy
+220,Peet's Coffee,Coffee
+221,Caribou Coffee,Coffee
+222,Scooter's Coffee,Coffee
+223,7 Brew Coffee,Coffee
+224,Biggby Coffee,Coffee
+225,Black Rifle Coffee,Coffee
+226,Coffee Bean & Tea Leaf,Coffee
+227,Shipley Do-Nuts,Donuts
+228,Winchell's Donut House,Donuts
+229,Duck Donuts,Donuts
+230,Daylight Donuts,Donuts
+231,Donut King,Donuts
+232,Voodoo Doughnut,Donuts
+233,Manchu Wok,Asian
+234,Teriyaki Madness,Asian
+235,Sarku Japan,Asian
+236,Benihana,Japanese
+237,Kona Grill,Asian
+238,Genghis Grill,Asian
+239,Flat Top Grill,Asian
+240,BD's Mongolian Grill,Asian
+241,HuHot Mongolian Grill,Asian
+242,Yoshinoya,Japanese
+243,Kura Sushi,Japanese
+244,Lazy Dog Restaurant & Bar,Casual Dining
+245,Uncle Julio's,Mexican
+246,Abuelo's Mexican Restaurant,Mexican
+247,El Torito,Mexican
+248,Chevys Fresh Mex,Mexican
+249,Cafe Rio,Mexican
+250,Costa Vida,Mexican
+251,Chronic Tacos,Mexican
+252,Wahoo's Fish Taco,Mexican
+253,Rubio's,Mexican
+254,California Tortilla,Mexican
+255,Freebirds World Burrito,Mexican
+256,Willy's Mexicana Grill,Mexican
+257,Fuzzy's Taco Shop,Mexican
+258,Velvet Taco,Mexican
+259,Taco Mac,Wings & Sports Bar
+260,La Salsa,Mexican
+261,Zoës Kitchen,Mediterranean
+262,Roti Modern Mediterranean,Mediterranean
+263,Pita Pit,Sandwiches
+264,Garbanzo Mediterranean Fresh,Mediterranean
+265,Naf Naf Grill,Mediterranean
+266,Pita Jungle,Mediterranean
+267,Taziki's Mediterranean Cafe,Mediterranean
+268,The Halal Guys,Mediterranean
+269,Cousins Maine Lobster,Seafood
+270,Chicken Salad Chick,Chicken
+271,Dave's Hot Chicken,Chicken
+272,Hattie B's,Chicken
+273,Layne's Chicken Fingers,Chicken
+274,Guthrie's Chicken,Chicken
+275,Wings Over,Wings
+276,Quaker Steak & Lube,Wings & Sports Bar
+277,Beef O'Brady's,Wings & Sports Bar
+278,Fox & Hound,Bar & Grill
+279,Miller's Ale House,Bar & Grill
+280,Walk-On's Sports Bistreaux,Bar & Grill
+281,Duffy's Sports Grill,Bar & Grill
+282,Champps,Bar & Grill
+283,Houlihan's,Casual Dining
+284,O'Charley's,Casual Dining
+285,Max & Erma's,Casual Dining
+286,Ruby's Diner,Family Dining
+287,Mel's Diner,Family Dining
+288,Huddle House,Family Dining
+289,Waffle House Restaurants,Breakfast
+290,Village Inn,Family Dining
+291,Eat'n Park,Family Dining
+292,Shoney's,Family Dining
+293,Big Boy,Family Dining
+294,Frisch's Big Boy,Family Dining
+295,Marie Callender's,Family Dining
+296,Coco's Bakery Restaurant,Family Dining
+297,Carrows,Family Dining
+298,Baker's Square,Family Dining
+299,Black Bear Diner,Family Dining
+300,Another Broken Egg Cafe,Breakfast
+301,First Watch,Breakfast
+302,Original Pancake House,Breakfast
+303,Snooze An A.M. Eatery,Breakfast
+304,Le Peep,Breakfast
+305,Egg Harbor Cafe,Breakfast
+306,Biscuit Belly,Breakfast
+307,Metro Diner,Family Dining
+308,Mimi's Cafe,Family Dining
+309,Cafe Zupas,Fast Casual
+310,Zupas,Fast Casual
+311,Souplantation,Salads
+312,Sweet Tomatoes,Salads
+313,Saladworks,Salads
+314,Salad and Go,Salads
+315,Chopt Creative Salad Co.,Salads
+316,Just Salad,Salads
+317,Freshii,Healthy
+318,Mixt Greens,Salads
+319,Veggie Grill,Healthy
+320,Modern Market,Fast Casual
+321,Mad Greens,Salads
+322,Bertucci's,Italian
+323,Romano's Macaroni Grill,Italian
+324,Johnny Carino's,Italian
+325,Brio Italian Grille,Italian
+326,Biaggi's Ristorante Italiano,Italian
+327,Piada Italian Street Food,Italian
+328,Fazoli's Italian Restaurant,Italian
+329,Villa Italian Kitchen,Italian
+330,Pasta Pomodoro,Italian
+331,Il Fornaio,Italian
+332,Spaghetti Warehouse,Italian
+333,Old Spaghetti Factory,Italian
+334,Wienerschnitzel,Hot Dogs
+335,Hot Dog on a Stick,Hot Dogs
+336,Pink's Hot Dogs,Hot Dogs
+337,Frankie's Fresh Hot Dogs,Hot Dogs
+338,Dog Haus,Hot Dogs
+339,Coney Island Hot Dogs,Hot Dogs
+340,Skyline Chili,Chili
+341,Gold Star Chili,Chili
+342,Steak Escape,Sandwiches
+343,Roy Rogers Restaurants,Burgers
+344,Biscuitville,Breakfast
+345,Zippy's,Family Dining
+346,Jollibee,Filipino
+347,Bonchon,Korean Chicken
+348,KyoChon Chicken,Korean Chicken
+349,BB.Q Chicken,Korean Chicken
+350,Chart House,Seafood
+351,Rainforest Cafe,Entertainment Dining
+352,Hard Rock Cafe,Entertainment Dining
+353,Planet Hollywood,Entertainment Dining
+354,Margaritaville,Entertainment Dining
+355,Jimmy Buffett's Margaritaville,Entertainment Dining
+356,Main Event,Entertainment Dining
+357,Topgolf,Entertainment Dining
+358,The Melting Pot,Fondue
+359,World of Beer,Bar & Grill
+360,Bruegger's Bagel Bakery,Bagels
+361,Great Harvest Bread Co.,Bakery
+362,Perkins Restaurant & Bakery,Family Dining
+363,Roadhouse Grill,Steakhouse

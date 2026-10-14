@@ -20,6 +20,10 @@ import { resolveCustomerRoute } from '../src/utils/customerRouting';
 import { minimalProfile } from '../src/utils/profileDefaults';
 import { Alert } from '../src/utils/alert';
 import { BRAND_NAME } from '../src/constants/brandTheme';
+import { hideNativePasswordReveal } from '../src/utils/hideNativePasswordReveal';
+
+// the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
+hideNativePasswordReveal();
 
 // Fully suppressed rather than just filtering specific messages — LogBox's
 // raw red error box is a developer tool (it never ships in a production

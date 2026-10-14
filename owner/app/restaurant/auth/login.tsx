@@ -10,6 +10,7 @@ import { supabase } from '../../../src/api/supabase';
 import { BrandBar } from '../../../src/components/common/BrandBar';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
+import { PasswordInput } from '../../../src/components/common/PasswordInput';
 
 export default function RestaurantLoginScreen() {
   const router = useRouter();
@@ -109,11 +110,10 @@ export default function RestaurantLoginScreen() {
           onChangeText={(t) => { setEmail(t); setError(''); }}
         />
 
-        <TextInput {...chain(1)}
+        <PasswordInput {...chain(1)}
           style={styles.input}
           placeholder="Password"
           placeholderTextColor="#999"
-          secureTextEntry
           value={password}
           onChangeText={(t) => { setPassword(t); setError(''); }}
         />
