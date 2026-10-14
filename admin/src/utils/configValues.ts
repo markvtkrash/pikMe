@@ -64,3 +64,34 @@ export function listingSwitchText(value: string | undefined): { on: boolean; sta
         message: 'Restaurants marked "not eligible" will be HIDDEN from customers: from search, Saved, menus, coupons and the AI menu guess. The apps pick the change up within a few minutes.',
       };
 }
+
+// Which Google Places API the customer restaurant search calls (migration 144): a button on the Config page, not a text box. 'new' is Places API (New);
+// anything else counts as the legacy API, which is also what the server does with a value it does not understand.
+export const PLACES_API_KEY = 'placesApiVersion';
+
+export function parsePlacesApi(value: string | null | undefined): 'new' | 'legacy' {
+  return typeof value === 'string' && value.trim().toLowerCase() === 'new' ? 'new' : 'legacy';
+}
+
+export function nextPlacesApi(value: string | null | undefined): 'new' | 'legacy' {
+  return parsePlacesApi(value) === 'new' ? 'legacy' : 'new';
+}
+
+export function placesApiText(value: string | null | undefined): { version: 'new' | 'legacy'; state: string; button: string; title: string; message: string } {
+  const version = parsePlacesApi(value);
+  return version === 'new'
+    ? {
+        version,
+        state: 'NEW: the restaurant search uses Places API (New) with only the fields the app needs. A request that fails falls back to legacy by itself.',
+        button: 'Switch back to legacy',
+        title: 'Switch back to the legacy Places API?',
+        message: 'The restaurant search goes back to the legacy Google Places API. Nothing else changes. The server picks this up within about a minute.',
+      }
+    : {
+        version,
+        state: 'LEGACY: the restaurant search uses the Places API we have always used.',
+        button: 'Use the new Places API',
+        title: 'Use the new Places API?',
+        message: 'The restaurant search will call Places API (New): nearest 20 food places, asking Google only for the fields the app uses. If it fails, that request falls back to legacy by itself. You can switch back here at any time. Make sure "Places API (New)" is enabled for your Google key. The server picks this up within about a minute.',
+      };
+}

@@ -6,7 +6,7 @@ import {
 import { useState, useEffect, useMemo } from 'react';
 import { Image } from 'expo-image';
 import { BRAND_COLORS } from '../../src/constants/brandTheme';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurantStore } from '../../src/store/restaurantStore';
 import { formatDistance } from '../../src/utils/geo';
@@ -183,6 +183,11 @@ export default function RestaurantDetailScreen() {
     }, 400);
     return () => clearInterval(interval);
   }, [isLoading]);
+
+  // Opened with no restaurant at all (no id in the address): nothing to show, so go to the app's home rather than a "not found" page.
+  if (!id || id === '[id]') {
+    return <Redirect href="/(main)/(tabs)" />;
+  }
 
   if (!restaurant) {
     return (

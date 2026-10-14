@@ -70,3 +70,27 @@ describe('listing eligibility switch', () => {
     expect(listingSwitchText(undefined).on).toBe(false);
   });
 });
+
+import { nextPlacesApi, parsePlacesApi, PLACES_API_KEY, placesApiText } from './configValues';
+
+describe('Places API switch', () => {
+  it('is the placesApiVersion key', () => {
+    expect(PLACES_API_KEY).toBe('placesApiVersion');
+  });
+  it('is legacy for anything but new', () => {
+    expect(parsePlacesApi('new')).toBe('new');
+    expect(parsePlacesApi(' New ')).toBe('new');
+    for (const v of ['legacy', '', 'neww', null, undefined]) expect(parsePlacesApi(v as any)).toBe('legacy');
+  });
+  it('the button switches to the other one', () => {
+    expect(nextPlacesApi('legacy')).toBe('new');
+    expect(nextPlacesApi('new')).toBe('legacy');
+    expect(nextPlacesApi(undefined)).toBe('new');
+  });
+  it('words each state and the button', () => {
+    expect(placesApiText('legacy')).toMatchObject({ version: 'legacy', button: 'Use the new Places API' });
+    expect(placesApiText('legacy').message).toMatch(/Places API \(New\)/);
+    expect(placesApiText('new')).toMatchObject({ version: 'new', button: 'Switch back to legacy' });
+    expect(placesApiText('new').state).toMatch(/falls back to legacy/);
+  });
+});

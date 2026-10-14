@@ -7,7 +7,8 @@ import { Alert, confirmDialog } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import {
-  isBooleanValue, nextBooleanValue, switchQuestion, QUICK_SWITCHES, quickSwitchQuestion, LISTING_SWITCH_KEY, listingSwitchText,
+  isBooleanValue, switchQuestion, QUICK_SWITCHES, quickSwitchQuestion, LISTING_SWITCH_KEY, listingSwitchText, nextBooleanValue,
+  PLACES_API_KEY, placesApiText, nextPlacesApi,
 } from '../../src/utils/configValues';
 import { TypeToConfirmModal } from '../../src/components/common/TypeToConfirmModal';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
@@ -137,6 +138,30 @@ export default function AdminConfigScreen() {
     }
   }
 
+  // The Google Places API switch: one button, after a short question. Saved at once; the server reads it again within a minute.
+  async function handlePlacesApiSwitch() {
+    const row = rows.find((x) => x.key === PLACES_API_KEY);
+    if (!row || savingKey) return;
+    const text = placesApiText(row.value);
+    if (!(await confirmDialog(text.title, text.message, { confirmText: text.button }))) return;
+    const nextValue = nextPlacesApi(row.value);
+    setSavingKey(PLACES_API_KEY);
+    try {
+      const { error } = await supabase
+        .from('app_config')
+        .update({ value: nextValue, updated_at: new Date().toISOString() })
+        .eq('key', PLACES_API_KEY);
+      if (error) throw error;
+      setRows((prev) => prev.map((x) => (x.key === PLACES_API_KEY ? { ...x, value: nextValue } : x)));
+      setDrafts((prev) => ({ ...prev, [PLACES_API_KEY]: nextValue }));
+    } catch (error: any) {
+      console.error('[admin-config] Places API switch error:', error);
+      Alert.alert('Error', error.message || 'Failed to change the Places API');
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   async function handleAdd() {
     const key = addingKey.trim();
     const value = addingValue.trim();
@@ -212,7 +237,7 @@ export default function AdminConfigScreen() {
         </Text>
 
         <FlatList
-          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key) && r.key !== LISTING_SWITCH_KEY && r.key !== 'enforceRegionGating')}
+          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key) && r.key !== LISTING_SWITCH_KEY && r.key !== 'enforceRegionGating' && r.key !== PLACES_API_KEY)}
           keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
@@ -271,6 +296,30 @@ export default function AdminConfigScreen() {
                       style={[styles.listingBtn, text.on ? styles.listingBtnOff : styles.listingBtnOn, (!row || busy) && styles.btnDisabled]}
                       disabled={!row || busy}
                       onPress={() => setListingConfirmOpen(true)}
+                      accessibilityRole="button"
+                    >
+                      {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.listingBtnText}>{text.button}</Text>}
+                    </TouchableOpacity>
+                  </>
+                );
+              })()}
+            </View>
+            <View style={styles.switchCard}>
+              <Text style={styles.addTitle}>Google Places API</Text>
+              {(() => {
+                const row = rows.find((x) => x.key === PLACES_API_KEY);
+                const text = placesApiText(row?.value);
+                const busy = savingKey === PLACES_API_KEY;
+                return (
+                  <>
+                    <Text style={styles.listingState}>{row ? text.state : 'Not set up yet (run migration 144).'}</Text>
+                    <Text style={styles.rowDescription}>
+                      Which Google Places API finds the restaurants near a customer. The new one is cheaper per call and asks for only what the app uses. Legacy is the fallback.
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.listingBtn, text.version === 'new' ? styles.listingBtnOff : styles.switchOn, (!row || busy) && styles.btnDisabled]}
+                      disabled={!row || busy}
+                      onPress={handlePlacesApiSwitch}
                       accessibilityRole="button"
                     >
                       {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.listingBtnText}>{text.button}</Text>}

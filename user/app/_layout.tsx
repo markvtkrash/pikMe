@@ -298,6 +298,11 @@ export default function RootLayout() {
                 transparent modal over the screen that opened it, keeping
                 Explore/Saved mounted underneath instead of replacing them. */}
             <Stack screenOptions={{ headerShown: false }}>
+              {/* The FIRST screen listed is the one the navigator starts on, and it sits under whatever is opened next. It used to be the restaurant
+                  detail, so on a phone the app opened on an empty "Restaurant not found" page right after signing in. The main app goes first. */}
+              <Stack.Screen name="(main)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(onboarding)" />
               <Stack.Screen
                 name="restaurant/[id]"
                 options={{ presentation: 'transparentModal', animation: 'fade' }}

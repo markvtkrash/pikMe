@@ -347,7 +347,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
                 <Text key={i.icon} style={styles.tileIcon} accessibilityLabel={i.label}>{i.icon}</Text>
               ))}
             </View>
-            <Text style={[styles.tileHint, { color: CARD_ACCENT }]}>Tap for details ▾</Text>
+            <Text style={styles.tileHint}>Tap for details ▾</Text>
           </View>
         </>
       ) : (
@@ -450,7 +450,8 @@ const styles = StyleSheet.create({
   tileFooter: { marginTop: 'auto', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6 },
   tileIcons: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, flexShrink: 1 },
   tileIcon: { fontSize: 14 },
-  tileHint: { fontSize: 11.5, fontWeight: '800' },
+  // a solid green pill, so it reads as the thing to tap
+  tileHint: { fontSize: 11.5, fontWeight: '800', color: '#fff', backgroundColor: '#2E7D32', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, overflow: 'hidden' },
   tileDetails: { marginTop: 10 },
   actionRowStacked: { flexDirection: 'column', alignItems: 'stretch', gap: 6 },
   tileBtn: { flex: 0, alignSelf: 'stretch' },

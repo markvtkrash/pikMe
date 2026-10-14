@@ -1,6 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { anyKindHidden, filterByKind, parseKindFlags, SHOW_ALL, type KindFlags } from './kindFilter.ts';
 import { checkRegion } from './regionGate.ts';
+import {
+  buildDetailsRequest, buildNearbyRequest, describeGoogleError, parseNearbyResponse, parsePlacesApiVersion, toLegacyPlace,
+  type PlacesApiVersion,
+} from './placesNew.ts';
 import { DEFAULT_CATALOG, resolveCategories, type Catalog, type CategoryDef, type OwnerCategories } from './categories.ts';
 
 const CORS = {
@@ -138,6 +142,26 @@ async function isStaffCaller(supabase: any, userId: string): Promise<boolean> {
   if (admin && admin.length > 0) return true;
   const { data: owner } = await supabase.from('restaurant_owners').select('id').eq('id', userId).limit(1);
   return !!(owner && owner.length > 0);
+}
+
+// ── Which Google Places API to call (migration 144) ────────────────────────
+// The admin's switch on the Config page (app_config placesApiVersion): 'new' = Places API (New), anything else = the legacy API. Kept for a minute, so
+// a switch takes effect quickly. Any problem reading it means the legacy API, the behaviour we had before.
+let placesApiCache: { version: PlacesApiVersion; at: number } | null = null;
+const PLACES_API_TTL_MS = 60 * 1000;
+
+// deno-lint-ignore no-explicit-any
+async function loadPlacesApiVersion(supabase: any): Promise<PlacesApiVersion> {
+  if (placesApiCache && Date.now() - placesApiCache.at < PLACES_API_TTL_MS) return placesApiCache.version;
+  try {
+    const { data, error } = await supabase.from('app_config').select('value').eq('key', 'placesApiVersion').maybeSingle();
+    if (error) throw error;
+    placesApiCache = { version: parsePlacesApiVersion(data?.value), at: Date.now() };
+    return placesApiCache.version;
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not read the Places API switch, using the legacy API:', e instanceof Error ? e.message : e);
+    return 'legacy';
+  }
 }
 
 // ── Listing eligibility (migration 139) ───────────────────────────────────
@@ -374,7 +398,25 @@ Deno.serve(async (req) => {
       let places: any[] = [];
       let pageToken: string | undefined;
 
-      for (let page = 0; page < MAX_RESULT_PAGES; page++) {
+      // The admin's switch (Config: placesApiVersion). The new API answers with at most 20 nearest places and has no "next page", so
+      // MAX_RESULT_PAGES applies to the legacy API only. If the new API fails, THIS request is answered by the legacy API instead.
+      let usedNewApi = false;
+      if ((await loadPlacesApiVersion(supabase)) === 'new') {
+        try {
+          const req = buildNearbyRequest(Number(latitude), Number(longitude), radiusMeters, GOOGLE_KEY);
+          const res = await fetch(req.url, req.init);
+          const json = await res.json().catch(() => null);
+          if (!res.ok) throw new Error(describeGoogleError(json, res.status));
+          places = parseNearbyResponse(json);
+          usedNewApi = true;
+          console.log('[fetch-nearby-restaurants] Places API (New): got', places.length, 'places');
+        } catch (e) {
+          console.warn('[fetch-nearby-restaurants] Places API (New) failed, using the legacy API for this request:', e instanceof Error ? e.message : e);
+          places = [];
+        }
+      }
+
+      for (let page = 0; !usedNewApi && page < MAX_RESULT_PAGES; page++) {
         if (page > 0) {
           if (!pageToken) break;
           // next_page_token isn't valid immediately after it's issued.
@@ -414,7 +456,7 @@ Deno.serve(async (req) => {
             latitude: place.geometry.location.lat,
             longitude: place.geometry.location.lng,
             address: place.vicinity ?? '',
-            city: '',
+            city: place.city ?? '',
           },
           distanceMeters: Math.round(
             haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
@@ -555,29 +597,47 @@ Deno.serve(async (req) => {
           }
         }
 
+        const backfillWithNewApi = missingClaimed.length > 0 && (await loadPlacesApiVersion(supabase)) === 'new';
         for (const claimed of missingClaimed) {
           if (alreadyCachedIds.has(claimed.google_place_id)) continue;
           try {
-            const detailsUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
-            detailsUrl.searchParams.set('place_id', claimed.google_place_id);
-            detailsUrl.searchParams.set(
-              'fields',
-              'place_id,name,geometry,rating,types,vicinity,photos,opening_hours'
-            );
-            detailsUrl.searchParams.set('key', GOOGLE_KEY);
+            // Place Details in whichever API the admin's switch selects (one place, the same few fields as the search)
+            // deno-lint-ignore no-explicit-any
+            let place: any;
+            if (backfillWithNewApi) {
+              const req = buildDetailsRequest(claimed.google_place_id, GOOGLE_KEY);
+              const detailsRes = await fetch(req.url, req.init);
+              if (!detailsRes.ok) {
+                console.warn('[fetch-nearby-restaurants] Place Details (New) HTTP', detailsRes.status, 'for claimed restaurant', claimed.name);
+                continue;
+              }
+              place = toLegacyPlace(await detailsRes.json().catch(() => null));
+              if (!place) {
+                console.warn('[fetch-nearby-restaurants] Place Details (New) had no usable place for claimed restaurant', claimed.name);
+                continue;
+              }
+            } else {
+              const detailsUrl = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+              detailsUrl.searchParams.set('place_id', claimed.google_place_id);
+              detailsUrl.searchParams.set(
+                'fields',
+                'place_id,name,geometry,rating,types,vicinity,photos,opening_hours'
+              );
+              detailsUrl.searchParams.set('key', GOOGLE_KEY);
 
-            const detailsRes = await fetch(detailsUrl.toString());
-            if (!detailsRes.ok) {
-              console.warn('[fetch-nearby-restaurants] Place Details HTTP', detailsRes.status, 'for claimed restaurant', claimed.name);
-              continue;
-            }
-            const detailsData = await detailsRes.json();
-            if (detailsData.status !== 'OK' || !detailsData.result?.geometry?.location) {
-              console.warn('[fetch-nearby-restaurants] Place Details returned', detailsData.status, 'for claimed restaurant', claimed.name);
-              continue;
-            }
+              const detailsRes = await fetch(detailsUrl.toString());
+              if (!detailsRes.ok) {
+                console.warn('[fetch-nearby-restaurants] Place Details HTTP', detailsRes.status, 'for claimed restaurant', claimed.name);
+                continue;
+              }
+              const detailsData = await detailsRes.json();
+              if (detailsData.status !== 'OK' || !detailsData.result?.geometry?.location) {
+                console.warn('[fetch-nearby-restaurants] Place Details returned', detailsData.status, 'for claimed restaurant', claimed.name);
+                continue;
+              }
 
-            const place = detailsData.result;
+              place = detailsData.result;
+            }
             const distance = Math.round(
               haversine(latitude, longitude, place.geometry.location.lat, place.geometry.location.lng)
             );
@@ -591,7 +651,7 @@ Deno.serve(async (req) => {
                 latitude: place.geometry.location.lat,
                 longitude: place.geometry.location.lng,
                 address: place.vicinity ?? '',
-                city: '',
+                city: place.city ?? '',
               },
               distanceMeters: distance,
               rating: place.rating ?? 0,
