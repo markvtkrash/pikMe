@@ -11,6 +11,15 @@ export interface AdminTool {
 
 export const ADMIN_TOOLS: AdminTool[] = [
   {
+    key: 'regions',
+    icon: '🗺️',
+    title: 'Region Management',
+    subtitle: 'Open the app to customers state by state: go live now or on a date, turn a state off, and see who is waiting',
+    color: '#00695C',
+    bg: '#E0F2F1',
+    href: '/admin/regions',
+  },
+  {
     key: 'scheduled-builds',
     icon: '⏱️',
     title: 'Scheduled Builds',

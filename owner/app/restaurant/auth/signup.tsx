@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { BrandBar } from '../../../src/components/common/BrandBar';
 import { signUpRestaurantOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { DataSourcesNotice } from '../../../src/components/common/DataSourcesNotice';
@@ -57,7 +58,7 @@ export default function RestaurantSignupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topLeftBar}>
-        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+        <BrandBar />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <IconText style={styles.title} emoji="🍽️">Restaurant Owner</IconText>

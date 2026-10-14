@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
-  ActivityIndicator, Image, Modal, ScrollView, } from 'react-native';
+  ActivityIndicator, Modal, ScrollView, } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -12,6 +12,7 @@ import { supabase } from '../../src/api/supabase';
 import { formatDistance } from '../../src/utils/geo';
 import { normalizeForSearch } from '../../src/utils/textMatch';
 import { getOwnerSearchRadiusMeters } from '../../src/constants/searchRadius';
+import { BrandBar } from '../../src/components/common/BrandBar';
 import type { Restaurant } from '../../src/types';
 import { DataSourcesNotice } from '../../src/components/common/DataSourcesNotice';
 import { CategoryPicker } from '../../src/components/common/CategoryPicker';
@@ -238,7 +239,7 @@ export default function ClaimRestaurantScreen() {
     <View style={styles.container}>
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
-        <Image source={require('../../assets/logo.png')} style={styles.headerLogo} />
+        <BrandBar style={{ marginBottom: 8 }} />
         <Text style={styles.title}>Claim Your Restaurant</Text>
         <Text style={styles.subtitle}>Use your current location or enter a zip code to find it nearby</Text>
       </View>

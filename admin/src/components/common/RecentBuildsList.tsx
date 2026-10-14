@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getChainBuildLog } from '../../api/chainMenus';
+import { usePaging } from '../../hooks/usePaging';
+import { PagerBar } from './PagerBar';
 import {
   BUILD_LOG_HOURS, ChainBuildLogRow, canManageFromBuild, describeBuildOutcome, formatLastRun, manageChainParams,
   summarizeBuildLog,
@@ -19,7 +21,10 @@ const hoursLabel = (h: number) => (h < 24 ? `${h} h` : `${h / 24} d`);
 // "Recent builds" inside the Scheduled builds panel (migration 097): the chains the hourly job, or
 // "Run a batch now", started in the last N hours, with each chain's outcome. Loads when shown.
 // Shows nothing but a short note if the list cannot be read (for example migration 097 is not applied yet).
-export default function RecentBuildsList() {
+// kind: show only franchise builds ('chain') or only independent-restaurant builds ('place'); leave out to show both. Paged, 20 to a page.
+const BUILDS_PAGE_SIZE = 20;
+
+export default function RecentBuildsList({ kind }: { kind?: 'chain' | 'place' }) {
   const router = useRouter();
   const [hours, setHours] = useState(24);
   const [rows, setRows] = useState<ChainBuildLogRow[] | null>(null);
@@ -44,12 +49,15 @@ export default function RecentBuildsList() {
     load(hours);
   }, [load, hours]);
 
-  const summary = rows ? summarizeBuildLog(rows) : null;
+  // a build log from before migration 105 has no kind: those are franchise builds
+  const shown = rows ? rows.filter((r) => !kind || (r.kind ?? 'chain') === kind) : null;
+  const summary = shown ? summarizeBuildLog(shown) : null;
+  const paging = usePaging(shown ?? [], `${hours}|${kind ?? 'all'}`, undefined, BUILDS_PAGE_SIZE);
 
   return (
     <View style={styles.wrap}>
       <View style={styles.headRow}>
-        <Text style={styles.title}>Recent builds</Text>
+        <Text style={styles.title}>{kind === 'place' ? 'Recent restaurant builds' : kind === 'chain' ? 'Recent franchise builds' : 'Recent builds'}</Text>
         <TouchableOpacity onPress={() => load(hours)} disabled={loading} accessibilityRole="button">
           <Text style={[styles.refresh, loading && styles.disabled]}>↻ Refresh</Text>
         </TouchableOpacity>
@@ -79,7 +87,7 @@ export default function RecentBuildsList() {
         </Text>
       )}
 
-      {rows?.map((r) => {
+      {(shown ? paging.pageItems : []).map((r) => {
         const outcome = describeBuildOutcome(r.outcome);
         const tone = TONES[outcome.tone];
         return (
@@ -109,6 +117,8 @@ export default function RecentBuildsList() {
           </View>
         );
       })}
+
+      <PagerBar page={paging.page} pageCount={paging.pageCount} from={paging.from} to={paging.to} total={paging.total} onPage={paging.goTo} />
     </View>
   );
 }

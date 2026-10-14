@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Image, } from 'react-native';
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, } from 'react-native';
+import { BrandBar } from '../../../src/components/common/BrandBar';
 import { Alert } from '../../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/api/supabase';
@@ -99,7 +100,7 @@ export default function RestaurantChangePasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topLeftBar}>
-        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+        <BrandBar />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
         <IconText style={styles.title} emoji="🔐">Set a New Password</IconText>

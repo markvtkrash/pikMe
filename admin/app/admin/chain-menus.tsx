@@ -18,6 +18,8 @@ import {
 } from '../../src/utils/chainMenuSources';
 import { IconText } from '../../src/components/common/AppIcon';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
+import { PagerBar } from '../../src/components/common/PagerBar';
+import { usePaging } from '../../src/hooks/usePaging';
 
 // Colour for the "last looked up" text in a row: orange when marked for a fresh lookup, blue when never
 // looked up, the normal grey otherwise.
@@ -115,6 +117,10 @@ export default function AdminChainMenusScreen() {
   const summary = useMemo(() => summarizeSources(rows), [rows]);
   const filtered = useMemo(() => filterSources(rows, filter, search), [rows, filter, search]);
 
+  // 50 rows to a page; back to page 1 on a new search or filter; the list scrolls to the top when the page changes
+  const listRef = useRef<FlatList<any>>(null);
+  const paging = usePaging(filtered, `${filter}|${search}`, () => listRef.current?.scrollToOffset({ offset: 0, animated: false }));
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -137,7 +143,8 @@ export default function AdminChainMenusScreen() {
     <View style={styles.container}>
       <View style={styles.pageWrapper}>
         <FlatList
-          data={filtered}
+          ref={listRef}
+          data={paging.pageItems}
           keyExtractor={(item) => item.chain_id}
           contentContainerStyle={styles.list}
           initialNumToRender={20}
@@ -219,6 +226,7 @@ export default function AdminChainMenusScreen() {
               </TouchableOpacity>
             );
           }}
+          ListFooterComponent={<PagerBar page={paging.page} pageCount={paging.pageCount} from={paging.from} to={paging.to} total={paging.total} onPage={paging.goTo} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>{search || filter !== 'all' ? 'No matches' : 'No chains yet'}</Text>

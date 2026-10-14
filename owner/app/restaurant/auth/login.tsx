@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { loginRestaurantOwner, getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
 import { supabase } from '../../../src/api/supabase';
-import { BRAND_NAME } from '../../../src/constants/brand';
+import { BrandBar } from '../../../src/components/common/BrandBar';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
@@ -93,12 +93,11 @@ export default function RestaurantLoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.topLeftBar}>
-        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+        <BrandBar />
       </View>
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.brand}>{BRAND_NAME}</Text>
-        <IconText style={styles.title} emoji="🍽️">Restaurant Owner</IconText>
-        <Text style={styles.subtitle}>Sign in to your account</Text>
+        <IconText style={styles.title} emoji="🍽️">Manage Your Restaurant</IconText>
+        <Text style={styles.subtitle}>Sign in to update your menu and coupons</Text>
 
         <TextInput {...chain(0)}
           style={styles.input}

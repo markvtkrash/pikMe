@@ -8,6 +8,7 @@ import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { getSessionTimeoutMinutes } from '../src/constants/sessionTimeout';
 import { loadAppConfig, isAppConfigLoaded } from '../src/constants/appConfig';
 import { AlertModalHost } from '../src/components/common/AlertModalHost';
+import { canShowAdminPage, resolveAdminRoute } from '../src/utils/adminRouting';
 
 const IDLE_ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
 
@@ -35,7 +36,10 @@ const queryClient = new QueryClient({
 function AuthGate({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [roleCheckComplete, setRoleCheckComplete] = useState(false);
+  // the user id the admin check has finished for; the check counts as finished only for the session in hand, so a new sign-in is never
+  // mistaken for an already-checked one
+  const [checkedFor, setCheckedFor] = useState<string | null>(null);
+  const roleCheckComplete = !session || checkedFor === session.user.id;
   const [configLoaded, setConfigLoaded] = useState(isAppConfigLoaded());
   const router = useRouter();
   const segments = useSegments();
@@ -97,11 +101,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!session) {
       setIsAdmin(false);
-      setRoleCheckComplete(true);
+      setCheckedFor(null);
       return;
     }
 
-    setRoleCheckComplete(false);
+    let cancelled = false;
+    setCheckedFor(null);
+    setIsAdmin(false);
 
     (async () => {
       try {
@@ -110,6 +116,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           .select('role')
           .eq('user_id', session.user.id)
           .eq('role', 'admin');
+        if (cancelled) return;
         if (error) {
           console.error('[AuthGate] Admin check error:', error);
           setIsAdmin(false);
@@ -117,55 +124,29 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           setIsAdmin(!!data && data.length > 0);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('[AuthGate] Role check catch:', err);
         setIsAdmin(false);
       } finally {
-        setRoleCheckComplete(true);
+        if (!cancelled) setCheckedFor(session.user.id);
       }
     })();
+
+    return () => { cancelled = true; };
   }, [session]);
 
-  // Routing guard — runs whenever session or role state or segment changes
+  // Routing guard — runs whenever session or role state or segment changes. Every admin page except the login page needs a signed-in admin
+  // (the rules are in adminRouting.ts).
   useEffect(() => {
     if (session === undefined) return;
-
-    // Allow the bare root route to handle its own redirect
-    if (segments[0] === undefined) {
-      console.log('[AuthGate] On entry point page, skipping guards');
-      return;
-    }
-
-    console.log('[AuthGate] segments:', segments, 'session:', !!session, 'isAdmin:', isAdmin);
-
-    const isAdminPage = segments[0] === 'admin';
-
-    if (!session && !isAdminPage) {
-      console.log('[AuthGate] No session and not on an auth page, redirecting to admin login');
-      router.replace('/admin/login');
-      return;
-    }
-
-    // Role check is still in flight — wait rather than guessing.
-    if (!roleCheckComplete) {
-      console.log('[AuthGate] Role check still in flight, waiting...');
-      return;
-    }
-
-    if (isAdmin) {
-      if (!isAdminPage) {
-        console.log('[AuthGate] Admin not on an admin page, redirecting to /admin/claims');
-        router.replace('/admin/claims');
-      }
-      return;
-    }
-
-    // Signed in, but not an admin — this account has no business being in
-    // this app (e.g. an owner/customer credential used by mistake).
-    if (!isAdminPage) {
-      console.log('[AuthGate] Session has no admin role, redirecting to admin login');
-      router.replace('/admin/login');
+    const target = resolveAdminRoute({ hasSession: !!session, roleCheckComplete, isAdmin, segments: segments as string[] });
+    if (target) {
+      console.log('[AuthGate] redirecting to', target, '- segments:', segments, 'session:', !!session, 'isAdmin:', isAdmin);
+      router.replace(target as any);
     }
   }, [session, isAdmin, roleCheckComplete, segments]);
+
+  const allowed = canShowAdminPage({ hasSession: !!session, roleCheckComplete, isAdmin, segments: segments as string[] });
 
   if (!configLoaded || session === undefined) {
     return (
@@ -175,7 +156,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return <>{children}</>;
+  // The page stays mounted (the router needs it to be able to redirect) but is covered by a spinner until the visitor is allowed to see it:
+  // a signed-out visitor, or someone whose admin check is still running, sees nothing of the page.
+  return (
+    <>
+      {children}
+      {!allowed && (
+        <View
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}
+          accessibilityLabel="Checking your sign-in"
+        >
+          <ActivityIndicator size="large" color="#1565C0" />
+        </View>
+      )}
+    </>
+  );
 }
 
 export default function RootLayout() {

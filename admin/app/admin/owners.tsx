@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList,
   ActivityIndicator, Modal, ScrollView,
@@ -16,6 +16,8 @@ import { IconText } from '../../src/components/common/AppIcon';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
 import { getFranchiseNameSet } from '../../src/api/franchiseKinds';
 import { OWNER_KINDS, OwnerKind, countByKind, matchesOwnerKind } from '../../src/utils/ownerKinds';
+import { PagerBar } from '../../src/components/common/PagerBar';
+import { usePaging } from '../../src/hooks/usePaging';
 
 function generatePassword(): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -275,6 +277,10 @@ export default function AdminOwnersScreen() {
     );
   });
 
+  // 50 rows to a page; back to page 1 on a new search or filter; the list scrolls to the top when the page changes
+  const listRef = useRef<FlatList<any>>(null);
+  const paging = usePaging(filtered, `${filter}|${kind}`, () => listRef.current?.scrollToOffset({ offset: 0, animated: false }));
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -316,7 +322,8 @@ export default function AdminOwnersScreen() {
         </View>
 
         <FlatList
-          data={filtered}
+          ref={listRef}
+          data={paging.pageItems}
           keyExtractor={(item) => item.owner_id}
           renderItem={({ item }) => {
             const isBusy = busyId === item.owner_id;
@@ -415,6 +422,7 @@ export default function AdminOwnersScreen() {
             );
           }}
           contentContainerStyle={styles.list}
+          ListFooterComponent={<PagerBar page={paging.page} pageCount={paging.pageCount} from={paging.from} to={paging.to} total={paging.total} onPage={paging.goTo} />}
           ListEmptyComponent={<Text style={styles.emptyText}>No owners found</Text>}
         />
       </View>

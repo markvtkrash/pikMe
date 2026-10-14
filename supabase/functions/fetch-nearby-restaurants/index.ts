@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { anyKindHidden, filterByKind, parseKindFlags, SHOW_ALL, type KindFlags } from './kindFilter.ts';
+import { checkRegion } from './regionGate.ts';
 import { DEFAULT_CATALOG, resolveCategories, type Catalog, type CategoryDef, type OwnerCategories } from './categories.ts';
 
 const CORS = {
@@ -263,6 +264,18 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    // ── Region launch control (migration 142) ───────────────────────────────────────────
+    // A customer standing in a state that is not open yet gets an empty list, and no Google call is made for them. Done here as well as in the
+    // app (region-access) so an old or altered app cannot skip it. Staff are never blocked; any error lets the customer in. While the master
+    // switch (enforceRegionGating) is off, checkRegion returns at once without looking anything up.
+    const region = await checkRegion(supabase, GOOGLE_KEY, Number(latitude), Number(longitude));
+    if (region.enforced && !region.allowed && !(await isStaffCaller(supabase, userData.user.id))) {
+      console.log('[fetch-nearby-restaurants] Region not open:', region.status, region.stateCode);
+      return new Response(JSON.stringify([]), {
+        headers: { ...CORS, 'Content-Type': 'application/json', 'X-Region-Blocked': 'true' },
+      });
+    }
 
     // Whether this area is safe to serve from cache is answered by
     // is_area_covered (migration 023) — "has a real Google search already

@@ -212,7 +212,7 @@ export default function AdminConfigScreen() {
         </Text>
 
         <FlatList
-          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key) && r.key !== LISTING_SWITCH_KEY)}
+          data={rows.filter((r) => !QUICK_SWITCHES.some((q) => q.key === r.key) && r.key !== LISTING_SWITCH_KEY && r.key !== 'enforceRegionGating')}
           keyExtractor={(item) => item.key}
           contentContainerStyle={styles.list}
           ListHeaderComponent={

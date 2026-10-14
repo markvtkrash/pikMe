@@ -46,6 +46,7 @@ export default function AdminLayout() {
       <Stack.Screen name="chain-menus" options={{ title: '🔗 Franchise Menu Management' }} />
       <Stack.Screen name="restaurant-menu-issues" options={{ title: '🍽️ Restaurant Menu Issues' }} />
       <Stack.Screen name="tools" options={{ title: '🧰 Tools' }} />
+      <Stack.Screen name="regions" options={{ title: '🗺️ Region Management' }} />
       <Stack.Screen name="scheduled-builds" options={{ title: '⏱️ Scheduled Builds' }} />
       <Stack.Screen name="config" options={{ title: '⚙️ App Config' }} />
       <Stack.Screen name="tickets" options={{ title: '🎫 Support Tickets' }} />

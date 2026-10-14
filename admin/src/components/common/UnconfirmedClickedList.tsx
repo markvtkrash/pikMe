@@ -5,22 +5,26 @@ import { getUnconfirmedClickedRestaurants } from '../../api/unconfirmedClicks';
 import {
   describeClickCount, describeCrawlState, describeTotal, formatClickDate, UNCONFIRMED_PAGE_SIZE, UnconfirmedClickedRestaurant,
 } from '../../utils/unconfirmedClicks';
+import { pageCountFor, pageRange } from '../../utils/paging';
+import { PagerBar } from './PagerBar';
 
 // Independent restaurants a customer opened that have no confirmed menu item: nobody has looked after their menu, so
 // the admin can upload one (Manage). A restaurant leaves the list as soon as it has one verified item.
+// Paged by the server (Prev / Next): only one page is fetched at a time.
 export default function UnconfirmedClickedList() {
   const router = useRouter();
+  const [page, setPage] = useState(0);
   const [rows, setRows] = useState<UnconfirmedClickedRestaurant[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  const load = useCallback(async (offset: number) => {
+  const load = useCallback(async (pageIndex: number) => {
     setLoading(true);
     try {
-      const page = await getUnconfirmedClickedRestaurants(UNCONFIRMED_PAGE_SIZE, offset);
-      setTotal(page.total);
-      setRows((prev) => (offset === 0 ? page.rows : [...prev, ...page.rows]));
+      const result = await getUnconfirmedClickedRestaurants(UNCONFIRMED_PAGE_SIZE, pageIndex * UNCONFIRMED_PAGE_SIZE);
+      setTotal(result.total);
+      setRows(result.rows);
       setFailed(false);
     } catch (error: any) {
       console.warn('[admin-scheduled-builds] Unconfirmed restaurants unavailable:', error?.message);
@@ -31,8 +35,11 @@ export default function UnconfirmedClickedList() {
   }, []);
 
   useEffect(() => {
-    load(0);
-  }, [load]);
+    load(page);
+  }, [load, page]);
+
+  const pageCount = pageCountFor(total, UNCONFIRMED_PAGE_SIZE);
+  const range = pageRange(page, total, UNCONFIRMED_PAGE_SIZE);
 
   return (
     <View>
@@ -68,11 +75,7 @@ export default function UnconfirmedClickedList() {
       })}
 
       {loading && rows.length > 0 && <ActivityIndicator size="small" style={styles.spinner} />}
-      {!loading && rows.length < total && (
-        <TouchableOpacity onPress={() => load(rows.length)} accessibilityRole="button">
-          <Text style={styles.more}>Show more ({total - rows.length} left)</Text>
-        </TouchableOpacity>
-      )}
+      <PagerBar page={page} pageCount={pageCount} from={range.from} to={range.to} total={total} onPage={(p) => !loading && setPage(p)} />
     </View>
   );
 }
@@ -89,5 +92,4 @@ const styles = StyleSheet.create({
   manageBtn: { backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
   manageText: { fontSize: 12, fontWeight: '800', color: '#fff' },
   spinner: { marginVertical: 8 },
-  more: { fontSize: 12, fontWeight: '700', color: '#1565C0', marginTop: 8 },
 });

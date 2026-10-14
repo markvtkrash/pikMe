@@ -47,6 +47,8 @@ function Choices({
 // Management page itself is never affected.
 // standalone: shown on its own page (Tools -> Scheduled Builds), so it is always open and the header does not fold.
 export default function ScheduledBuildsPanel({ standalone = false }: { standalone?: boolean }) {
+  // on its own page the franchises and the independent restaurants are separate tabs; embedded, both show together as before
+  const [tab, setTab] = useState<'franchise' | 'independent'>('franchise');
   const router = useRouter();
   const [status, setStatus] = useState<ChainBuildStatus | null>(null);
   const [open, setOpen] = useState(standalone);
@@ -139,7 +141,19 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
             </Text>
           )}
 
+          {standalone && (
+            <View style={styles.tabs}>
+              <TouchableOpacity style={[styles.tab, tab === 'franchise' && styles.tabFranchiseOn]} onPress={() => setTab('franchise')} accessibilityRole="tab" accessibilityState={{ selected: tab === 'franchise' }}>
+                <IconText style={[styles.tabText, tab === 'franchise' && styles.tabTextOn]} emoji="🍔">Franchises ({status.queued_count} waiting)</IconText>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.tab, tab === 'independent' && styles.tabRestaurantOn]} onPress={() => setTab('independent')} accessibilityRole="tab" accessibilityState={{ selected: tab === 'independent' }}>
+                <IconText style={[styles.tabText, tab === 'independent' && styles.tabTextOn]} emoji="🍽️">Independent restaurants ({status.places_waiting ?? 0} waiting)</IconText>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Franchises */}
+          {(!standalone || tab === 'franchise') && (
           <View style={[styles.section, styles.sectionFranchise]}>
             <View style={[styles.band, styles.bandFranchise]}>
               <IconText style={styles.bandTitle} emoji="🍔">Franchises</IconText>
@@ -164,9 +178,12 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
             <TouchableOpacity style={[styles.runBtn, busy && styles.disabled]} disabled={busy} onPress={runFranchises} accessibilityRole="button">
               {busy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.runBtnText}>▶ Run Menu Build Now</Text>}
             </TouchableOpacity>
+            {standalone && <RecentBuildsList key={`f-${logKey}`} kind="chain" />}
           </View>
+          )}
 
           {/* Independent restaurants */}
+          {(!standalone || tab === 'independent') && (
           <View style={[styles.section, styles.sectionRestaurant]}>
             <View style={[styles.band, styles.bandRestaurant]}>
               <IconText style={styles.bandTitle} emoji="🍽️">Independent restaurants</IconText>
@@ -174,10 +191,19 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
             <Text style={styles.sectionHint}>
               Restaurants customers opened that have no confirmed menu item. Use Manage to upload a menu.
             </Text>
+            {standalone && (
+              <Text style={styles.line}>
+                In the build queue: {status.places_waiting ?? 0} waiting · {status.places_attention ?? 0} need attention
+                {status.place_per_run != null ? ` · ${status.place_per_run} per run` : ''}
+                {status.place_per_day != null ? ` · up to ${status.place_per_day} a day` : ''}
+              </Text>
+            )}
             <UnconfirmedClickedList />
+            {standalone && <RecentBuildsList key={`p-${logKey}`} kind="place" />}
           </View>
+          )}
 
-          <RecentBuildsList key={logKey} />
+          {!standalone && <RecentBuildsList key={logKey} />}
         </View>
       )}
     </View>
@@ -213,4 +239,10 @@ const styles = StyleSheet.create({
   queueBtn: { marginTop: 10, alignSelf: 'flex-start', backgroundColor: '#2E7D32', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 9, elevation: 2 },
   queueBtnText: { fontSize: 12, fontWeight: '800', color: '#fff' },
   disabled: { opacity: 0.5 },
+  tabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  tab: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#CFD8DC' },
+  tabFranchiseOn: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
+  tabRestaurantOn: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
+  tabText: { fontSize: 13, fontWeight: '800', color: '#546E7A' },
+  tabTextOn: { color: '#fff' },
 });

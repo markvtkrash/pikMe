@@ -131,6 +131,13 @@ serve(async (req) => {
       }
     }
 
+    // A place in a state that is not open yet (Region Management) gets no menu guess or build: that is where the cost is. No place, a switch that
+    // is off, or any problem asking means carry on.
+    if (typeof placeId === 'string' && placeId.length > 0) {
+      const { data: regionOk, error: regionError } = await supabase.rpc('place_region_allowed', { p_place_id: placeId });
+      if (!regionError && regionOk === false) return ok([]);
+    }
+
     // A restaurant that is not listed (not eligible, closed, paused) gets no menu guess. Any problem asking means "carry on".
     if (typeof placeId === 'string' && placeId.length > 0) {
       const { data: listed, error: listedError } = await supabase.rpc('restaurant_is_listed', { p_place_id: placeId });

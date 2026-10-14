@@ -8,6 +8,9 @@ import { useLocation } from '../../../src/hooks/useLocation';
 import { useNearbyRestaurants } from '../../../src/hooks/useNearbyRestaurants';
 import { useCouponPlaceIds } from '../../../src/hooks/useCouponPlaceIds';
 import { useCustomerConfig } from '../../../src/hooks/useCustomerConfig';
+import { useRegionAccess } from '../../../src/hooks/useRegionAccess';
+import { ComingSoon } from '../../../src/components/region/ComingSoon';
+import { isBlocked } from '../../../src/utils/regionAccess';
 import {
   anyCategoryFilter, isCurated, matchesCategoryFilters, NO_CATEGORY_FILTERS, type CategoryFilters,
 } from '../../../src/utils/categories';
@@ -43,6 +46,8 @@ export default function ExploreScreen() {
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const { data: restaurants = [], isLoading, error: fetchError, refetch, isRefetching } =
     useNearbyRestaurants(location);
+  // Region launch control: in a state that is not open yet, a "Coming soon" screen replaces the restaurants (Region Management, migration 142).
+  const region = useRegionAccess(location);
 
   const [search, setSearch] = useState('');
   const [activeType, setActiveType] = useState(ALL);
@@ -178,6 +183,10 @@ export default function ExploreScreen() {
         </View>
       </View>
     );
+  }
+
+  if (isBlocked(region.data)) {
+    return <ComingSoon access={region.data!} onCheckAgain={() => { refresh(); region.refetch(); }} checking={region.isFetching} />;
   }
 
   return (

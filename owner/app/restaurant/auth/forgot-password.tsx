@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '../../../src/api/supabase';
@@ -11,7 +11,7 @@ import {
   isValidEmail, normalizeResetCode, isCompleteResetCode, resendSecondsLeft, newPasswordProblem, passwordRequirements,
   RESET_REQUESTED_MESSAGE,
 } from '../../../src/utils/passwordReset';
-import { BRAND_NAME } from '../../../src/constants/brand';
+import { BrandBar } from '../../../src/components/common/BrandBar';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
 
@@ -125,10 +125,9 @@ export default function RestaurantForgotPasswordScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={styles.topLeftBar}>
-        <Image source={require('../../../assets/logo.png')} style={styles.topLeftLogo} />
+        <BrandBar />
       </View>
       <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled">
-        <Text style={styles.brand}>{BRAND_NAME}</Text>
         <IconText style={styles.title} emoji="🔐">Reset Password</IconText>
         <Text style={styles.subtitle}>
           {step === 'email'

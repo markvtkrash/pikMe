@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { BrandBar } from '../../src/components/common/BrandBar';
 import { Slot, useSegments, useRouter } from 'expo-router';
 import { OwnerNavHeader } from '../../src/components/common/OwnerNavHeader';
 import { OwnerTipsSidebar } from '../../src/components/common/OwnerTipsSidebar';
@@ -25,7 +26,7 @@ function PendingApprovalScreen() {
   return (
     <View style={styles.pendingContainer}>
       <View style={styles.pendingTopLeftBar}>
-        <Image source={require('../../assets/logo.png')} style={styles.pendingTopLeftLogo} />
+        <BrandBar />
       </View>
       <View style={styles.pendingCard}>
         <Text style={styles.pendingIcon}>{isRejected ? '✕' : '⏳'}</Text>

@@ -1,8 +1,10 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, ActivityIndicator } from 'react-native';
 import { Alert } from '../../src/utils/alert';
 import { useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
+import { PagerBar } from '../../src/components/common/PagerBar';
+import { usePaging } from '../../src/hooks/usePaging';
 
 interface FranchiseRow {
   id: string;
@@ -56,6 +58,10 @@ export default function AdminFranchiseLookupScreen() {
     );
   }, [rows, search]);
 
+  // 50 rows to a page; back to page 1 on a new search or filter; the list scrolls to the top when the page changes
+  const listRef = useRef<FlatList<any>>(null);
+  const paging = usePaging(filtered, search, () => listRef.current?.scrollToOffset({ offset: 0, animated: false }));
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -75,7 +81,8 @@ export default function AdminFranchiseLookupScreen() {
         </Text>
 
         <FlatList
-          data={filtered}
+          ref={listRef}
+          data={paging.pageItems}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           initialNumToRender={20}
@@ -102,6 +109,7 @@ export default function AdminFranchiseLookupScreen() {
               )}
             </View>
           )}
+          ListFooterComponent={<PagerBar page={paging.page} pageCount={paging.pageCount} from={paging.from} to={paging.to} total={paging.total} onPage={paging.goTo} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>{search ? 'No matches' : 'No franchises yet'}</Text>
