@@ -14,6 +14,7 @@ import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../sr
 import { useFaceIdStore } from '../../../src/store/faceIdStore';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
+import { useThemedStyles } from '../../../src/theme/useTheme';
 
 // Alert (../../../src/utils/alert) renders an actual in-app modal on every
 // platform including web, so this no longer needs a native-browser-dialog
@@ -32,6 +33,7 @@ function notify(title: string, message: string) {
 }
 
 function LabelRow({ items, emptyText }: { items: string[]; emptyText: string }) {
+  const styles = useThemedStyles(baseStyles);
   if (items.length === 0) return <Text style={styles.emptyText}>{emptyText}</Text>;
   return (
     <View style={styles.tagRow}>
@@ -53,6 +55,7 @@ function ChipRow({
   selected: string[];
   onToggle: (value: string) => void;
 }) {
+  const styles = useThemedStyles(baseStyles);
   return (
     <View style={styles.chipRow}>
       {options.map((opt) => (
@@ -71,6 +74,7 @@ function ChipRow({
 }
 
 export default function ProfileScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const { data: profile, isLoading, error, refetch } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
@@ -393,7 +397,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },

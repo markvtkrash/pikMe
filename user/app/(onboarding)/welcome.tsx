@@ -1,11 +1,20 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
 import { useProfileReminderStore } from '../../src/store/profileReminderStore';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function WelcomeScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const dismissReminder = useProfileReminderStore((s) => s.dismiss);
+
+  // This page is the start of an OPTIONAL setup, reached from the reminder's "Set up now" (a push, so there is a screen to go back to). Loaded
+  // straight from the address bar (a saved address, or the browser completing a typed one) there is nothing behind it, and a person who just
+  // opened the app should land in the app, not here.
+  if (!router.canGoBack()) {
+    return <Redirect href="/(main)/(tabs)" />;
+  }
 
   return (
     <View style={styles.container}>
@@ -30,7 +39,7 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { useCustomerConfig } from '../../hooks/useCustomerConfig';
 import { isVersionBelow } from '../../utils/customerConfig';
 import { BRAND_NAME } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // Blocks the app behind an "update required" screen when this app version is older than the admin's minimum
 // (app_config 'minAppVersion', migration 127). It never blocks while the setting is loading or if it cannot be read, so a
@@ -20,6 +21,7 @@ export function UpdateGate({ children }: { children: ReactNode }) {
 }
 
 function UpdateRequiredScreen() {
+  const styles = useThemedStyles(baseStyles);
   // The store listing is opened from the device's store app; until the app has a published listing this just asks the
   // person to update from the store.
   function openStore() {
@@ -38,7 +40,7 @@ function UpdateRequiredScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
   icon: { fontSize: 32, marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' },

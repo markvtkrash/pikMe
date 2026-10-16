@@ -93,7 +93,22 @@ export default function RecentBuildsList({ kind }: { kind?: 'chain' | 'place' })
         return (
           <View key={`${r.chain_id ?? r.place_id ?? r.chain_name}|${r.started_at}`} style={styles.row}>
             <View style={styles.rowTop}>
-              <Text style={styles.chain} numberOfLines={1}>{r.chain_name}</Text>
+              {r.kind === 'place' && !r.place_id ? (
+                <Text style={styles.chain} numberOfLines={1}>{r.chain_name}</Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.chainWrap}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/admin/menu-edit',
+                      params: r.kind === 'place' ? { name: r.chain_name, placeId: r.place_id } : { name: r.chain_name },
+                    } as any)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Edit the menu of ${r.chain_name}`}
+                >
+                  <Text style={[styles.chain, styles.chainLink]} numberOfLines={1}>{r.chain_name}</Text>
+                </TouchableOpacity>
+              )}
               <Text style={[styles.badge, { backgroundColor: tone.bg, color: tone.fg }]}>
                 {outcome.label}{r.outcome === 'ok' ? ` · ${r.item_count} items` : ''}
               </Text>
@@ -139,6 +154,8 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#f2f2f2' },
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   chain: { fontSize: 13, fontWeight: '700', color: '#222', flex: 1 },
+  chainWrap: { flex: 1 },
+  chainLink: { color: '#1565C0', textDecorationLine: 'underline' },
   badge: { fontSize: 10, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
   meta: { fontSize: 11, color: '#888' },
   detail: { fontSize: 11, color: '#c62828' },

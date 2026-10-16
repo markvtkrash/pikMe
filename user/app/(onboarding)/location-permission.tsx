@@ -11,8 +11,10 @@ import { upsertUserProfile } from '../../src/api/functions';
 import { supabase } from '../../src/api/supabase';
 import { LegalDocumentModal } from '../../src/components/common/LegalDocumentModal';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function LocationPermissionScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const { draft, setOnboardingComplete, resetDraft } = useUserProfileStore();
   const [loading, setLoading] = useState(false);
@@ -154,7 +156,7 @@ export default function LocationPermissionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: {
     flex: 1,

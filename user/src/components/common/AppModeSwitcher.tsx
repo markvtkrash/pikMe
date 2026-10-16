@@ -2,8 +2,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND_COLORS } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 export function AppModeSwitcher() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
@@ -33,9 +35,9 @@ export function AppModeSwitcher() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.background.page,
     paddingBottom: 8,
     paddingHorizontal: 16,
     borderBottomWidth: 1,

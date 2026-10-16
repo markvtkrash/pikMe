@@ -8,10 +8,12 @@ import { useSaved } from '../../../src/hooks/useSaved';
 import { RestaurantCard } from '../../../src/components/restaurant/RestaurantCard';
 import { getNutritionFlags } from '../../../src/utils/nutritionFlags';
 import type { MenuItem } from '../../../src/types';
+import { useThemedStyles } from '../../../src/theme/useTheme';
 
 type Tab = 'restaurants' | 'items';
 
 export default function SavedScreen() {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const { savedRestaurants, savedMenuItems, isLoaded, load, toggleMenuItem } = useSaved();
   const [activeTab, setActiveTab] = useState<Tab>('restaurants');
@@ -93,7 +95,7 @@ export default function SavedScreen() {
             <EmptyState
               icon="🥗"
               title="No saved menu items yet"
-              body='Tap "AI Verdict" on a menu item, then heart it to save.'
+              body='Tap the heart on a menu item to save it.'
             />
           }
         />
@@ -103,6 +105,7 @@ export default function SavedScreen() {
 }
 
 function SavedMenuItemCard({ item, onUnsave }: { item: MenuItem; onUnsave: () => void }) {
+  const styles = useThemedStyles(baseStyles);
   // Qualitative flags only, same as MenuItemCard's Nutrition Info popup — no
   // exact numbers, and nothing claiming a value is "low" (see
   // utils/nutritionFlags.ts for why).
@@ -130,6 +133,7 @@ function SavedMenuItemCard({ item, onUnsave }: { item: MenuItem; onUnsave: () =>
 }
 
 function EmptyState({ icon, title, body }: { icon: string; title: string; body: string }) {
+  const styles = useThemedStyles(baseStyles);
   return (
     <View style={styles.empty}>
       <Text style={styles.emptyIcon}>{icon}</Text>
@@ -139,7 +143,7 @@ function EmptyState({ icon, title, body }: { icon: string; title: string; body: 
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   header: { paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   title: { fontSize: 22, fontWeight: '700', color: '#1a1a1a' },

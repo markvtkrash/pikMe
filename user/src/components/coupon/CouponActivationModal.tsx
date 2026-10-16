@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BRAND_COLORS } from '../../constants/brandTheme';
 import type { Coupon } from '../../types';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props {
   visible: boolean;
@@ -28,6 +29,7 @@ function formatDiscount(coupon: Coupon): string {
 }
 
 export function CouponActivationModal({ visible, coupon, expiresAt, onDone, itemName }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const [msRemaining, setMsRemaining] = useState(0);
   const hasAutoClosed = useRef(false);
 
@@ -89,7 +91,7 @@ export function CouponActivationModal({ visible, coupon, expiresAt, onDone, item
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#141414',

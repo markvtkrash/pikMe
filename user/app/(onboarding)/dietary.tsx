@@ -5,8 +5,10 @@ import { OnboardingProgress } from '../../src/components/common/OnboardingProgre
 import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { DIETARY_RESTRICTIONS } from '../../src/constants/dietaryOptions';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function DietaryScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const { draft, updateDraft } = useUserProfileStore();
   const [selected, setSelected] = useState<string[]>(draft.dietaryRestrictions);
@@ -62,7 +64,7 @@ export default function DietaryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },

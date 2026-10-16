@@ -1,15 +1,27 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Whether the person tapped "Not now" on the profile reminder in this launch of the app. It is memory only, so the reminder comes back the
-// next time the app is opened, and it is cleared when they sign out so the next person to sign in sees it too.
+// When the person tapped "Not now" on the profile reminder. It is kept on the device, so the reminder stays away for a week (see isSnoozed in
+// utils/profileReminder.ts) instead of coming back every time the app is opened. It is cleared when they sign out, so the next person to sign in
+// is reminded too, and finishing the setup ends the reminder for good.
 interface ProfileReminderStore {
-  dismissed: boolean;
+  dismissedAt: number | null;
   dismiss: () => void;
   reset: () => void;
 }
 
-export const useProfileReminderStore = create<ProfileReminderStore>((set) => ({
-  dismissed: false,
-  dismiss: () => set({ dismissed: true }),
-  reset: () => set({ dismissed: false }),
-}));
+export const useProfileReminderStore = create<ProfileReminderStore>()(
+  persist(
+    (set) => ({
+      dismissedAt: null,
+      dismiss: () => set({ dismissedAt: Date.now() }),
+      reset: () => set({ dismissedAt: null }),
+    }),
+    {
+      name: 'pikme-profile-reminder',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (s) => ({ dismissedAt: s.dismissedAt }),
+    },
+  ),
+);

@@ -103,13 +103,17 @@ export async function aiOnboard(freeText: string): Promise<Partial<UserProfile>>
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
 
+// nearby: the restaurants near the person, as names (older callers) or as { placeId, name } (so the server can find their confirmed menu items).
+// The person's name and allergens are not sent: Quick Find suggests from a list and does not use them.
 export async function sendChatMessage(
   message: string,
   profile: UserProfile,
-  nearbyRestaurantNames: string[]
+  nearby: (string | { placeId?: string; name: string })[]
 ): Promise<string> {
+  const restaurants = nearby.map((n) => (typeof n === 'string' ? { name: n } : { placeId: n.placeId, name: n.name }));
+  const { allergens: _allergens, displayName: _displayName, ...shareable } = (profile ?? {}) as Partial<UserProfile>;
   const { data, error } = await supabase.functions.invoke('ai-chat', {
-    body: { message, profile, nearbyRestaurantNames },
+    body: { message, profile: shareable, nearbyRestaurantNames: restaurants.map((x) => x.name), nearbyRestaurants: restaurants },
   });
   if (error) {
     try {

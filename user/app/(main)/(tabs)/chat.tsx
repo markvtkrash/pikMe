@@ -11,6 +11,8 @@ import { BRAND_COLORS } from '../../../src/constants/brandTheme';
 import { useUserProfile } from '../../../src/hooks/useUserProfile';
 import { useRestaurantStore } from '../../../src/store/restaurantStore';
 import { sendChatMessage } from '../../../src/api/functions';
+import { CHAT_DISCLAIMER, chatSuggestions } from '../../../src/utils/chatNotices';
+import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -26,6 +28,7 @@ function parseResponse(text: string): (string | { type: 'bullet'; text: string }
 }
 
 function FormattedResponse({ text }: { text: string }) {
+  const styles = useThemedStyles(baseStyles);
   const parsed = parseResponse(text);
 
   return (
@@ -49,50 +52,8 @@ function FormattedResponse({ text }: { text: string }) {
   );
 }
 
-function getSuggestions(profile: any): string[] {
-  const questions: string[] = [];
-
-  // 1. Based on dietary restrictions
-  if (profile?.dietaryRestrictions && profile.dietaryRestrictions.length > 0 &&
-      !profile.dietaryRestrictions.every((r: string) => r === 'none')) {
-    questions.push('Show me options for my dietary preferences');
-  }
-
-  // 2. Based on health goals
-  if (profile?.healthGoals && profile.healthGoals.length > 0) {
-    questions.push('What options support my health goals?');
-  }
-
-  // 3. Based on allergens
-  if (profile?.allergens && profile.allergens.length > 0) {
-    questions.push('What meals might suit my goals?');
-  }
-
-  // 4. Based on cuisine preferences
-  if (profile?.cuisinePreferences && profile.cuisinePreferences.length > 0) {
-    questions.push('Show me my favorite cuisines nearby');
-  }
-
-  // Fallback questions if profile is incomplete
-  if (questions.length < 4) {
-    const fallbacks = [
-      'What should I eat for lunch?',
-      'Find me something healthy nearby',
-      "What's the best option for me?",
-      'Show me top-rated restaurants',
-    ];
-    while (questions.length < 4) {
-      const fallback = fallbacks[questions.length];
-      if (!questions.includes(fallback)) {
-        questions.push(fallback);
-      }
-    }
-  }
-
-  return questions.slice(0, 4);
-}
-
 export default function ChatScreen() {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const { data: profile } = useUserProfile();
   const restaurants = useRestaurantStore((s) => s.restaurants);
@@ -101,15 +62,15 @@ export default function ChatScreen() {
   const [loading, setLoading] = useState(false);
   const [suggestedFollowUp, setSuggestedFollowUp] = useState<string | null>(null);
 
-  const suggestions = getSuggestions(profile);
+  const suggestions = chatSuggestions(profile);
 
   async function handleSendSuggestion(text: string) {
     if (!profile || loading) return;
 
     setLoading(true);
     try {
-      const nearbyNames = restaurants.slice(0, 15).map((r) => r.name);
-      const response = await sendChatMessage(text, profile, nearbyNames);
+      const nearby = restaurants.slice(0, 15).map((r) => ({ placeId: r.placeId, name: r.name }));
+      const response = await sendChatMessage(text, profile, nearby);
       setAnswer(response);
       setModalVisible(true);
     } catch (error) {
@@ -130,16 +91,16 @@ export default function ChatScreen() {
     <View style={[styles.flex, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Menu Mentor</Text>
-        <Text style={styles.headerSub}>Your personal menu guide</Text>
+        <Text style={styles.headerTitle}>Quick Find</Text>
+        <Text style={styles.headerSub}>Suggestions from confirmed menu items</Text>
       </View>
 
       {/* Suggestions */}
       <View style={styles.empty}>
         <Text style={styles.emptyIcon}>🍽️</Text>
-        <Text style={styles.emptyTitle}>Find meals made for you</Text>
+        <Text style={styles.emptyTitle}>Find something to eat</Text>
         <Text style={styles.emptySub}>
-          Personalized recommendations based on your preferences
+          Suggestions from confirmed menu items near you
         </Text>
         <View style={styles.suggestions}>
           {suggestions.map((s, idx) => (
@@ -195,7 +156,10 @@ export default function ChatScreen() {
                   <Text style={styles.loadingText}>Finding recommendations...</Text>
                 </View>
               ) : (
-                <FormattedResponse text={answer} />
+                <>
+                  <FormattedResponse text={answer} />
+                  <Text style={styles.disclaimer}>{CHAT_DISCLAIMER}</Text>
+                </>
               )}
             </ScrollView>
 
@@ -229,7 +193,8 @@ export default function ChatScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
+  disclaimer: { fontSize: 11.5, color: '#666', lineHeight: 16, marginTop: 14 },
   flex: { flex: 1, backgroundColor: '#fff' },
   header: {
     backgroundColor: '#fff',

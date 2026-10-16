@@ -11,6 +11,14 @@ import { PagerBar } from './PagerBar';
 // Independent restaurants a customer opened that have no confirmed menu item: nobody has looked after their menu, so
 // the admin can upload one (Manage). A restaurant leaves the list as soon as it has one verified item.
 // Paged by the server (Prev / Next): only one page is fetched at a time.
+// The menu edit page of one restaurant: by name, with its place ID (and address) so it edits THIS location's menu.
+function editParams(r: UnconfirmedClickedRestaurant): Record<string, string> {
+  const params: Record<string, string> = { name: r.restaurant_name, placeId: r.place_id };
+  const address = [r.address, r.city].filter(Boolean).join(', ');
+  if (address) params.address = address;
+  return params;
+}
+
 export default function UnconfirmedClickedList() {
   const router = useRouter();
   const [page, setPage] = useState(0);
@@ -55,7 +63,14 @@ export default function UnconfirmedClickedList() {
         return (
           <View key={r.place_id} style={styles.row}>
             <View style={styles.rowText}>
-              <Text style={styles.name} numberOfLines={1}>{r.restaurant_name}</Text>
+              {/* the name opens this restaurant's menu edit page (its own place, by its place ID) */}
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/admin/menu-edit', params: editParams(r) } as any)}
+                accessibilityRole="link"
+                accessibilityLabel={`Edit the menu of ${r.restaurant_name}`}
+              >
+                <Text style={[styles.name, styles.nameLink]} numberOfLines={1}>{r.restaurant_name}</Text>
+              </TouchableOpacity>
               {!!place && <Text style={styles.sub} numberOfLines={1}>{place}</Text>}
               <Text style={styles.sub}>
                 {describeClickCount(r.click_count)} · last {formatClickDate(r.last_clicked_at)}
@@ -86,6 +101,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#eee' },
   rowText: { flex: 1 },
   name: { fontSize: 13, fontWeight: '700', color: '#222' },
+  nameLink: { color: '#1565C0', textDecorationLine: 'underline' },
   sub: { fontSize: 11, color: '#777', marginTop: 1 },
   state: { fontSize: 11, fontWeight: '700', color: '#E65100', marginTop: 2 },
   stateQuiet: { color: '#2E7D32' },

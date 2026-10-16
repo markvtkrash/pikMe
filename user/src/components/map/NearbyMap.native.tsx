@@ -10,11 +10,13 @@ import { useRestaurantStore } from '../../store/restaurantStore';
 import { RestaurantCard } from '../restaurant/RestaurantCard';
 import { RadiusSelector } from '../common/RadiusSelector';
 import type { Restaurant } from '../../types';
+import { useThemedStyles } from '../../theme/useTheme';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.75;
 
 export function NearbyMap() {
+  const styles = useThemedStyles(baseStyles);
   const mapRef = useRef<MapView>(null);
   const listRef = useRef<FlatList>(null);
   const { location, loading: locationLoading, error: locationError, canAskAgain, refresh } = useLocation();
@@ -162,7 +164,7 @@ export function NearbyMap() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#eee' },
   radiusOverlay: {
     position: 'absolute',
@@ -204,7 +206,8 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 0,
     right: 0,
-    height: 110,
+    // tall enough for the whole compact card (photo, name, cuisine, rating); 110 cut the name off
+    height: 185,
   },
   stripLoading: {
     height: 90,

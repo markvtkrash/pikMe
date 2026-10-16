@@ -11,10 +11,12 @@ import {
   RESET_REQUESTED_MESSAGE, MIN_PASSWORD_LENGTH,
 } from '../../src/utils/passwordReset';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 // Forgot password: (1) enter the email, (2) enter the 6-digit code from the email plus a new password. The code signs the person in
 // briefly so the new password can be saved; the route guard in app/_layout.tsx leaves this screen alone while that happens.
 export default function ForgotPasswordScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const [step, setStep] = useState<'email' | 'code'>('email');
   const [email, setEmail] = useState('');
@@ -196,7 +198,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingBottom: 40 },
   logo: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 8, color: '#1565C0' },

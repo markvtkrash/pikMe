@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, RefreshControl, Platform, Linking,
@@ -9,6 +9,8 @@ import { useNearbyRestaurants } from '../../../src/hooks/useNearbyRestaurants';
 import { useCouponPlaceIds } from '../../../src/hooks/useCouponPlaceIds';
 import { useCustomerConfig } from '../../../src/hooks/useCustomerConfig';
 import { useRegionAccess } from '../../../src/hooks/useRegionAccess';
+import { useVoiceSearch } from '../../../src/hooks/useVoiceSearch';
+import { Alert } from '../../../src/utils/alert';
 import { ComingSoon } from '../../../src/components/region/ComingSoon';
 import { isBlocked } from '../../../src/utils/regionAccess';
 import {
@@ -22,8 +24,9 @@ import { RadiusSelector } from '../../../src/components/common/RadiusSelector';
 import { useRestaurantStore } from '../../../src/store/restaurantStore';
 import { normalizeForSearch } from '../../../src/utils/textMatch';
 import { CUISINE_FILTERS } from '../../../src/constants/cuisines';
-import { BRAND_NAME } from '../../../src/constants/brandTheme';
+import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { Restaurant } from '../../../src/types';
+import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const ALL = 'All';
 
@@ -41,6 +44,7 @@ function greeting() {
 }
 
 export default function ExploreScreen() {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const { location, loading: locationLoading, error: locationError, canAskAgain, refresh } = useLocation();
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
@@ -50,6 +54,14 @@ export default function ExploreScreen() {
   const region = useRegionAccess(location);
 
   const [search, setSearch] = useState('');
+  // The microphone button in the search box (only where the phone's build has speech recognition): the words heard go into the box as they come.
+  const voice = useVoiceSearch(setSearch);
+  useEffect(() => {
+    if (voice.error) {
+      Alert.alert('Voice search', voice.error);
+      voice.clearError();
+    }
+  }, [voice.error]);
   const [activeType, setActiveType] = useState(ALL);
   const [activeCuisine, setActiveCuisine] = useState(ALL);
   // the filter sheet (what kind of place, how you get the food, cuisine); the page itself keeps search, Coupons Only and the chosen chips
@@ -194,10 +206,7 @@ export default function ExploreScreen() {
       {/* Sticky header */}
       <View style={styles.header}>
         <View style={styles.greetingRow}>
-          <View>
-            <Text style={styles.greeting}>{greeting()} 👋</Text>
-            <Text style={styles.subGreeting}>Discover food near you</Text>
-          </View>
+          <Text style={styles.greeting}>{greeting()} 👋</Text>
           <View style={styles.locationBadge}>
             <Text style={styles.locationText}>📍 Near you</Text>
           </View>
@@ -209,12 +218,23 @@ export default function ExploreScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Search restaurants…"
-            placeholderTextColor="#AEAEB2"
+            placeholderTextColor="#6B6B6B"
             value={search}
             onChangeText={setSearch}
             returnKeyType="search"
             clearButtonMode="while-editing"
           />
+          {voice.available && (
+            <TouchableOpacity
+              onPress={voice.listening ? voice.stop : voice.start}
+              style={[styles.micButton, voice.listening && styles.micButtonOn]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={voice.listening ? 'Stop listening' : 'Search by voice'}
+            >
+              <Text style={styles.micIcon}>{voice.listening ? '⏹' : '🎤'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* More Filters toggle */}
@@ -237,9 +257,10 @@ export default function ExploreScreen() {
             activeOpacity={0.8}
             accessibilityRole="button"
             accessibilityState={{ selected: couponsOnly }}
+            accessibilityLabel="Coupons only"
           >
             <Text style={[styles.couponsText, couponsOnly && styles.moreFiltersTextActive]}>
-              🎉 Coupons Only
+              🎉 Coupons
             </Text>
           </TouchableOpacity>
 
@@ -248,13 +269,14 @@ export default function ExploreScreen() {
               style={styles.resetFiltersPill}
               onPress={resetFilters}
               activeOpacity={0.8}
+              accessibilityLabel="Reset filters"
             >
-              <Text style={styles.resetFiltersText}>✕ Reset Filters</Text>
+              <Text style={styles.resetFiltersText}>✕ Reset</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <RadiusSelector />
+        <RadiusSelector compact />
 
         {/* What is switched on, as small chips: tap one to remove it */}
         {chips.length > 0 && (
@@ -356,29 +378,29 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F6F6' },
+const baseStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BRAND_COLORS.background.page },
 
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: BRAND_COLORS.background.page,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-    paddingBottom: 4,
+    paddingBottom: 0,
   },
   greetingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
-  greeting: { fontSize: 22, fontWeight: '800', color: '#141414', letterSpacing: -0.3 },
+  greeting: { fontSize: 19, fontWeight: '800', color: '#141414', letterSpacing: -0.3 },
   subGreeting: { fontSize: 13, color: '#6B6B6B', marginTop: 2 },
   locationBadge: {
     backgroundColor: '#F0FAF0',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#BBDEFB',
@@ -388,28 +410,46 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F6F6F6',
+    // white with a 2px blue border, so the search box stands out from the light blue page
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: '#1565C0',
     marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    gap: 8,
+    marginBottom: 8,
+    borderRadius: 12,
+    // no padding on the box itself: the text field fills all of it, so there is no smaller box inside the box
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    overflow: 'hidden',
+    gap: 0,
   },
-  searchIcon: { fontSize: 16 },
-  searchInput: { flex: 1, fontSize: 15, color: '#141414', padding: 0 },
+  searchIcon: { fontSize: 20, paddingLeft: 12 },
+  searchInput: {
+    flex: 1,
+    height: 48,
+    fontSize: 19,
+    color: '#141414',
+    paddingHorizontal: 10,
+    paddingVertical: 0,
+    backgroundColor: 'transparent',
+    // on the web the browser draws its own outline round the field when it is tapped: the blue box is the outline already
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', outlineWidth: 0 } as any) : {}),
+  },
+  micButton: { marginRight: 10, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD' },
+  micButtonOn: { backgroundColor: '#FFCDD2' },
+  micIcon: { fontSize: 15 },
 
   moreFiltersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     marginHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   resetFiltersPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 50,
     backgroundColor: '#FFEBEE',
     borderWidth: 1.5,
@@ -420,8 +460,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 50,
     backgroundColor: '#E3F2FD',
     borderWidth: 1.5,
@@ -432,8 +472,8 @@ const styles = StyleSheet.create({
     borderColor: '#1565C0',
   },
   couponsPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 50,
     backgroundColor: '#FFF3E0',
     borderWidth: 1.5,
@@ -445,7 +485,7 @@ const styles = StyleSheet.create({
   moreFiltersChevron: { fontSize: 13, color: '#1565C0', fontWeight: '700' },
   moreFiltersTextActive: { color: '#fff' },
 
-  activeChips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 10, gap: 6 },
+  activeChips: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 6, gap: 6 },
   activeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#141414' },
   activeChipText: { fontSize: 12, color: '#fff', fontWeight: '700' },
   activeChipMore: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: '#ccc' },

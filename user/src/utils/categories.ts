@@ -97,6 +97,19 @@ export function matchesCategoryFilters(r: CategorizedRestaurant, f: CategoryFilt
   return true;
 }
 
+// How many of these restaurants a chip would give, given the OTHER groups' choices. Inside the chip's own group the picks are "any of" (places or
+// cuisines) or "all of" (ways to order), so the count is what tapping it would show on its own:
+//   places / cuisines  the restaurants that have this one, and fit the other groups' choices (other picks in the same group are ignored: they are
+//                      alternatives, so this chip's places are all counted whether or not those are on);
+//   ways to order      the restaurants that fit the choices so far AND offer this one too.
+export function chipCount(restaurants: CategorizedRestaurant[], f: CategoryFilters, group: CategoryGroup, key: string): number {
+  let probe: CategoryFilters;
+  if (group === 'venue') probe = { ...f, venues: [key] };
+  else if (group === 'cuisine') probe = { ...f, cuisines: [key] };
+  else probe = { ...f, services: f.services.includes(key) ? f.services : [...f.services, key] };
+  return restaurants.filter((r) => matchesCategoryFilters(r, probe)).length;
+}
+
 export function labelFor(categories: RestaurantCategory[], key: string): string {
   return categories.find((c) => c.key === key)?.label ?? key.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
 }

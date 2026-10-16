@@ -1,5 +1,6 @@
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { BRAND_COLORS } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props {
   visible: boolean;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function CouponConfirmModal({ visible, onCancel, onConfirm }: Props) {
+  const styles = useThemedStyles(baseStyles);
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onCancel}>
       <View style={styles.overlay}>
@@ -32,7 +34,7 @@ export function CouponConfirmModal({ visible, onCancel, onConfirm }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',

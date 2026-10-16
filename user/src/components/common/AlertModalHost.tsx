@@ -1,10 +1,12 @@
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { useAlertStore, AlertButton } from '../../store/alertStore';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // Mounted once at the app root (see app/_layout.tsx). Renders whatever the
 // drop-in Alert replacement (../../utils/alert.ts) currently has queued —
 // every Alert.alert(...) call site in this app ends up here.
 export function AlertModalHost() {
+  const styles = useThemedStyles(baseStyles);
   const { visible, title, message, buttons, hide } = useAlertStore();
 
   function handlePress(btn: AlertButton) {
@@ -47,7 +49,7 @@ export function AlertModalHost() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24,
   },

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { WebView } from 'react-native-webview';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND_COLORS } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props {
   visible: boolean;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export function InAppWebViewModal({ visible, url, title, onClose }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +47,7 @@ export function InAppWebViewModal({ visible, url, title, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

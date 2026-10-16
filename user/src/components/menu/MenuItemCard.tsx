@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Pressable, Platform, Modal, ScrollView } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, FadeIn, SlideInDown } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS, BRAND_SHADOWS, BRAND_TYPOGRAPHY } from '../../constants/brandTheme';
 import type { Recommendation, MenuItem, Coupon } from '../../types';
@@ -20,6 +20,7 @@ import {
 } from '../../utils/menuItemNotices';
 import { tileIcons } from '../../utils/menuLayout';
 import { Alert } from '../../utils/alert';
+import { useThemedStyles, useThemeColor } from '../../theme/useTheme';
 
 interface Props {
   recommendation: Recommendation;
@@ -38,18 +39,22 @@ const CARD_BORDER = '#1B5E20';
 
 // The score as a small rounded chip, tinted by how good it is.
 function ScoreChip({ score }: { score: number }) {
+  const styles = useThemedStyles(baseStyles);
+  const { color: tc } = useThemeColor();
   const isGood = score >= 75;
   const isMid  = score >= 50;
   const color  = isGood ? '#1565C0' : isMid ? '#e65100' : '#c62828';
   const bg     = isGood ? '#E3F2FD' : isMid ? '#FFF3E0' : '#FFEBEE';
   return (
-    <View style={[styles.scoreChip, { backgroundColor: bg }]} accessibilityLabel={`Score ${score}`}>
-      <Text style={[styles.scoreChipText, { color }]}>★ {score}</Text>
+    <View style={[styles.scoreChip, { backgroundColor: tc(bg, 'backgroundColor') }]} accessibilityLabel={`Score ${score}`}>
+      <Text style={[styles.scoreChipText, { color: tc(color) }]}>★ {score}</Text>
     </View>
   );
 }
 
 export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed, variant = 'list' }: Props) {
+  const styles = useThemedStyles(baseStyles);
+  const { color: tc } = useThemeColor();
   const isTile = variant === 'tile';
   const [expanded, setExpanded] = useState(false);
   const { menuItem: item, score, reasons, warnings } = recommendation;
@@ -68,15 +73,11 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
 
   // Animation values
   const buttonScale = useSharedValue(1);
-  const analysisPanelOpacity = useSharedValue(0);
 
   const buttonAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: buttonScale.value }],
   }));
 
-  const analysisPanelAnimStyle = useAnimatedStyle(() => ({
-    opacity: analysisPanelOpacity.value,
-  }));
 
   // Handle button press animation
   const handleButtonPress = () => {
@@ -95,31 +96,22 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
   );
   const isSafe = getSafeIndicator(item, score);
   const hasWarnings = allergenWarnings.length > 0 || restrictionWarnings.length > 0;
-  // A tap on a tile opens its details in a popup (closed by a tap outside it or the X). In the list, a tap anywhere on the card that is not a
-  // button (Nutrition, AI Verdict, the heart, a tag or a coupon) collapses an open AI Verdict answer.
+  // A tap on a tile opens its details in a popup (closed by a tap outside it or the X).
   function handleCardPress() {
     if (isTile) {
       setExpanded(true);
-    } else if (analysisOpen) {
-      handleAskAi();
     }
   }
 
+  // The Quick take opens in a small popup (below). It is closed by a tap anywhere outside it.
   async function handleAskAi() {
-    if (analysisOpen) {
-      analysisPanelOpacity.value = withTiming(0, { duration: 300 });
-      setTimeout(() => setAnalysisOpen(false), 300);
-      return;
-    }
     if (analysisText) {
       setAnalysisOpen(true);
-      analysisPanelOpacity.value = withTiming(1, { duration: 300 });
       return;
     }
     if (!profile) return;
     setAnalysisLoading(true);
     setAnalysisOpen(true);
-    analysisPanelOpacity.value = withTiming(1, { duration: 300 });
     try {
       const text = await getItemAnalysis(item.itemId, item, profile);
       setAnalysisText(text);
@@ -141,7 +133,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
   const cautionEl = caution.strong ? (
     <View style={[styles.tag, styles.cautionTag]}>
       <View style={[styles.marker, { borderColor: '#E65100', backgroundColor: '#E65100' }]} />
-      <Text style={[styles.tagText, { color: '#BF360C' }]}>{caution.text}</Text>
+      <Text style={[styles.tagText, { color: tc('#BF360C') }]}>{caution.text}</Text>
     </View>
   ) : (
     <Text style={styles.cautionQuiet}>{caution.text}</Text>
@@ -162,13 +154,13 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
               accessibilityLabel={`${notice.title}. Tap for details.`}
             >
               <View style={[styles.marker, { borderColor: notice.tag.startsWith('⚠') ? '#E65100' : '#1565C0' }]} />
-              <Text style={[styles.tagText, { color: notice.tag.startsWith('⚠') ? '#BF360C' : '#0D47A1' }]}>{notice.tag.replace(/^\S+\s+/, '')}</Text>
+              <Text style={[styles.tagText, { color: tc(notice.tag.startsWith('⚠') ? '#BF360C' : '#0D47A1') }]}>{notice.tag.replace(/^\S+\s+/, '')}</Text>
             </TouchableOpacity>
           )}
           {showFit && (
-            <View style={[styles.tag, { borderColor: '#2E7D32' }]}>
-              <View style={[styles.marker, { borderColor: '#2E7D32', backgroundColor: '#2E7D32' }]} />
-              <Text style={[styles.tagText, { color: '#1B5E20' }]}>Calories & macros: may fit your goals</Text>
+            <View style={[styles.tag, { borderColor: tc('#2E7D32') }]}>
+              <View style={[styles.marker, { borderColor: tc('#2E7D32'), backgroundColor: '#2E7D32' }]} />
+              <Text style={[styles.tagText, { color: tc('#1B5E20') }]}>Calories & macros: may fit your goals</Text>
             </View>
           )}
           {goodChips.map((r) => (
@@ -218,9 +210,9 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
           activeOpacity={0.7}
           accessibilityRole="button"
         >
-          <Text style={[styles.nutritionLinkText, { color: CARD_ACCENT }]}>📊 Nutrition ›</Text>
+          <Text style={[styles.nutritionLinkText, { color: tc(CARD_ACCENT) }]}>🍎 Nutrition ›</Text>
         </TouchableOpacity>
-        <Animated.View style={[styles.aiBtn, analysisOpen && { backgroundColor: '#D84315' }, isTile && styles.tileBtn, buttonAnimStyle]}>
+        <Animated.View style={[styles.aiBtn, isTile && styles.tileBtn, buttonAnimStyle]}>
           <TouchableOpacity
             onPress={handleButtonPress}
             disabled={analysisLoading}
@@ -228,49 +220,10 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
             style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
             accessibilityRole="button"
           >
-            <Text style={styles.aiBtnText}>
-              {analysisOpen ? 'Close ▲' : '🤖  AI Verdict'}
-            </Text>
+            <Text style={styles.aiBtnText}>Quick take</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
-
-      {/* Analysis panel */}
-      {analysisOpen && (
-        <Animated.View
-          style={[
-            styles.analysisBox,
-            analysisText.startsWith('Yes') ? styles.analysisPositive : analysisText.startsWith('No') ? styles.analysisNegative : {},
-            analysisPanelAnimStyle
-          ]}
-          entering={SlideInDown.duration(400)}
-        >
-          {analysisLoading
-            ? <View style={styles.analysingRow}>
-                <ActivityIndicator size="small" color="#1565C0" />
-                <Text style={styles.analysingText}>Analysing…</Text>
-              </View>
-            : analysisText.startsWith('Yes')
-            ? <Animated.View style={styles.analysisPositiveContainer} entering={FadeIn.duration(500)}>
-                <Text style={styles.yesText}>{VERDICT_GOOD}</Text>
-                <Text style={[
-                  styles.analysisText,
-                  styles.analysisPositiveText
-                ]}>{analysisText}</Text>
-              </Animated.View>
-            : analysisText.startsWith('No')
-            ? <Animated.View style={styles.analysisNegativeContainer} entering={FadeIn.duration(500)}>
-                <Text style={styles.noText}>{VERDICT_NOT_GOOD}</Text>
-                <Text style={[
-                  styles.analysisText,
-                  styles.analysisNegativeText
-                ]}>{analysisText}</Text>
-              </Animated.View>
-            : <Animated.View entering={FadeIn.duration(500)}><Text style={styles.analysisText}>{analysisText}</Text></Animated.View>
-          }
-          {!analysisLoading && <Text style={styles.aiDisclaimer}>{AI_DISCLAIMER}</Text>}
-        </Animated.View>
-      )}
 
       {/* Coupons: a thin strip each, so a coupon does not take a whole banner */}
       {itemCoupons.length > 0 && (
@@ -327,7 +280,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
   return (
     <>
     <Pressable
-      style={[styles.card, isTile && styles.tileCard, { borderColor: CARD_BORDER }]}
+      style={[styles.card, isTile && styles.tileCard, { borderColor: tc(CARD_BORDER) }]}
       onPress={handleCardPress}
     >
       {isTile ? (
@@ -383,6 +336,28 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
         </Pressable>
       </Modal>
     )}
+    {/* Quick take: a small popup over a dimmed background, closed by a tap anywhere outside it. One neutral look for every kind of answer. */}
+    <Modal visible={analysisOpen} transparent animationType="fade" onRequestClose={() => setAnalysisOpen(false)}>
+      <Pressable style={styles.quickBackdrop} onPress={() => setAnalysisOpen(false)} accessibilityLabel="Close quick take">
+        <Pressable style={styles.quickCard} onPress={() => {}}>
+          <Text style={styles.quickTitle}>Quick take</Text>
+          <Text style={styles.quickDish} numberOfLines={2}>{item.name}</Text>
+          {analysisLoading ? (
+            <View style={styles.analysingRow}>
+              <ActivityIndicator size="small" color="#455A64" />
+              <Text style={styles.analysingText}>Working it out…</Text>
+            </View>
+          ) : (
+            <>
+              {analysisText.startsWith('Yes') ? <Text style={styles.quickLead}>{VERDICT_GOOD}</Text>
+                : analysisText.startsWith('No') ? <Text style={styles.quickLead}>{VERDICT_NOT_GOOD}</Text> : null}
+              <Text style={styles.analysisText}>{analysisText}</Text>
+              <Text style={styles.aiDisclaimer}>{AI_DISCLAIMER}</Text>
+            </>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
     <CouponActivationModal
       visible={!!couponActivation.activeCoupon}
       coupon={couponActivation.activeCoupon}
@@ -404,7 +379,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   popupBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 16 },
   popupCard: { width: '100%', maxWidth: 440, maxHeight: '85%', backgroundColor: '#fff', borderRadius: 20, borderWidth: 3, borderColor: '#1B5E20', overflow: 'hidden' },
   popupContent: { padding: 14, paddingTop: 22 },
@@ -520,48 +495,16 @@ const styles = StyleSheet.create({
   },
   aiBtnText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.2, color: '#fff' },
 
-  analysisBox: {
-    marginTop: 8,
-    backgroundColor: '#F6F6F6',
-    borderRadius: 12,
-    padding: 14,
-    borderLeftWidth: 3,
-    borderLeftColor: '#1565C0',
-  },
-  analysisPositive: {
-    backgroundColor: '#E3F2FD',
-    borderLeftColor: '#1565C0',
-  },
-  analysisNegative: {
-    backgroundColor: '#FFEBEE',
-    borderLeftColor: '#C62828',
-  },
-  analysisPositiveContainer: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  analysisNegativeContainer: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  yesText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1565C0',
-    textAlign: 'center',
-  },
-  noText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#C62828',
-    textAlign: 'center',
-  },
-  aiDisclaimer: { fontSize: 11, color: '#666', marginTop: 10, lineHeight: 15, textAlign: 'center' },
-  analysingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  analysingText: { fontSize: 13, color: '#888' },
-  analysisText: { fontSize: 13, color: '#333', lineHeight: 21 },
-  analysisPositiveText: { color: '#1565C0', fontWeight: '600' },
-  analysisNegativeText: { color: '#C62828', fontWeight: '600' },
+  // the Quick take popup: one neutral look, whatever the answer says
+  quickBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  quickCard: { width: '100%', maxWidth: 340, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1.5, borderColor: '#CFD8DC', padding: 16, gap: 6 },
+  quickTitle: { fontSize: 12, fontWeight: '800', color: '#607D8B', textTransform: 'uppercase', letterSpacing: 0.6 },
+  quickDish: { fontSize: 15, fontWeight: '700', color: '#222' },
+  quickLead: { fontSize: 15, fontWeight: '800', color: '#37474F', marginTop: 4 },
+  aiDisclaimer: { fontSize: 11, color: '#666', marginTop: 8, lineHeight: 15 },
+  analysingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
+  analysingText: { fontSize: 13, color: '#607D8B' },
+  analysisText: { fontSize: 13, color: '#333', lineHeight: 20 },
 
   couponStripContainer: { gap: 4, marginTop: 6, alignItems: 'flex-start' },
   couponStrip: {

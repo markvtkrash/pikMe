@@ -159,12 +159,23 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
               <IconText style={styles.bandTitle} emoji="🍔">Franchises</IconText>
             </View>
             <Text style={styles.sectionHint}>One shared menu for each franchise, built from its official menu page.</Text>
-            <Text style={styles.line}>
-              Waiting: {status.queued_count}
-              {status.queued_names.length > 0
-                ? ` (next: ${status.queued_names.join(', ')}${status.queued_count > status.queued_names.length ? ', …' : ''})`
-                : ''}
-            </Text>
+            <View style={styles.waitingRow}>
+              <Text style={styles.line}>Waiting: {status.queued_count}</Text>
+              {status.queued_names.length > 0 && <Text style={styles.line}> (next: </Text>}
+              {status.queued_names.map((name, i) => (
+                <View key={`${name}-${i}`} style={styles.waitingName}>
+                  {/* each name opens that franchise's shared menu edit page */}
+                  <TouchableOpacity
+                    onPress={() => router.push({ pathname: '/admin/menu-edit', params: { name } } as any)}
+                    accessibilityRole="link"
+                    accessibilityLabel={`Edit the menu of ${name}`}
+                  >
+                    <Text style={styles.nameLink}>{name}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.line}>{i < status.queued_names.length - 1 ? ', ' : status.queued_count > status.queued_names.length ? ', …)' : ')'}</Text>
+                </View>
+              ))}
+            </View>
             <TouchableOpacity onPress={() => router.push('/admin/chain-menus?filter=attention')} accessibilityRole="button">
               <Text style={styles.reportLink}>View franchises whose menu could not be built →</Text>
             </TouchableOpacity>
@@ -217,6 +228,9 @@ const styles = StyleSheet.create({
   badge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, overflow: 'hidden' },
   body: { paddingHorizontal: 12, paddingBottom: 12, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 8 },
   line: { fontSize: 12, color: '#555', marginBottom: 3 },
+  waitingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
+  waitingName: { flexDirection: 'row', alignItems: 'baseline' },
+  nameLink: { fontSize: 12, fontWeight: '700', color: '#1565C0', textDecorationLine: 'underline', marginBottom: 3 },
   warning: { fontSize: 12, color: '#E65100', marginBottom: 4 },
   note: { fontSize: 11, color: '#999', marginTop: 4 },
   reportLink: { fontSize: 12, fontWeight: '700', color: '#1565C0', marginTop: 2 },

@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import type { ReactNode } from 'react';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props { children: ReactNode }
 interface State { hasError: boolean; message: string }
@@ -18,26 +19,29 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.hasError) return this.props.children;
-    return (
-      <View style={styles.container}>
-        <Text style={styles.icon}>⚠️</Text>
-        <Text style={styles.title}>Something went wrong</Text>
-        <Text style={styles.body}>
-          The app hit an unexpected error. Please restart and try again.
-        </Text>
-        {this.state.message ? <Text style={styles.detail}>{this.state.message}</Text> : null}
-        <TouchableOpacity
-          style={styles.btn}
-          onPress={() => this.setState({ hasError: false, message: '' })}
-        >
-          <Text style={styles.btnText}>Try again</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <ErrorFallback message={this.state.message} onRetry={() => this.setState({ hasError: false, message: '' })} />;
   }
 }
 
-const styles = StyleSheet.create({
+// A function component, so the fallback can use the themed styles (a class component cannot call hooks).
+function ErrorFallback({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const styles = useThemedStyles(baseStyles);
+  return (
+    <View style={styles.container}>
+      <Text style={styles.icon}>⚠️</Text>
+      <Text style={styles.title}>Something went wrong</Text>
+      <Text style={styles.body}>
+        The app hit an unexpected error. Please restart and try again.
+      </Text>
+      {message ? <Text style={styles.detail}>{message}</Text> : null}
+      <TouchableOpacity style={styles.btn} onPress={onRetry}>
+        <Text style={styles.btnText}>Try again</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const baseStyles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
   icon: { fontSize: 48, marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },

@@ -162,7 +162,7 @@ def run_signed_in(browser, width, diet=False):
     check(page, f"{tag}restaurant grid open", width)
     page.get_by_text("Detailed", exact=False).first.click()
     settle(page, 600)
-    page.get_by_text("AI Verdict", exact=False).first.click()
+    page.get_by_text("Quick take", exact=False).first.click()
     settle(page, 1500)
     check(page, f"{tag}restaurant list AI verdict", width)
 

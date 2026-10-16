@@ -1,8 +1,10 @@
 import { View, StyleSheet } from 'react-native';
 import { useEffect } from 'react';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming } from 'react-native-reanimated';
+import { useThemedStyles } from '../../theme/useTheme';
 
 export function MenuItemSkeleton() {
+  const styles = useThemedStyles(baseStyles);
   const shimmerOpacity = useSharedValue(0.5);
 
   const shimmerStyle = useAnimatedStyle(() => ({
@@ -54,7 +56,7 @@ export function MenuItemSkeleton() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,

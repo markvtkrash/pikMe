@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import { InAppWebViewModal } from '../../../src/components/common/InAppWebViewModal';
+import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const LEGAL_LINKS = {
   privacy: 'https://www.markvtkrash.com/legal/privacy',
@@ -91,6 +92,7 @@ function LegalLink({
   onNavigate?: () => void;
   onOpenWebView?: (url: string, title: string) => void;
 }) {
+  const styles = useThemedStyles(baseStyles);
   const handlePress = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -128,6 +130,7 @@ function LegalLink({
 }
 
 export default function HelpScreen() {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [webViewState, setWebViewState] = useState<{ url: string; title: string } | null>(null);
@@ -217,7 +220,7 @@ export default function HelpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',

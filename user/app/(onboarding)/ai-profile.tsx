@@ -9,8 +9,10 @@ import { OnboardingProgress } from '../../src/components/common/OnboardingProgre
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { aiOnboard } from '../../src/api/functions';
 import { stripReligiousDietary } from '../../src/utils/religiousData';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function AiProfileScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const { draft, updateDraft } = useUserProfileStore();
   const [displayName, setDisplayName] = useState(draft.displayName);
@@ -116,7 +118,7 @@ export default function AiProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '700', color: '#222', marginBottom: 6, marginTop: 8 },

@@ -1,11 +1,14 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRestaurantStore } from '../../store/restaurantStore';
 import { BRAND_COLORS } from '../../constants/brandTheme';
 import { useMaxRadiusMiles } from '../../hooks/useMaxRadiusMiles';
+import { useThemedStyles } from '../../theme/useTheme';
 
 const METERS_PER_MILE = 1609.34;
 
-export function RadiusSelector() {
+// compact: one line that scrolls sideways when the pills do not fit (the Explore header, where height is precious). Default: pills wrap, as before.
+export function RadiusSelector({ compact = false }: { compact?: boolean } = {}) {
+  const styles = useThemedStyles(baseStyles);
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const setSearchRadiusMeters = useRestaurantStore((s) => s.setSearchRadiusMeters);
   const selectedMiles = Math.round(searchRadiusMeters / METERS_PER_MILE);
@@ -15,29 +18,45 @@ export function RadiusSelector() {
   // useMaxRadiusMiles.ts).
   const radiusOptionsMiles = Array.from({ length: maxRadiusMiles }, (_, i) => i + 1);
 
+  const pills = radiusOptionsMiles.map((mi) => {
+    const active = mi === selectedMiles;
+    return (
+      <TouchableOpacity
+        key={mi}
+        style={[styles.pill, compact && styles.pillCompact, active && styles.pillActive]}
+        onPress={() => setSearchRadiusMeters(mi * METERS_PER_MILE)}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.pillText, active && styles.pillTextActive]}>{mi} mi</Text>
+      </TouchableOpacity>
+    );
+  });
+
+  if (compact) {
+    return (
+      <View style={styles.rowCompact}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pillsCompact}
+          style={styles.scroll}
+          accessibilityLabel="Distance"
+        >
+          {pills}
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.row}>
       <Text style={styles.label}>Distance</Text>
-      <View style={styles.pills}>
-        {radiusOptionsMiles.map((mi) => {
-          const active = mi === selectedMiles;
-          return (
-            <TouchableOpacity
-              key={mi}
-              style={[styles.pill, active && styles.pillActive]}
-              onPress={() => setSearchRadiusMeters(mi * METERS_PER_MILE)}
-              activeOpacity={0.85}
-            >
-              <Text style={[styles.pillText, active && styles.pillTextActive]}>{mi} mi</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <View style={styles.pills}>{pills}</View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -45,6 +64,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 10,
   },
+  rowCompact: { flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingBottom: 6, gap: 8 },
+  scroll: { flex: 1 },
+  pillsCompact: { flexDirection: 'row', gap: 6, paddingRight: 16 },
+  pillCompact: { paddingVertical: 4, paddingHorizontal: 9 },
   label: {
     fontSize: 12,
     fontWeight: '700',
@@ -60,7 +83,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
-    backgroundColor: '#F6F6F6',
+    // a clear blue outline on a white pill, so each distance reads as a button
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: BRAND_COLORS.primary,
   },
   pillActive: {
     backgroundColor: BRAND_COLORS.primary,
@@ -68,7 +94,7 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B6B6B',
+    color: BRAND_COLORS.primary,
   },
   pillTextActive: {
     color: '#fff',

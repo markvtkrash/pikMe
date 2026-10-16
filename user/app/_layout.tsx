@@ -21,6 +21,8 @@ import { minimalProfile } from '../src/utils/profileDefaults';
 import { Alert } from '../src/utils/alert';
 import { BRAND_NAME } from '../src/constants/brandTheme';
 import { hideNativePasswordReveal } from '../src/utils/hideNativePasswordReveal';
+import { useThemedStyles } from '../src/theme/useTheme';
+import { useProfileReminderStore } from '../src/store/profileReminderStore';
 
 // the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
 hideNativePasswordReveal();
@@ -132,7 +134,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       console.log('[AuthGate] onAuthStateChange event:', _event, '- session:', !!newSession, newSession?.user?.email);
       setSession(newSession);
-      if (!newSession) setOnboardingComplete(null);
+      if (!newSession) {
+        setOnboardingComplete(null);
+        // signed out: the next person to sign in on this device is reminded too (a "Not now" is kept for one person only)
+        if (_event === 'SIGNED_OUT') useProfileReminderStore.getState().reset();
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -232,6 +238,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 }
 
 function FaceIdLockScreen({ onRetry }: { onRetry: () => void }) {
+  const lockStyles = useThemedStyles(baseLockStyles);
   return (
     <View style={lockStyles.container}>
       <Text style={lockStyles.icon}>🔒</Text>
@@ -244,7 +251,7 @@ function FaceIdLockScreen({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const lockStyles = StyleSheet.create({
+const baseLockStyles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#fff' },
   icon: { fontSize: 32, marginBottom: 12 },
   title: { fontSize: 20, fontWeight: '700', color: '#333', marginBottom: 8 },
@@ -262,6 +269,7 @@ const lockStyles = StyleSheet.create({
 // their own small top clearance to stay clear of this badge; see each
 // screen's own insets.top usage.
 function FloatingLogo() {
+  const floatingLogoStyles = useThemedStyles(baseFloatingLogoStyles);
   const insets = useSafeAreaInsets();
   return (
     <View
@@ -277,7 +285,7 @@ function FloatingLogo() {
   );
 }
 
-const floatingLogoStyles = StyleSheet.create({
+const baseFloatingLogoStyles = StyleSheet.create({
   container: {
     position: 'absolute', left: 12, zIndex: 999, flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 18, paddingLeft: 4, paddingRight: 12, paddingVertical: 3,

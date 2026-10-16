@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useUserProfileStore } from '../../store/userProfileStore';
@@ -8,31 +8,34 @@ import { useCustomerConfig } from '../../hooks/useCustomerConfig';
 import { nextAnnouncement } from '../../utils/announcements';
 import { ONBOARDING_START_PATH } from '../../utils/customerRouting';
 import {
-  shouldShowProfileReminder, REMINDER_TITLE, REMINDER_MESSAGE, REMINDER_SETUP_LABEL, REMINDER_LATER_LABEL,
+  isSnoozed, shouldShowProfileReminder, REMINDER_TITLE, REMINDER_MESSAGE, REMINDER_SETUP_LABEL, REMINDER_LATER_LABEL,
 } from '../../utils/profileReminder';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // Signing up needs only an email and a password. This window, shown when the app is opened, invites a person who has not set up their food
-// preferences to do it (about 2 minutes). "Not now" hides it for this launch; finishing the setup, here or from the Profile tab, ends it.
+// preferences to do it (about 2 minutes). "Not now" hides it for a week on this device; finishing the setup, here or from the Profile tab, ends it.
 export function ProfileReminder() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const segments = useSegments();
   const onboardingComplete = useUserProfileStore((s) => s.onboardingComplete);
-  const dismissed = useProfileReminderStore((s) => s.dismissed);
+  const dismissedAt = useProfileReminderStore((s) => s.dismissedAt);
   const dismiss = useProfileReminderStore((s) => s.dismiss);
-  const reset = useProfileReminderStore((s) => s.reset);
+  // the remembered "Not now" is read from the device a moment after launch; nothing is shown before it is known
+  const [hydrated, setHydrated] = useState(useProfileReminderStore.persist.hasHydrated());
+  useEffect(() => {
+    const unsubscribe = useProfileReminderStore.persist.onFinishHydration(() => setHydrated(true));
+    setHydrated(useProfileReminderStore.persist.hasHydrated());
+    return unsubscribe;
+  }, []);
   const { data } = useCustomerConfig();
   const seenIds = useAnnouncementStore((s) => s.seenIds);
 
-  // Signed out (the profile state is cleared): the next person to sign in is reminded too.
-  useEffect(() => {
-    if (onboardingComplete === null) reset();
-  }, [onboardingComplete, reset]);
-
-  const visible = shouldShowProfileReminder({
+  const visible = hydrated && shouldShowProfileReminder({
     hasSession: onboardingComplete !== null,
     onboardingComplete,
     segments: segments as string[],
-    dismissedThisLaunch: dismissed,
+    snoozed: isSnoozed(dismissedAt),
     announcementPending: nextAnnouncement(data?.announcements ?? [], seenIds) !== null,
   });
 
@@ -62,7 +65,7 @@ export function ProfileReminder() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 22, width: '100%', maxWidth: 380, alignItems: 'center' },
   emoji: { fontSize: 40, marginBottom: 8 },

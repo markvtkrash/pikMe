@@ -25,6 +25,7 @@ export const BRAND_COLORS = {
   },
 
   background: {
+    page: '#EAF3FC', // the soft light blue behind the restaurant list and its header
     default: '#ffffff', // White
     surface: '#F9F9F9', // Light Gray
     overlay: '#f0f0f0', // Dividers

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildSystemPrompt, confirmedItemLines, formatMenuBlock, normalizePlaces } from './chatContext.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -48,7 +49,7 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   try {
-    const { message, history, profile, nearbyRestaurantNames } = await req.json();
+    const { message, history, profile, nearbyRestaurantNames, nearbyRestaurants } = await req.json();
     if (!message?.trim()) {
       return new Response(JSON.stringify({ error: 'message is required' }), {
         status: 400,
@@ -106,38 +107,22 @@ serve(async (req) => {
       chatHistory.push({ role: 'user', content: message });
     }
 
-    const goals = (profile?.healthGoals ?? []).join(', ') || 'balanced diet';
-    const restrictions = stripReligiousDietary(profile?.dietaryRestrictions).join(', ') || 'none';
-    const allergens = (profile?.allergens ?? []).join(', ') || 'none';
-    const cuisines = (profile?.cuisinePreferences ?? []).join(', ') || 'any';
-    const restaurants = (nearbyRestaurantNames ?? []).slice(0, 15).join(', ') || 'none known';
+    // Only CONFIRMED menu items of the restaurants near the person are given to the AI, and it may suggest nothing else. The person's name and
+    // allergens are never sent to it (they are not needed to suggest from a list, and not sent to a third party without a reason).
+    const restrictions = stripReligiousDietary(profile?.dietaryRestrictions);
+    const places = normalizePlaces(nearbyRestaurants, nearbyRestaurantNames);
+    const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const entries = await Promise.all(places.map(async (place) => {
+      try {
+        const { data } = await service.rpc('get_menu_items_for_restaurant', { p_place_id: place.placeId, p_restaurant_name: place.name });
+        return { place, lines: confirmedItemLines(data) };
+      } catch {
+        return { place, lines: [] as string[] };
+      }
+    }));
+    const systemPrompt = buildSystemPrompt(profile, formatMenuBlock(entries), restrictions);
 
-    const systemPrompt = `You are PikMe, a food recommendation assistant. Respond ONLY with bullet points.
-
-User profile: ${profile?.displayName ?? 'user'} | Goals: ${goals} | Restrictions: ${restrictions} | Allergens: ${allergens}
-Restaurants: ${restaurants}
-
-OUTPUT FORMAT - DO NOT DEVIATE:
-Start every response with a bullet point. Use ONLY this format:
-• [1-2 words max]: [1 short sentence]
-• [1-2 words max]: [1 short sentence]
-• [1-2 words max]: [1 short sentence]
-
-EXAMPLES of CORRECT format:
-• Best choice: Grilled chicken at Subway (36g protein)
-• Watch out: High sodium content (1340mg)
-• Alternative: Salad with dressing on side
-
-NEVER write:
-- Paragraphs
-- Multiple sentences in one bullet
-- "Yes, this is..." or explanations
-- Anything except bullets
-
-Maximum 3 bullets per response.`;
-
-    console.log('[ai-chat] Prompt:', systemPrompt.slice(0, 300));
-    console.log('[ai-chat] User message:', message);
+    // (The prompt and the person's message are deliberately not written to the log.)
 
     let response: string;
 
@@ -198,7 +183,6 @@ Maximum 3 bullets per response.`;
       response = claudeData.content?.[0]?.text?.trim() || 'Sorry, I could not generate a response.';
     }
 
-    console.log('[ai-chat] AI response:', JSON.stringify(response));
 
     // Save assistant response to DB
     await userClient.rpc('append_chat_message', {

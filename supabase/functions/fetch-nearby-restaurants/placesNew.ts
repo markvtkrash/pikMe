@@ -26,22 +26,41 @@ export const DETAILS_FIELD_MASK = 'id,displayName,location,formattedAddress,type
 
 // What counts as a food place. includedTypes matches ANY of a place's types, and most restaurants list 'restaurant' among theirs. Cafes, coffee shops and
 // bakeries are named because they often do not, which is why the legacy 'restaurant' filter missed places like Dunkin'.
-export const FOOD_TYPES = [
-  'restaurant', 'fast_food_restaurant', 'cafe', 'coffee_shop', 'bakery', 'meal_takeaway', 'sandwich_shop', 'ice_cream_shop', 'bar_and_grill',
+//
+// The places are asked for in TWO groups, one call each, so a downtown full of restaurants cannot fill all the slots and push every cafe and bakery out.
+// To change what is asked for, edit these two lists and redeploy the function (nothing else needs to change).
+export const MEAL_TYPES = ['restaurant', 'fast_food_restaurant', 'meal_takeaway', 'sandwich_shop', 'bar_and_grill'];
+export const TREAT_TYPES = [
+  'cafe', 'coffee_shop', 'bakery', 'ice_cream_shop', 'dessert_shop', 'donut_shop', 'juice_shop', 'bagel_shop', 'tea_house',
 ];
+// Both groups together: the single-call version (maxResultPages = 1).
+export const FOOD_TYPES = [...MEAL_TYPES, ...TREAT_TYPES];
+// The two calls of the two-call version (maxResultPages = 2): up to 20 nearest places each, so up to 40 in all.
+export const SEARCH_GROUPS: string[][] = [MEAL_TYPES, TREAT_TYPES];
+export const NEW_API_MAX_CALLS = SEARCH_GROUPS.length;
+export const NEW_API_MAX_RESULTS = 20 * NEW_API_MAX_CALLS;
 
-// Nearby Search (New) allows a radius up to 50,000 m, and at most 20 results, with no "next page".
+// Nearby Search (New) allows a radius up to 50,000 m, and at most 20 results per call, with no "next page".
 export const NEARBY_MAX_RESULTS = 20;
 export const MAX_RADIUS_METERS = 50000;
 
-export function buildNearbyRequest(latitude: number, longitude: number, radiusMeters: number, apiKey: string) {
+// While the admin has franchises switched OFF, places whose main type is one of these are not asked for: they are almost all chains, which the server
+// would only remove afterwards, wasting the slots. (Shared saved results: see the note in index.ts.)
+export const CHAIN_HEAVY_PRIMARY_TYPES = ['fast_food_restaurant'];
+
+export function buildNearbyRequest(
+  latitude: number, longitude: number, radiusMeters: number, apiKey: string, types: string[] = FOOD_TYPES, excludedPrimaryTypes: string[] = [],
+) {
+  // a type is never both asked for and excluded
+  const includedTypes = types.filter((t) => !excludedPrimaryTypes.includes(t));
   return {
     url: 'https://places.googleapis.com/v1/places:searchNearby',
     init: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': apiKey, 'X-Goog-FieldMask': NEARBY_FIELD_MASK },
       body: JSON.stringify({
-        includedTypes: FOOD_TYPES,
+        includedTypes,
+        ...(excludedPrimaryTypes.length > 0 ? { excludedPrimaryTypes } : {}),
         maxResultCount: NEARBY_MAX_RESULTS,
         // nearest first, not "most prominent" first: the nearest 20 is what a customer wants
         rankPreference: 'DISTANCE',
@@ -51,6 +70,24 @@ export function buildNearbyRequest(latitude: number, longitude: number, radiusMe
       }),
     },
   };
+}
+
+// The places of several calls as one list: in order, each place once (the first copy wins), at most `cap`.
+// deno-lint-ignore no-explicit-any
+export function mergePlaces(lists: any[][], cap: number = NEW_API_MAX_RESULTS): any[] {
+  const seen = new Set<string>();
+  // deno-lint-ignore no-explicit-any
+  const out: any[] = [];
+  for (const list of lists) {
+    for (const p of list) {
+      const id = p?.place_id;
+      if (typeof id !== 'string' || seen.has(id)) continue;
+      seen.add(id);
+      out.push(p);
+      if (out.length >= cap) return out;
+    }
+  }
+  return out;
 }
 
 export function buildDetailsRequest(placeId: string, apiKey: string) {

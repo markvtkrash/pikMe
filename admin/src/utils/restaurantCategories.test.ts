@@ -108,7 +108,10 @@ describe('the built-in list matches the migration seed (so the fallback never dr
 
   it('has the same Google mappings', () => {
     const block = sql.slice(sql.indexOf('INSERT INTO public.restaurant_category_map'), sql.indexOf('-- ── 2. The owner'));
-    const seeded = [...block.matchAll(/\('([a-z_]+)', '([a-z_]+)'\)/g)].map((m) => `${m[1]}>${m[2]}`).sort();
+    // migration 145 adds more Google types to the same mapping
+    const more = fs.readFileSync(path.join(__dirname, '../../../supabase/migrations/145_category_map_more_food_types.sql'), 'utf8');
+    const seeded = [...block.matchAll(/\('([a-z_]+)', '([a-z_]+)'\)/g), ...more.matchAll(/\('([a-z_]+)',\s+'([a-z_]+)'\)/g)]
+      .map((m) => `${m[1]}>${m[2]}`).sort();
     const builtIn = DEFAULT_CATALOG.map.map((m) => `${m.google_type}>${m.category_key}`).sort();
     expect(builtIn).toEqual(seeded);
   });

@@ -12,7 +12,7 @@ export default {
     orientation: 'portrait',
     icon: './assets/icon.png',
     scheme: 'pikme',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -60,6 +60,15 @@ export default {
         'expo-local-authentication',
         {
           faceIDPermission: `${BRAND_NAME} uses Face ID to keep your account secure and locked between sessions.`,
+        },
+      ],
+      // Voice search in the Explore search box. The phone's speech recognizer turns what is said into text; the text is only used as the search words.
+      // (Apple's speech recognition may process the audio on Apple's servers.) A new native build is needed for this.
+      [
+        'expo-speech-recognition',
+        {
+          microphonePermission: `${BRAND_NAME} uses the microphone so you can say what restaurant or food you are looking for.`,
+          speechRecognitionPermission: `${BRAND_NAME} uses speech recognition to turn what you say into a restaurant search. Nothing is recorded or kept by ${BRAND_NAME}.`,
         },
       ],
     ],

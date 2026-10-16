@@ -1,7 +1,8 @@
 // Tests for the Places API (New) helper of fetch-nearby-restaurants.
 import {
-  buildDetailsRequest, buildNearbyRequest, cityFromAddress, DETAILS_FIELD_MASK, describeGoogleError, FOOD_TYPES, NEARBY_FIELD_MASK,
-  parseNearbyResponse, parsePlacesApiVersion, toLegacyHours, toLegacyPlace,
+  buildDetailsRequest, buildNearbyRequest, CHAIN_HEAVY_PRIMARY_TYPES, cityFromAddress, DETAILS_FIELD_MASK, describeGoogleError, FOOD_TYPES, MEAL_TYPES, mergePlaces,
+  NEARBY_FIELD_MASK, NEW_API_MAX_CALLS, NEW_API_MAX_RESULTS, parseNearbyResponse, parsePlacesApiVersion, SEARCH_GROUPS, toLegacyHours,
+  toLegacyPlace, TREAT_TYPES,
 } from '../../../supabase/functions/fetch-nearby-restaurants/placesNew';
 
 describe('parsePlacesApiVersion', () => {
@@ -151,5 +152,62 @@ describe('describeGoogleError', () => {
     expect(describeGoogleError({ error: { code: 403, status: 'PERMISSION_DENIED', message: 'Places API (New) has not been used' } }, 403))
       .toBe('403 PERMISSION_DENIED Places API (New) has not been used');
     expect(describeGoogleError(null, 500)).toBe('HTTP 500');
+  });
+});
+
+describe('the two category calls', () => {
+  it('are meals and cafes / treats, with no type in both', () => {
+    expect(SEARCH_GROUPS).toEqual([MEAL_TYPES, TREAT_TYPES]);
+    expect(MEAL_TYPES).toEqual(expect.arrayContaining(['restaurant', 'fast_food_restaurant', 'meal_takeaway', 'sandwich_shop']));
+    expect(TREAT_TYPES).toEqual(expect.arrayContaining(['cafe', 'coffee_shop', 'bakery', 'ice_cream_shop']));
+    expect(MEAL_TYPES.filter((t) => TREAT_TYPES.includes(t))).toEqual([]);
+    expect(new Set(FOOD_TYPES)).toEqual(new Set([...MEAL_TYPES, ...TREAT_TYPES]));
+  });
+  it('are at most two calls, and at most 40 places', () => {
+    expect(NEW_API_MAX_CALLS).toBe(2);
+    expect(NEW_API_MAX_RESULTS).toBe(40);
+  });
+  it('each ask for the 20 nearest of their own types', () => {
+    for (const group of SEARCH_GROUPS) {
+      const body = JSON.parse(buildNearbyRequest(1, 2, 5000, 'K', group).init.body);
+      expect(body.includedTypes).toEqual(group);
+      expect(body.maxResultCount).toBe(20);
+      expect(body.rankPreference).toBe('DISTANCE');
+    }
+  });
+  it('the single call still asks for every type', () => {
+    expect(JSON.parse(buildNearbyRequest(1, 2, 5000, 'K').init.body).includedTypes).toEqual(FOOD_TYPES);
+  });
+});
+
+describe('mergePlaces', () => {
+  const p = (id: string) => ({ place_id: id });
+  it('joins the lists in order, each place once, the first copy winning', () => {
+    expect(mergePlaces([[p('a'), p('b')], [p('b'), p('c')]]).map((x) => x.place_id)).toEqual(['a', 'b', 'c']);
+  });
+  it('stops at the cap', () => {
+    const many = Array.from({ length: 30 }, (_, i) => p(`m${i}`));
+    const more = Array.from({ length: 30 }, (_, i) => p(`n${i}`));
+    expect(mergePlaces([many, more])).toHaveLength(40);
+    expect(mergePlaces([many, more], 25)).toHaveLength(25);
+  });
+  it('skips entries without an id, and copes with empty lists', () => {
+    expect(mergePlaces([[{}, p('a')], []]).map((x) => x.place_id)).toEqual(['a']);
+    expect(mergePlaces([])).toEqual([]);
+  });
+});
+
+describe('leaving out chain-heavy types (franchises switched off)', () => {
+  it('excludes fast food by main type and no longer asks for it', () => {
+    const body = JSON.parse(buildNearbyRequest(1, 2, 5000, 'K', MEAL_TYPES, CHAIN_HEAVY_PRIMARY_TYPES).init.body);
+    expect(CHAIN_HEAVY_PRIMARY_TYPES).toEqual(['fast_food_restaurant']);
+    expect(body.excludedPrimaryTypes).toEqual(['fast_food_restaurant']);
+    expect(body.includedTypes).not.toContain('fast_food_restaurant');
+    expect(body.includedTypes).toEqual(expect.arrayContaining(['restaurant', 'meal_takeaway', 'sandwich_shop']));
+  });
+  it('sends nothing extra when franchises are shown', () => {
+    const body = JSON.parse(buildNearbyRequest(1, 2, 5000, 'K', MEAL_TYPES).init.body);
+    expect('excludedPrimaryTypes' in body).toBe(false);
+    expect(body.includedTypes).toEqual(MEAL_TYPES);
   });
 });

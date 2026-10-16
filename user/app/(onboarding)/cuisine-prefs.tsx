@@ -5,8 +5,10 @@ import { OnboardingProgress } from '../../src/components/common/OnboardingProgre
 import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { CUISINE_OPTIONS } from '../../src/constants/dietaryOptions';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function CuisinePrefsScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const { draft, updateDraft } = useUserProfileStore();
   const [selected, setSelected] = useState<string[]>(draft.cuisinePreferences);
@@ -59,7 +61,7 @@ export default function CuisinePrefsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },

@@ -7,11 +7,13 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { isValidEmail } from '../../src/utils/passwordReset';
 import { LegalDocumentModal, type DocumentType } from '../../src/components/common/LegalDocumentModal';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 // A password box with its own show / hide eye.
 function PasswordField({
   value, onChangeText, placeholder, onSubmit,
 }: { value: string; onChangeText: (t: string) => void; placeholder: string; onSubmit: () => void }) {
+  const styles = useThemedStyles(baseStyles);
   const [show, setShow] = useState(false);
   return (
     <View style={styles.passwordContainer}>
@@ -35,6 +37,7 @@ function PasswordField({
 // Sign in and register are on the same page as two separate cards with their own borders: side by side on a wide screen, stacked on a phone. The
 // sizes are kept small so both fit on one screen without scrolling.
 export default function SignInScreen() {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const wide = useWindowDimensions().width >= 720;
 
@@ -207,7 +210,7 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F8FB' },
   // the top padding leaves room for the logo and name that float at the top left of every screen
   inner: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12 },

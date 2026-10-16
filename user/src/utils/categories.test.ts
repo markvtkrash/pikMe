@@ -125,3 +125,41 @@ describe('small helpers', () => {
     expect(describeCategories(list[0], [])).toBeNull();
   });
 });
+
+
+import { chipCount } from './categories';
+
+describe('chipCount', () => {
+  const r = (name: string, venueTypes: string[], services: string[] = [], cuisines: string[] = []) =>
+    ({ name, cuisineTypes: [], venueTypes, services, cuisines, ownerCategories: true });
+  const list = [
+    r('A', ['cafe'], ['takeaway']),
+    r('B', ['cafe', 'bakery'], ['takeaway', 'delivery']),
+    r('C', ['bakery']),
+    r('D', ['restaurant'], ['delivery'], ['italian']),
+  ];
+
+  it('counts the places that have the kind, and ignores other kinds picked in the same group', () => {
+    expect(chipCount(list, NO_CATEGORY_FILTERS, 'venue', 'cafe')).toBe(2);
+    expect(chipCount(list, NO_CATEGORY_FILTERS, 'venue', 'bakery')).toBe(2);
+    // picking Cafe does not change what Bakery would give: they are alternatives
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, venues: ['cafe'] }, 'venue', 'bakery')).toBe(2);
+  });
+
+  it('respects the other groups\' choices', () => {
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, services: ['delivery'] }, 'venue', 'cafe')).toBe(1);
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, services: ['delivery'] }, 'venue', 'bakery')).toBe(1);
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, cuisines: ['italian'] }, 'venue', 'cafe')).toBe(0);
+  });
+
+  it('counts ways to order as "and also this one"', () => {
+    expect(chipCount(list, NO_CATEGORY_FILTERS, 'service', 'takeaway')).toBe(2);
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, services: ['takeaway'] }, 'service', 'delivery')).toBe(1);
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, services: ['takeaway'] }, 'service', 'takeaway')).toBe(2);
+  });
+
+  it('counts cuisines', () => {
+    expect(chipCount(list, NO_CATEGORY_FILTERS, 'cuisine', 'italian')).toBe(1);
+    expect(chipCount(list, { ...NO_CATEGORY_FILTERS, venues: ['cafe'] }, 'cuisine', 'italian')).toBe(0);
+  });
+});

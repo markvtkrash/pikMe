@@ -92,6 +92,6 @@ export function placesApiText(value: string | null | undefined): { version: 'new
         state: 'LEGACY: the restaurant search uses the Places API we have always used.',
         button: 'Use the new Places API',
         title: 'Use the new Places API?',
-        message: 'The restaurant search will call Places API (New): nearest 20 food places, asking Google only for the fields the app uses. If it fails, that request falls back to legacy by itself. You can switch back here at any time. Make sure "Places API (New)" is enabled for your Google key. The server picks this up within about a minute.',
+        message: 'The restaurant search will call Places API (New), asking Google only for the fields the app uses: the 20 nearest food places in one call, or, with maxResultPages set to 2, up to 40 in two calls (meals, then cafes and treats). If it fails, that request falls back to legacy by itself. You can switch back here at any time. Make sure "Places API (New)" is enabled for your Google key. The server picks this up within about a minute.',
       };
 }

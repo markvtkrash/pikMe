@@ -2,6 +2,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } fr
 import { useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BRAND_COLORS } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // react-native-web has no built-in <iframe> element — declare it so the JSX
 // below type-checks. This file is the web build (Metro picks the .native.tsx
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function InAppWebViewModal({ visible, url, title, onClose }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +58,7 @@ export function InAppWebViewModal({ visible, url, title, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

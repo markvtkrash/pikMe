@@ -10,6 +10,7 @@ import { useSaved } from '../../hooks/useSaved';
 import { useCustomerConfig } from '../../hooks/useCustomerConfig';
 import { describeCategories } from '../../utils/categories';
 import { getActiveCouponsByPlaceId } from '../../api/coupons';
+import { useThemedStyles, useThemeColor } from '../../theme/useTheme';
 
 // Generic restaurant/food photos — the app doesn't call Google's Place
 // Photos API at all (it's billed per view, not per unique place, so it scales
@@ -52,6 +53,8 @@ interface Props {
 }
 
 export function RestaurantCard({ restaurant, selected = false, compact = false, hideStatus = false }: Props) {
+  const styles = useThemedStyles(baseStyles);
+  const { color: tc } = useThemeColor();
   const router = useRouter();
   const isSaved = useSavedStore((s) => s.restaurantIds.has(restaurant.placeId));
   const { toggleRestaurant } = useSaved();
@@ -99,11 +102,11 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
 
         {/* Heart */}
         <TouchableOpacity
-          style={styles.heart}
+          style={[styles.heart, isSaved && styles.heartSaved]}
           onPress={() => toggleRestaurant(restaurant.placeId, restaurant)}
           hitSlop={10}
         >
-          <Text style={{ fontSize: 17 }}>{isSaved ? '❤️' : '🤍'}</Text>
+          <Text style={isSaved ? styles.heartOn : styles.heartOff}>{isSaved ? '♥' : '♡'}</Text>
         </TouchableOpacity>
 
         {/* Status */}
@@ -111,11 +114,11 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
           <View style={styles.statusPill}>
             <View style={[styles.dot, { backgroundColor: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.statusTxt, { color: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]}>
+              <Text style={[styles.statusTxt, { color: tc(hoursDisplay.isOpen ? '#1565C0' : '#EF5350') }]}>
                 {hoursDisplay.todayHours || (hoursDisplay.isOpen ? 'Open' : 'Closed')}
               </Text>
               {hoursDisplay.timeUntil && (
-                <Text style={[styles.statusSubtxt, { color: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]}>
+                <Text style={[styles.statusSubtxt, { color: tc(hoursDisplay.isOpen ? '#1565C0' : '#EF5350') }]}>
                   {hoursDisplay.timeUntil}
                 </Text>
               )}
@@ -127,7 +130,9 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
       {/* Info row */}
       <View style={styles.info}>
         <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
+          <View style={styles.nameBox}>
+            <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
+          </View>
           {restaurant.rating > 0 && (
             <View style={styles.ratingPill}>
               <Text style={styles.ratingTxt}>⭐ {restaurant.rating.toFixed(1)}</Text>
@@ -152,7 +157,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -177,7 +182,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.93)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#D32F2F',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -186,6 +193,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+
+  // saved: filled red circle with a white heart; not saved: white circle with a red outline heart
+  heartSaved: { backgroundColor: '#D32F2F' },
+  heartOff: { fontSize: 22, lineHeight: 26, color: '#D32F2F', fontWeight: '700' },
+  heartOn: { fontSize: 20, lineHeight: 24, color: '#FFFFFF' },
 
   statusPill: {
     position: 'absolute',
@@ -205,7 +217,9 @@ const styles = StyleSheet.create({
 
   info: { paddingHorizontal: 14, paddingVertical: 12 },
   nameRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
-  name: { fontSize: 16, fontWeight: '700', color: '#141414', flex: 1, marginRight: 8 },
+  // the restaurant name sits on a light-blue highlight so it stands out from the details under it
+  nameBox: { flex: 1, marginRight: 8, backgroundColor: '#DCEBFA', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderLeftWidth: 4, borderLeftColor: '#1565C0' },
+  name: { fontSize: 16, fontWeight: '800', color: '#0D47A1' },
   ratingPill: {
     backgroundColor: '#F6F6F6',
     paddingHorizontal: 8,

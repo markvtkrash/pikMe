@@ -6,8 +6,10 @@ import { useNearbyRestaurants } from '../../hooks/useNearbyRestaurants';
 import { useRestaurantStore } from '../../store/restaurantStore';
 import { RadiusSelector } from '../common/RadiusSelector';
 import type { Restaurant } from '../../types';
+import { useThemedStyles } from '../../theme/useTheme';
 
 export function NearbyMap() {
+  const styles = useThemedStyles(baseStyles);
   const { location, loading: locationLoading, error: locationError, refresh } = useLocation();
   const searchRadiusMeters = useRestaurantStore((s) => s.searchRadiusMeters);
   const { data: restaurants = [], isLoading, error: fetchError, refetch } = useNearbyRestaurants(location);
@@ -84,7 +86,7 @@ export function NearbyMap() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
   banner: {

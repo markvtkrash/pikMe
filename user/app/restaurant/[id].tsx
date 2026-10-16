@@ -31,6 +31,7 @@ import { describeCategories } from '../../src/utils/categories';
 import { supabase } from '../../src/api/supabase';
 import { useUIStore } from '../../src/store/uiStore';
 import type { Recommendation, Coupon } from '../../src/types';
+import { useThemedStyles, useThemeColor } from '../../src/theme/useTheme';
 
 const LOADING_EMOJIS = ['🍽️', '🥗', '🍲', '🥘', '🍳'];
 
@@ -77,6 +78,8 @@ const LOADING_STATES = [
 ];
 
 export default function RestaurantDetailScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const { dark, color: tc } = useThemeColor();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -413,11 +416,11 @@ export default function RestaurantDetailScreen() {
                   style={[
                     styles.keywordButton,
                     selectedKeywords.length === 0
-                      ? { backgroundColor: '#141414', borderColor: '#141414', borderWidth: 2 }
-                      : { backgroundColor: '#fff', borderColor: '#141414', borderWidth: 1.5 },
+                      ? { backgroundColor: dark ? '#ededed' : '#141414', borderColor: dark ? '#ededed' : '#141414', borderWidth: 2 }
+                      : { backgroundColor: tc('#fff', 'backgroundColor'), borderColor: tc('#141414'), borderWidth: 1.5 },
                   ]}
                 >
-                  <Text style={[styles.keywordText, { color: selectedKeywords.length === 0 ? '#fff' : '#141414' }]}>
+                  <Text style={[styles.keywordText, { color: selectedKeywords.length === 0 ? (dark ? '#141414' : '#fff') : tc('#141414') }]}>
                     {selectedKeywords.length === 0 ? '✓ ' : ''}All
                   </Text>
                 </TouchableOpacity>
@@ -437,10 +440,10 @@ export default function RestaurantDetailScreen() {
                         styles.keywordButton,
                         isSelected
                           ? { backgroundColor: filter.textColor, borderColor: filter.textColor, borderWidth: 2 }
-                          : { backgroundColor: '#fff', borderColor: filter.textColor, borderWidth: 1.5 },
+                          : { backgroundColor: tc('#fff', 'backgroundColor'), borderColor: tc(filter.textColor), borderWidth: 1.5 },
                       ]}
                     >
-                      <Text style={[styles.keywordText, { color: isSelected ? '#fff' : filter.textColor }]}>
+                      <Text style={[styles.keywordText, { color: isSelected ? '#fff' : tc(filter.textColor) }]}>
                         {isSelected ? '✓ ' : ''}{filter.label}
                       </Text>
                     </TouchableOpacity>
@@ -464,7 +467,7 @@ export default function RestaurantDetailScreen() {
           )}
 
           {isLoading && (
-            <View style={[styles.loadingBox, { backgroundColor: LOADING_STATES[loadingMessageIndex].bg }]}>
+            <View style={[styles.loadingBox, { backgroundColor: tc(LOADING_STATES[loadingMessageIndex].bg, 'backgroundColor') }]}>
               <View style={styles.loadingContent}>
                 <Text style={styles.loadingEmoji}>{LOADING_STATES[loadingMessageIndex].emoji}</Text>
                 <Text style={styles.loadingText}>{LOADING_STATES[loadingMessageIndex].text}</Text>
@@ -634,7 +637,7 @@ export default function RestaurantDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center' },
   sheet: { flex: 1, width: '100%', backgroundColor: '#F6F6F6', overflow: 'hidden' },
   sheetWide: { maxWidth: 720, marginVertical: 24, borderRadius: 20 },

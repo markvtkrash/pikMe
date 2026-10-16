@@ -2,7 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { anyKindHidden, filterByKind, parseKindFlags, SHOW_ALL, type KindFlags } from './kindFilter.ts';
 import { checkRegion } from './regionGate.ts';
 import {
-  buildDetailsRequest, buildNearbyRequest, describeGoogleError, parseNearbyResponse, parsePlacesApiVersion, toLegacyPlace,
+  buildDetailsRequest, buildNearbyRequest, CHAIN_HEAVY_PRIMARY_TYPES, describeGoogleError, FOOD_TYPES, mergePlaces, NEW_API_MAX_CALLS,
+  NEW_API_MAX_RESULTS,
+  parseNearbyResponse, parsePlacesApiVersion, SEARCH_GROUPS, toLegacyPlace,
   type PlacesApiVersion,
 } from './placesNew.ts';
 import { DEFAULT_CATALOG, resolveCategories, type Catalog, type CategoryDef, type OwnerCategories } from './categories.ts';
@@ -186,12 +188,18 @@ async function applyListingEligibility(supabase: any, userId: string, restaurant
   }
 }
 
+// Applies the admin's Franchise / Independent switches. Also says what it did, in one word, so a response can be checked without reading logs:
+//   off       neither kind is switched off (or there was nothing to filter)
+//   staff     the caller is an admin or an owner, who always get the full list
+//   hid:N     N restaurants of a switched-off kind were left out
+//   none      a kind is off but nothing in this list belongs to it
+//   error     something failed, so everything is shown (the reason is in the log)
 // deno-lint-ignore no-explicit-any
-async function applyKindFlags(supabase: any, userId: string, restaurants: any[]): Promise<any[]> {
+async function applyKindFlags(supabase: any, userId: string, restaurants: any[]): Promise<{ list: any[]; note: string }> {
   try {
     const flags = await loadKindFlags(supabase);
-    if (!anyKindHidden(flags) || restaurants.length === 0) return restaurants;
-    if (await isStaffCaller(supabase, userId)) return restaurants;
+    if (!anyKindHidden(flags) || restaurants.length === 0) return { list: restaurants, note: 'off' };
+    if (await isStaffCaller(supabase, userId)) return { list: restaurants, note: 'staff' };
     const names = Array.from(new Set(restaurants.map((r) => String(r.name ?? '').trim()).filter(Boolean)));
     const { data, error } = await supabase.rpc('franchise_names_among', { p_names: names });
     if (error) throw error;
@@ -199,11 +207,12 @@ async function applyKindFlags(supabase: any, userId: string, restaurants: any[])
     const kept = filterByKind(restaurants, franchiseNames, flags);
     if (kept.length !== restaurants.length) {
       console.log('[fetch-nearby-restaurants] Hid', restaurants.length - kept.length, 'restaurant(s) of a switched-off kind');
+      return { list: kept, note: `hid:${restaurants.length - kept.length}` };
     }
-    return kept;
+    return { list: kept, note: 'none' };
   } catch (e) {
     console.warn('[fetch-nearby-restaurants] could not apply the restaurant kind flags, showing everything:', e instanceof Error ? e.message : e);
-    return restaurants;
+    return { list: restaurants, note: 'error' };
   }
 }
 
@@ -403,13 +412,34 @@ Deno.serve(async (req) => {
       let usedNewApi = false;
       if ((await loadPlacesApiVersion(supabase)) === 'new') {
         try {
-          const req = buildNearbyRequest(Number(latitude), Number(longitude), radiusMeters, GOOGLE_KEY);
-          const res = await fetch(req.url, req.init);
-          const json = await res.json().catch(() => null);
-          if (!res.ok) throw new Error(describeGoogleError(json, res.status));
-          places = parseNearbyResponse(json);
+          // maxResultPages = 1: one call for every kind of food place (up to 20 nearest). 2 or more: two calls at once, one for meals and one
+          // for cafes and treats (up to 20 nearest each), merged, up to 40. No more than two calls are ever made.
+          const callCount = Math.min(MAX_RESULT_PAGES, NEW_API_MAX_CALLS);
+          const groups = callCount >= 2 ? SEARCH_GROUPS : [FOOD_TYPES];
+          // While franchises are switched off, fast-food places (almost all chains) are not asked for, so the slots go to places that will be shown.
+          // The saved results of an area are shared, so they then lack fast food until the area is searched again (7 days at most, or sooner if
+          // the saved search areas are cleared after franchises are switched back on).
+          const skipChains = !(await loadKindFlags(supabase)).showFranchise;
+          const settled = await Promise.allSettled(groups.map(async (types) => {
+            const req = buildNearbyRequest(
+              Number(latitude), Number(longitude), radiusMeters, GOOGLE_KEY, types, skipChains ? CHAIN_HEAVY_PRIMARY_TYPES : [],
+            );
+            const res = await fetch(req.url, req.init);
+            const json = await res.json().catch(() => null);
+            if (!res.ok) throw new Error(describeGoogleError(json, res.status));
+            return parseNearbyResponse(json);
+          }));
+          const fulfilled = settled.filter((s): s is PromiseFulfilledResult<any[]> => s.status === 'fulfilled');
+          if (fulfilled.length === 0) {
+            const first = settled.find((s): s is PromiseRejectedResult => s.status === 'rejected');
+            throw first?.reason instanceof Error ? first.reason : new Error('Places API (New) gave no answer');
+          }
+          if (fulfilled.length < settled.length) {
+            console.warn('[fetch-nearby-restaurants] one of the Places API (New) calls failed; using the other');
+          }
+          places = mergePlaces(fulfilled.map((s) => s.value), NEW_API_MAX_RESULTS);
           usedNewApi = true;
-          console.log('[fetch-nearby-restaurants] Places API (New): got', places.length, 'places');
+          console.log('[fetch-nearby-restaurants] Places API (New):', groups.length, 'call(s), got', places.length, 'places');
         } catch (e) {
           console.warn('[fetch-nearby-restaurants] Places API (New) failed, using the legacy API for this request:', e instanceof Error ? e.message : e);
           places = [];
@@ -698,7 +728,8 @@ Deno.serve(async (req) => {
     }
 
     // Customers do not see a kind of restaurant an admin has switched off (franchise / independent).
-    restaurants = await applyKindFlags(supabase, userData.user.id, restaurants);
+    const kindResult = await applyKindFlags(supabase, userData.user.id, restaurants);
+    restaurants = kindResult.list;
 
     // Nor a restaurant that is not eligible for listing (only enforced while the server switch is on).
     restaurants = await applyListingEligibility(supabase, userData.user.id, restaurants);
@@ -708,7 +739,8 @@ Deno.serve(async (req) => {
 
     console.log('[fetch-nearby-restaurants] Returning', restaurants.length, 'restaurants');
     return new Response(JSON.stringify(restaurants), {
-      headers: { ...CORS, 'Content-Type': 'application/json' },
+      // X-Kind-Filter says what the Franchise / Independent switches did for this response (see applyKindFlags)
+      headers: { ...CORS, 'Content-Type': 'application/json', 'X-Kind-Filter': kindResult.note, 'Access-Control-Expose-Headers': 'X-Kind-Filter' },
     });
   } catch (err: any) {
     console.error('fetch-nearby-restaurants error:', err);

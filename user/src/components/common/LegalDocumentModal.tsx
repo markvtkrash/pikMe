@@ -3,6 +3,7 @@ import {
   View, Text, Modal, TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
 import { BRAND_NAME } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 export type DocumentType = 'privacy_policy' | 'terms_of_service' | 'food_disclaimer';
 
@@ -287,6 +288,7 @@ interface Props {
 }
 
 export function LegalDocumentModal({ visible, documentType, onClose }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const doc = DOCUMENTS[documentType];
 
   return (
@@ -322,7 +324,7 @@ export function LegalDocumentModal({ visible, documentType, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: {
     flexDirection: 'row',

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { View, Animated, StyleSheet } from 'react-native';
+import { useThemedStyles } from '../../theme/useTheme';
 
 function SkeletonBox({ width, height, style }: {
   width: number | string; height: number; style?: object;
 }) {
+  const styles = useThemedStyles(baseStyles);
   const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
@@ -23,6 +25,7 @@ function SkeletonBox({ width, height, style }: {
 }
 
 export function SkeletonRestaurantCard() {
+  const styles = useThemedStyles(baseStyles);
   return (
     <View style={styles.card}>
       <View style={styles.row}>
@@ -39,6 +42,7 @@ export function SkeletonRestaurantCard() {
 }
 
 export function SkeletonMenuCard() {
+  const styles = useThemedStyles(baseStyles);
   return (
     <View style={styles.card}>
       <View style={styles.row}>
@@ -56,7 +60,7 @@ export function SkeletonMenuCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: {
     backgroundColor: '#fff',
     borderRadius: 14,

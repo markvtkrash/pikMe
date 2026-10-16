@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createSupportTicket, getMyTickets, SupportTicket, TicketStatus } from '../../src/api/supportTickets';
 import { useUserProfile } from '../../src/hooks/useUserProfile';
 import { BRAND_COLORS } from '../../src/constants/brandTheme';
+import { useThemedStyles, useThemeColor } from '../../src/theme/useTheme';
 
 const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: string }> = {
   open: { bg: '#E3F2FD', text: '#1976D2', label: 'Open' },
@@ -18,6 +19,8 @@ const STATUS_COLORS: Record<TicketStatus, { bg: string; text: string; label: str
 };
 
 export default function SupportScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const { color: tc } = useThemeColor();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { data: profile } = useUserProfile();
@@ -137,8 +140,8 @@ export default function SupportScreen() {
                 <Text style={styles.ticketSubject} numberOfLines={expanded ? undefined : 1}>
                   {item.subject}
                 </Text>
-                <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-                  <Text style={[styles.statusText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: tc(statusInfo.bg, 'backgroundColor') }]}>
+                  <Text style={[styles.statusText, { color: tc(statusInfo.text) }]}>{statusInfo.label}</Text>
                 </View>
               </View>
               <Text style={styles.ticketDate}>
@@ -163,7 +166,7 @@ export default function SupportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BRAND_COLORS.background.surface },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   backBtn: { paddingVertical: 4, paddingHorizontal: 8, borderRadius: 6, backgroundColor: BRAND_COLORS.background.overlay },

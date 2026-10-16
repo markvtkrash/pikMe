@@ -1,7 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { BRAND_NAME } from '../../src/constants/brandTheme';
+import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function EntertainmentScreen() {
+  const styles = useThemedStyles(baseStyles);
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>🎮</Text>
@@ -13,7 +15,7 @@ export default function EntertainmentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',

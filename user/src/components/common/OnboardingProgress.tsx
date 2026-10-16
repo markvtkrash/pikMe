@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props {
   step: number;
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function OnboardingProgress({ step, total = 5, showBack = true }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -36,7 +38,7 @@ export function OnboardingProgress({ step, total = 5, showBack = true }: Props) 
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,7 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 import type { ChatMessage } from '../../store/chatStore';
+import { useThemedStyles } from '../../theme/useTheme';
 
 export function ChatBubble({ message }: { message: ChatMessage }) {
+  const styles = useThemedStyles(baseStyles);
   const isUser = message.role === 'user';
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAssistant]}>
@@ -15,7 +17,7 @@ export function ChatBubble({ message }: { message: ChatMessage }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   row: { flexDirection: 'row', marginHorizontal: 16, marginVertical: 4, alignItems: 'flex-end', gap: 8 },
   rowUser: { justifyContent: 'flex-end' },
   rowAssistant: { justifyContent: 'flex-start' },

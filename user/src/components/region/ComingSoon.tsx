@@ -4,10 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getOwnEmail, joinRegionWaitlist, leaveRegionWaitlist } from '../../api/region';
 import { comingSoonCopy, isValidEmail, RegionAccess } from '../../utils/regionAccess';
 import { BRAND_NAME } from '../../constants/brandTheme';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // Shown instead of restaurants when the customer is standing in a state that is not open yet (Region Management, migration 142). They can leave
 // their email to be told when it opens, take it back, or check again (for example after moving).
 export function ComingSoon({ access, onCheckAgain, checking }: { access: RegionAccess; onCheckAgain: () => void; checking: boolean }) {
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const copy = comingSoonCopy(access);
   const [email, setEmail] = useState('');
@@ -98,7 +100,7 @@ export function ComingSoon({ access, onCheckAgain, checking }: { access: RegionA
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 28, paddingBottom: 40, alignItems: 'center', width: '100%', maxWidth: 460, alignSelf: 'center' },
   icon: { fontSize: 54, marginBottom: 8 },

@@ -1,6 +1,7 @@
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { BRAND_COLORS } from '../../constants/brandTheme';
 import { getNutritionFlags, NutritionLike } from '../../utils/nutritionFlags';
+import { useThemedStyles } from '../../theme/useTheme';
 
 interface Props {
   visible: boolean;
@@ -13,13 +14,15 @@ interface Props {
 // wrong "low sodium" claim could give someone a false sense of safety in a
 // way an omitted label never would. See utils/nutritionFlags.ts.
 export function NutritionInfoModal({ visible, nutrition, onClose }: Props) {
+  const styles = useThemedStyles(baseStyles);
   const flags = getNutritionFlags(nutrition);
 
   return (
     <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.card}>
-          <Text style={styles.icon}>📊</Text>
+      {/* A tap anywhere outside the card closes it; a tap inside the card does not. */}
+      <Pressable style={styles.overlay} onPress={onClose} accessibilityLabel="Close nutrition info">
+        <Pressable style={styles.card} onPress={() => {}}>
+          <Text style={styles.icon}>🍎</Text>
           <Text style={styles.title}>Nutrition Info</Text>
 
           {flags.length > 0 ? (
@@ -47,13 +50,13 @@ export function NutritionInfoModal({ visible, nutrition, onClose }: Props) {
           <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.85}>
             <Text style={styles.closeBtnText}>Close</Text>
           </TouchableOpacity>
-        </View>
-      </View>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.55)',

@@ -2,12 +2,14 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, Linking, Pressable } f
 import { useCustomerConfig } from '../../hooks/useCustomerConfig';
 import { useAnnouncementStore } from '../../store/announcementStore';
 import { nextAnnouncement } from '../../utils/announcements';
+import { useThemedStyles } from '../../theme/useTheme';
 
 // Shows the next announcement an admin published that this phone has not shown yet (migration 128), once. An "important" one
 // can only be closed with the OK button; an info one can also be closed by tapping outside it. It appears the next time the
 // app opens, or when the shared settings refresh (every 10 minutes while the app is in use). Nothing shows if the settings
 // could not be read.
 export function AnnouncementModal() {
+  const styles = useThemedStyles(baseStyles);
   const { data } = useCustomerConfig();
   const seenIds = useAnnouncementStore((s) => s.seenIds);
   const markSeen = useAnnouncementStore((s) => s.markSeen);
@@ -46,7 +48,7 @@ export function AnnouncementModal() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   card: { width: '100%', maxWidth: 420, backgroundColor: '#fff', borderRadius: 16, padding: 20 },
   tag: { alignSelf: 'flex-start', fontSize: 11, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10, overflow: 'hidden' },
