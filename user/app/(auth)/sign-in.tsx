@@ -182,18 +182,24 @@ export default function SignInScreen() {
             >
               {busy === 'signIn' ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign In</Text>}
             </TouchableOpacity>
-            {/* the note belongs to Create Account only, so it sits directly above that button, not above Sign In */}
-            <View>
-              <Text style={styles.emailNote}>Email is all we need. It's used to reset your password.</Text>
-              <TouchableOpacity
-                style={[styles.button, styles.registerButton, busy !== null && styles.buttonDisabled]}
-                onPress={handleRegister}
-                disabled={busy !== null}
-                accessibilityRole="button"
-              >
-                {busy === 'register' ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Create Account</Text>}
-              </TouchableOpacity>
-            </View>
+            {/* the note belongs to Create Account only, so it is written on that button, under its name */}
+            <TouchableOpacity
+              style={[styles.button, styles.registerButton, busy !== null && styles.buttonDisabled]}
+              onPress={handleRegister}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityLabel="Create Account. Just email and password. Your email is only for password resets."
+            >
+              {busy === 'register' ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Text style={styles.buttonText}>Create Account</Text>
+                  <Text style={styles.buttonSub}>Just email and password.</Text>
+                  <Text style={styles.buttonSub}>Your email is only for password resets.</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.forgot} onPress={() => router.push('/(auth)/forgot-password')} accessibilityRole="button">
@@ -272,7 +278,6 @@ const baseStyles = StyleSheet.create({
   eyeIcon: { fontSize: 17 },
   errorText: { color: '#e53e3e', fontSize: 13, marginBottom: 6, textAlign: 'center', lineHeight: 18 },
   successText: { color: '#1565C0', fontSize: 13, marginBottom: 6, textAlign: 'center', lineHeight: 18 },
-  emailNote: { fontSize: 12, fontWeight: '600', color: '#7A4A00', backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, lineHeight: 15, marginBottom: 6 },
 
   // the agreement popup
   agreementLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 20 },
@@ -290,12 +295,14 @@ const baseStyles = StyleSheet.create({
   agreementCancelText: { fontSize: 14, fontWeight: '700', color: '#666' },
 
   // Sign In, then the note and Create Account together: stacked, so each button is full width and the note fits on one or two lines
-  buttons: { gap: 12 },
-  button: { borderRadius: 10, paddingVertical: 12, alignItems: 'center', minHeight: 44, justifyContent: 'center' },
+  buttons: { gap: 8 },
+  button: { borderRadius: 10, paddingVertical: 7, alignItems: 'center', minHeight: 38, justifyContent: 'center' },
   signInButton: { backgroundColor: '#1565C0' },
   registerButton: { backgroundColor: '#2E7D32' },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  buttonText: { color: '#fff', fontSize: 14.5, fontWeight: '800' },
+  // the small line under Create Account
+  buttonSub: { color: '#fff', fontSize: 11, fontWeight: '600', textAlign: 'center', marginTop: 1, paddingHorizontal: 8, lineHeight: 14 },
   forgot: { marginTop: 12, alignItems: 'center' },
   forgotText: { color: '#1565C0', fontSize: 14, fontWeight: '800' },
 });
