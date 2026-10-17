@@ -23,6 +23,7 @@ import { BRAND_NAME } from '../src/constants/brandTheme';
 import { hideNativePasswordReveal } from '../src/utils/hideNativePasswordReveal';
 import { useThemedStyles } from '../src/theme/useTheme';
 import { useProfileReminderStore } from '../src/store/profileReminderStore';
+import { trackEvent } from '../src/api/analytics';
 
 // the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
 hideNativePasswordReveal();
@@ -296,6 +297,11 @@ const baseFloatingLogoStyles = StyleSheet.create({
 });
 
 export default function RootLayout() {
+  // anonymous usage count: the app was opened (once per launch)
+  useEffect(() => {
+    trackEvent('app_open');
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>

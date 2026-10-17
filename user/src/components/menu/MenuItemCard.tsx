@@ -14,6 +14,9 @@ import { getItemWarnings, getSafeIndicator } from './menuItemWarnings';
 import { CouponActivationModal } from '../coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
 import { NutritionInfoModal } from './NutritionInfoModal';
+import { showNutritionFor } from '../../utils/menuStatus';
+import { useShare } from '../../hooks/useShare';
+import { dishShareMessage } from '../../utils/shareText';
 import { remainingPersonalUses, remainingTotalUses, isLowStock } from '../../utils/couponDisplay';
 import {
   unverifiedNotice, hasDietOrAllergen, ingredientCaution, AI_DISCLAIMER, VERDICT_GOOD, VERDICT_NOT_GOOD,
@@ -64,6 +67,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
 
   const isSaved = useSavedStore((s) => s.menuItemIds.has(item.itemId));
   const { toggleMenuItem } = useSaved();
+  const share = useShare();
   const couponActivation = useCouponActivation({ onClosed: onCouponClosed });
 
   const [analysisText, setAnalysisText]     = useState('');
@@ -204,14 +208,19 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
 
       {/* Nutrition as a quiet link, and the AI verdict as an outlined button on the right */}
       <View style={[styles.actionRow, isTile && styles.actionRowStacked]}>
-        <TouchableOpacity
-          style={[styles.nutritionLink, isTile && styles.tileBtn]}
-          onPress={() => setNutritionModalOpen(true)}
-          activeOpacity={0.7}
-          accessibilityRole="button"
-        >
-          <Text style={[styles.nutritionLinkText, { color: tc(CARD_ACCENT) }]}>🍎 Nutrition ›</Text>
-        </TouchableOpacity>
+        {showNutritionFor(item) ? (
+          <TouchableOpacity
+            style={[styles.nutritionLink, isTile && styles.tileBtn]}
+            onPress={() => setNutritionModalOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+          >
+            <Text style={[styles.nutritionLinkText, { color: tc(CARD_ACCENT) }]}>🍎 Nutrition ›</Text>
+          </TouchableOpacity>
+        ) : (
+          // an estimated item shows no nutrition numbers; the empty space keeps the button on the right
+          !isTile && <View style={styles.nutritionLink} />
+        )}
         <Animated.View style={[styles.aiBtn, isTile && styles.tileBtn, buttonAnimStyle]}>
           <TouchableOpacity
             onPress={handleButtonPress}
@@ -264,6 +273,18 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
 
   const icons = tileIcons({ warnings: hasWarnings, noticeTag: notice?.tag ?? null, fit: showFit, coupons: itemCoupons.length });
 
+  const shareButton = (
+    <TouchableOpacity
+      onPress={() => share(dishShareMessage({ dish: item.name, restaurantName: recommendation.restaurant?.name ?? item.restaurantName, confirmed: item.isVerified === true }), 'dish', item.itemId)}
+      hitSlop={10}
+      style={styles.shareWrap}
+      accessibilityRole="button"
+      accessibilityLabel={`Share ${item.name}`}
+    >
+      <Text style={styles.shareIcon}>➦</Text>
+    </TouchableOpacity>
+  );
+
   const heartButton = (
     <TouchableOpacity
       onPress={() => {
@@ -308,6 +329,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
           <View style={[styles.headerRow, styles.nameBand]}>
             <Text style={[styles.name, styles.nameOnBand]} numberOfLines={2}>{item.name}</Text>
             <ScoreChip score={score} />
+            {shareButton}
             {heartButton}
           </View>
           {detailsView}
@@ -324,6 +346,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
               <View style={[styles.headerRow, styles.nameBand]}>
                 <Text style={[styles.name, styles.nameOnBand]}>{item.name}</Text>
                 <ScoreChip score={score} />
+                {shareButton}
                 {heartButton}
               </View>
               <View style={styles.cautionRow}>{cautionEl}</View>
@@ -407,6 +430,8 @@ const baseStyles = StyleSheet.create({
   // not saved: a red outline heart in a red-ringed circle, so it shows clearly on the white circle and the green name band
   heartEmpty: { fontSize: 20, lineHeight: 24, fontWeight: '900', color: '#D32F2F' },
   heartWrapEmpty: { borderWidth: 2, borderColor: '#D32F2F' },
+  shareWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  shareIcon: { fontSize: 20, fontWeight: '900', color: '#1565C0', lineHeight: 24 },
   heartWrap: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 
   // the name sits on a green band, whatever the dish

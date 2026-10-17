@@ -29,7 +29,7 @@ export const NAV_ITEMS: NavItem[] = [
   // Scheduled Builds and App Config live under Tools, so the menu lights up Tools on those pages too.
   {
     label: 'Tools', icon: '🧰', href: '/admin/tools', match: '/admin/tools',
-    alsoMatch: ['/admin/regions', '/admin/scheduled-builds', '/admin/announcements', '/admin/crawl-cities', '/admin/restaurant-categories', '/admin/config'],
+    alsoMatch: ['/admin/regions', '/admin/analytics', '/admin/scheduled-builds', '/admin/announcements', '/admin/crawl-cities', '/admin/restaurant-categories', '/admin/config'],
   },
   { label: 'Support Tickets', icon: '🎧', href: '/admin/tickets?status=open', match: '/admin/tickets' },
 ];

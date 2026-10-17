@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { applyMenuStatus, menuStatusArgs, parseMenuStatusRows } from './menuStatus.ts';
 import { anyKindHidden, filterByKind, parseKindFlags, SHOW_ALL, type KindFlags } from './kindFilter.ts';
 import { checkRegion } from './regionGate.ts';
 import {
@@ -184,6 +185,22 @@ async function applyListingEligibility(supabase: any, userId: string, restaurant
     return kept;
   } catch (e) {
     console.warn('[fetch-nearby-restaurants] could not apply listing eligibility, showing everything:', e instanceof Error ? e.message : e);
+    return restaurants;
+  }
+}
+
+// What each restaurant's menu holds (migration 146): confirmed, estimated or none, so the app can put a badge on the card. Any problem asking
+// leaves the restaurants without it (the app then shows no badge) rather than failing the whole list.
+// deno-lint-ignore no-explicit-any
+async function addMenuStatus(supabase: any, restaurants: any[]): Promise<any[]> {
+  try {
+    const args = menuStatusArgs(restaurants);
+    if (args.p_place_ids.length === 0) return restaurants;
+    const { data, error } = await supabase.rpc('menu_status_for_places', args);
+    if (error) throw error;
+    return applyMenuStatus(restaurants, parseMenuStatusRows(data));
+  } catch (e) {
+    console.warn('[fetch-nearby-restaurants] could not read menu status, sending the list without it:', e instanceof Error ? e.message : e);
     return restaurants;
   }
 }
@@ -736,6 +753,9 @@ Deno.serve(async (req) => {
 
     // What each restaurant is, how you get the food and what it serves (owner's choice, else Google's guess).
     restaurants = await addCategories(supabase, restaurants);
+
+    // What each menu holds, for the badge on the card.
+    restaurants = await addMenuStatus(supabase, restaurants);
 
     console.log('[fetch-nearby-restaurants] Returning', restaurants.length, 'restaurants');
     return new Response(JSON.stringify(restaurants), {

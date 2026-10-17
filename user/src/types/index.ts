@@ -70,6 +70,8 @@ export interface Restaurant {
   openNow: boolean;
   openingHours?: OpeningHours;
   hasNutritionData: boolean;
+  // What the menu holds, from the server: at least one confirmed item, only estimated items, or nothing. Absent from an older server.
+  menuStatus?: 'confirmed' | 'estimated' | 'none';
 }
 
 export interface MenuItem {

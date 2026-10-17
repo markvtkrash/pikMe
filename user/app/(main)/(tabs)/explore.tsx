@@ -26,6 +26,8 @@ import { normalizeForSearch } from '../../../src/utils/textMatch';
 import { CUISINE_FILTERS } from '../../../src/constants/cuisines';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { Restaurant } from '../../../src/types';
+import { sortByDistanceAndMenu } from '../../../src/utils/menuStatus';
+import { trackEvent } from '../../../src/api/analytics';
 import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const ALL = 'All';
@@ -83,6 +85,11 @@ export default function ExploreScreen() {
 
   const curated = useMemo(() => isCurated(withinRadius, categories), [withinRadius, categories]);
 
+  // anonymous usage count: someone searched (once per launch; what they typed is never sent)
+  useEffect(() => {
+    if (search.trim().length >= 2) trackEvent('search');
+  }, [search]);
+
   const typeOptions = useMemo(() => {
     const counts: Record<string, number> = {};
     withinRadius.forEach((r) =>
@@ -99,8 +106,9 @@ export default function ExploreScreen() {
     return [ALL, ...present.map((c) => c.label)];
   }, [withinRadius]);
 
+  // Nearest first; among restaurants about the same distance away, a confirmed menu comes before an estimated or missing one.
   const filtered = useMemo(() =>
-    withinRadius
+    sortByDistanceAndMenu(withinRadius
       .filter((r) => {
         const matchSearch = normalizeForSearch(r.name).includes(normalizeForSearch(search));
         const matchType = activeType === ALL || r.cuisineTypes.includes(activeType);
@@ -109,8 +117,7 @@ export default function ExploreScreen() {
         const matchCoupon = !couponsOnly || !!couponPlaceIds?.has(r.placeId);
         const matchCategories = !curated || matchesCategoryFilters(r, filters);
         return matchSearch && matchType && matchCuisine && matchCoupon && matchCategories;
-      })
-      .sort((a, b) => a.distanceMeters - b.distanceMeters),
+      })),
     [withinRadius, search, activeType, activeCuisine, couponsOnly, couponPlaceIds, curated, filters]
   );
 

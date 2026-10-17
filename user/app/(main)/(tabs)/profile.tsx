@@ -78,6 +78,15 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { data: profile, isLoading, error, refetch } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
+  // the email of the signed-in account, shown on the Sign Out button so it is clear which account it signs out
+  const [accountEmail, setAccountEmail] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!cancelled) setAccountEmail(data.session?.user?.email ?? '');
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile> | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -165,7 +174,7 @@ export default function ProfileScreen() {
   };
 
   async function handleSignOut() {
-    const ok = await confirmDestructive('Sign out', 'Are you sure?', 'Sign Out');
+    const ok = await confirmDestructive('Sign out', accountEmail ? `Sign out of ${accountEmail}?` : 'Are you sure?', 'Sign Out');
     if (!ok) return;
     const { error } = await supabase.auth.signOut();
     if (error) notify('Error', error.message);
@@ -376,9 +385,10 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Sign Out */}
+      {/* Sign Out, with the account it signs out of */}
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign Out</Text>
+        {!!accountEmail && <Text style={styles.signOutEmail} numberOfLines={1}>{accountEmail}</Text>}
       </TouchableOpacity>
 
       {/* Delete Account */}
@@ -482,6 +492,7 @@ const baseStyles = StyleSheet.create({
     alignItems: 'center',
   },
   signOutText: { color: '#e53e3e', fontSize: 15, fontWeight: '600' },
+  signOutEmail: { color: '#7A7A7A', fontSize: 12.5, marginTop: 2, paddingHorizontal: 12 },
   deleteBtn: {
     marginTop: 12,
     paddingVertical: 13,

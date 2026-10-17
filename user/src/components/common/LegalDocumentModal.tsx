@@ -32,6 +32,10 @@ ${BRAND_NAME} is committed to protecting your privacy. This Privacy Policy expla
 - Chat interactions with Menu Mentor
 - Timestamps of usage
 
+**App Activity Counts**
+- Anonymous events such as opening the app, searching, viewing a restaurant or menu, saving, and signing up
+- Sent with a random ID created on your phone, not linked to your account, email, name, location, or what you type in a search
+
 **Technical Information**
 - Device type and OS version
 - App version
@@ -91,6 +95,7 @@ Contact us at support@markvtkrash.com to exercise these rights.
 
 - Profile data: Kept until account deletion
 - Usage data: Kept for up to 12 months for analytics
+- Anonymous app activity counts: Deleted after 180 days
 - Chat history: Kept until manually deleted by user
 
 ## Changes to This Policy

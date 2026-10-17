@@ -9,6 +9,7 @@ import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
 import { useCustomerConfig } from '../../hooks/useCustomerConfig';
 import { describeCategories } from '../../utils/categories';
+import { menuBadge } from '../../utils/menuStatus';
 import { getActiveCouponsByPlaceId } from '../../api/coupons';
 import { useThemedStyles, useThemeColor } from '../../theme/useTheme';
 
@@ -60,6 +61,7 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   const { toggleRestaurant } = useSaved();
   const hoursDisplay = getHoursDisplay(restaurant.openingHours);
   const [couponCount, setCouponCount] = useState(0);
+  const badge = menuBadge(restaurant.menuStatus);
 
   useEffect(() => {
     getActiveCouponsByPlaceId(restaurant.placeId)
@@ -152,6 +154,11 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
             </>
           )}
         </View>
+        {badge && (
+          <View style={[styles.menuBadge, badge.tone === 'confirmed' ? styles.menuBadgeConfirmed : styles.menuBadgeEstimated]}>
+            <Text style={[styles.menuBadgeText, badge.tone === 'confirmed' ? styles.menuBadgeTextConfirmed : styles.menuBadgeTextEstimated]}>{badge.label}</Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -164,13 +171,17 @@ const baseStyles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 18,
     overflow: 'hidden',
+    // a clear brand-blue border all round, so each card stands out from the light blue page and from the next card
+    borderWidth: 3,
+    borderColor: '#1565C0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.09,
     shadowRadius: 14,
     elevation: 4,
   },
-  cardSelected: { borderWidth: 2.5, borderColor: '#1565C0' },
+  // the card picked on the map: an orange border instead of the blue one
+  cardSelected: { borderColor: '#E65100' },
 
   imgWrap: { height: 170, position: 'relative' },
   img: { width: '100%', height: 170 },
@@ -230,6 +241,13 @@ const baseStyles = StyleSheet.create({
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
   meta: { fontSize: 13, color: '#6B6B6B' },
   sep: { fontSize: 13, color: '#CACACA' },
+  // whether the menu is confirmed: green when it is, soft blue (information, not a warning) while it is estimated
+  menuBadge: { alignSelf: 'flex-start', marginTop: 8, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
+  menuBadgeConfirmed: { backgroundColor: '#E8F5E9', borderColor: '#2E7D32' },
+  menuBadgeEstimated: { backgroundColor: '#E3F2FD', borderColor: '#1565C0' },
+  menuBadgeText: { fontSize: 12, fontWeight: '700' },
+  menuBadgeTextConfirmed: { color: '#1B5E20' },
+  menuBadgeTextEstimated: { color: '#0D47A1' },
   couponBadge: { backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
   couponBadgeText: { fontSize: 12, fontWeight: '600', color: '#E65100' },
 
@@ -239,6 +257,8 @@ const baseStyles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 14,
     overflow: 'hidden',
+    borderWidth: 2.5,
+    borderColor: '#1565C0',
     marginRight: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -246,7 +266,7 @@ const baseStyles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  compactSelected: { borderWidth: 2, borderColor: '#1565C0' },
+  compactSelected: { borderColor: '#E65100' },
   compactImgBox: { height: 95 },
   compactImg: { width: '100%', height: 95 },
   compactBody: { padding: 10 },

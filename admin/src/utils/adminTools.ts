@@ -20,6 +20,15 @@ export const ADMIN_TOOLS: AdminTool[] = [
     href: '/admin/regions',
   },
   {
+    key: 'analytics',
+    icon: '📈',
+    title: 'App Usage',
+    subtitle: 'How customers use the app: opens, searches, restaurants and menus viewed, saves, sign-ups and who comes back (anonymous counts)',
+    color: '#4527A0',
+    bg: '#EDE7F6',
+    href: '/admin/analytics',
+  },
+  {
     key: 'scheduled-builds',
     icon: '⏱️',
     title: 'Scheduled Builds',

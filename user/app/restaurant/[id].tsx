@@ -16,6 +16,10 @@ import { MenuItemCard } from '../../src/components/menu/MenuItemCard';
 import { useMenuLayoutStore } from '../../src/store/menuLayoutStore';
 import { resolveLayout, withGridSpacer, type Spacer } from '../../src/utils/menuLayout';
 import { unverifiedListNote, INGREDIENT_BANNER, FILTER_CAPTION } from '../../src/utils/menuItemNotices';
+import { trackEvent } from '../../src/api/analytics';
+import { useShare } from '../../src/hooks/useShare';
+import { restaurantShareMessage } from '../../src/utils/shareText';
+import { menuComingSoonNote, MENU_SOON_LINE, MENU_EMPTY_TITLE, MENU_EMPTY_BODY } from '../../src/utils/menuStatus';
 import { MenuItemSkeleton } from '../../src/components/menu/MenuItemSkeleton';
 import { useSavedStore } from '../../src/store/savedStore';
 import { useSaved } from '../../src/hooks/useSaved';
@@ -97,6 +101,7 @@ export default function RestaurantDetailScreen() {
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [loadingEmojiIndex, setLoadingEmojiIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [soonOpen, setSoonOpen] = useState(false);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
   const [couponsOnly, setCouponsOnly] = useState(false);
   const { data: customerConfig } = useCustomerConfig();
@@ -121,6 +126,17 @@ export default function RestaurantDetailScreen() {
   const removeCouponFromList = (couponId: string) =>
     setCoupons((prev) => prev.filter((c) => c.id !== couponId));
   const genericCouponActivation = useCouponActivation({ onClosed: removeCouponFromList });
+
+  const share = useShare();
+
+  // anonymous usage counts: a restaurant was opened, and its menu showed items (each once per restaurant per launch)
+  useEffect(() => {
+    if (id) trackEvent('restaurant_view', undefined, id);
+  }, [id]);
+  const menuItemCount = recommendations?.length ?? 0;
+  useEffect(() => {
+    if (id && menuItemCount > 0) trackEvent('menu_view', undefined, id);
+  }, [id, menuItemCount]);
 
   useEffect(() => {
     if (!id) {
@@ -294,7 +310,19 @@ export default function RestaurantDetailScreen() {
           {/* Info card */}
           <View style={styles.infoCardContainer}>
             <View style={styles.infoCard}>
-              <Text style={styles.restaurantName} numberOfLines={1}>{restaurant.name}</Text>
+              {/* The name, and Share set apart at the far end of the same line as one solid, outlined button */}
+              <View style={styles.nameShareRow}>
+                <Text style={[styles.restaurantName, { flex: 1 }]} numberOfLines={1}>{restaurant.name}</Text>
+                <TouchableOpacity
+                  style={styles.sharePill}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share this restaurant"
+                  onPress={() => share(restaurantShareMessage({ name: restaurant.name, address: restaurant.location.address, cuisine: cuisineDisplay }), 'restaurant', restaurant.placeId)}
+                >
+                  <Text style={styles.sharePillTxt}><Text style={styles.shareArrow}>➦</Text> Share</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.metaRow}>
                 {!restaurant.openNow
@@ -461,8 +489,24 @@ export default function RestaurantDetailScreen() {
             </Text>
           )}
 
+          {/* While no item is confirmed yet: a short line; tapping it opens the full wording */}
+          {!isLoading && !error && menuComingSoonNote((recommendations ?? []).map((r) => r.menuItem)) && (
+            <TouchableOpacity style={styles.soonNote} onPress={() => setSoonOpen(true)} activeOpacity={0.8} accessibilityRole="button" accessibilityHint="Opens the details">
+              <Text style={styles.soonNoteText}>🕒 {MENU_SOON_LINE}</Text>
+              <Text style={styles.soonNoteMore}>Details ›</Text>
+            </TouchableOpacity>
+          )}
+          <Modal visible={soonOpen} transparent animationType="fade" onRequestClose={() => setSoonOpen(false)}>
+            <Pressable style={styles.soonBackdrop} onPress={() => setSoonOpen(false)}>
+              <View style={styles.soonCard}>
+                <Text style={styles.soonTitle}>Estimated menu</Text>
+                <Text style={styles.soonBody}>{menuComingSoonNote([{ isVerified: false }])}</Text>
+              </View>
+            </Pressable>
+          </Modal>
+
           {/* One line explaining the Unconfirmed / AI-estimated tags on the cards below */}
-          {!isLoading && unverifiedListNote((recommendations ?? []).map((r) => r.menuItem)) && (
+          {!isLoading && !menuComingSoonNote((recommendations ?? []).map((r) => r.menuItem)) && unverifiedListNote((recommendations ?? []).map((r) => r.menuItem)) && (
             <Text style={styles.tagNote}>{unverifiedListNote((recommendations ?? []).map((r) => r.menuItem))}</Text>
           )}
 
@@ -506,11 +550,9 @@ export default function RestaurantDetailScreen() {
 
           {!isLoading && !error && (recommendations?.length ?? 0) === 0 && (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={styles.emptyTitle}>No nutrition data available</Text>
-              <Text style={styles.emptyBody}>
-                Nutrition info is available for major chain restaurants.
-              </Text>
+              <Text style={styles.emptyIcon}>🕒</Text>
+              <Text style={styles.emptyTitle}>{MENU_EMPTY_TITLE}</Text>
+              <Text style={styles.emptyBody}>{MENU_EMPTY_BODY}</Text>
             </View>
           )}
         </>
@@ -718,17 +760,28 @@ const baseStyles = StyleSheet.create({
   // illegible widths on a narrow phone — the address box drops to its own
   // line below the name instead of getting clipped mid-word.
   restaurantName: { fontSize: 19, fontWeight: '800', color: '#141414', letterSpacing: -0.3, marginBottom: 4 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
-  openDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#1565C0' },
-  statusOpenTxt: { fontSize: 12, color: '#1565C0', fontWeight: '700' },
-  statusClosed: { backgroundColor: '#FFEBEE', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
-  statusClosedTxt: { fontSize: 12, color: '#C62828', fontWeight: '700' },
-  metaPill: { backgroundColor: '#F6F6F6', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
-  metaPillTxt: { fontSize: 12, color: '#444', fontWeight: '600' },
+  // The row of pills under the name (open, rating, distance, Directions, Share): bigger, bolder and outlined so each one reads as a button or a fact
+  // at a glance. Share is the one solid blue pill.
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
+  statusOpen: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E3F2FD', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#1565C0' },
+  openDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#1565C0' },
+  statusOpenTxt: { fontSize: 14, color: '#0D47A1', fontWeight: '800' },
+  statusClosed: { backgroundColor: '#FFEBEE', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#C62828' },
+  statusClosedTxt: { fontSize: 14, color: '#C62828', fontWeight: '800' },
+  metaPill: { backgroundColor: '#FFF8E1', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#FFB300' },
+  metaPillTxt: { fontSize: 14, color: '#5D4037', fontWeight: '800' },
   addressLine: { fontSize: 11.5, color: '#6B6B6B' },
-  directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 },
-  directionsPillTxt: { fontSize: 12, fontWeight: '700', color: BRAND_COLORS.primary },
+  directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#1565C0' },
+  directionsPillTxt: { fontSize: 14, fontWeight: '800', color: BRAND_COLORS.primary },
+  // Share sits at the right end of the name line, with a gap from the name, as the one solid blue button with a white ring and a shadow so it is in focus
+  nameShareRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8 },
+  sharePill: {
+    backgroundColor: '#1565C0', paddingHorizontal: 18, paddingVertical: 9, borderRadius: 22, borderWidth: 2, borderColor: '#fff',
+    shadowColor: '#0D47A1', shadowOpacity: 0.4, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 5,
+  },
+  sharePillTxt: { fontSize: 15, fontWeight: '800', color: '#fff' },
+  // a fat, curved arrow
+  shareArrow: { fontSize: 20, fontWeight: '900', color: '#fff' },
   disclaimerRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 6,
     marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#F0F0F0',
@@ -774,6 +827,13 @@ const baseStyles = StyleSheet.create({
   stickyNotice: { backgroundColor: '#E65100', paddingHorizontal: 12, paddingTop: 7, alignItems: 'center', elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.2, shadowRadius: 4 },
   stickyNoticeText: { fontSize: 12, fontWeight: '800', color: '#fff', lineHeight: 16, textAlign: 'center' },
   filterCaption: { fontSize: 10.5, color: '#888', marginHorizontal: 16, marginTop: 0, marginBottom: 4 },
+  soonNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#E65100', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginHorizontal: 16, marginBottom: 6 },
+  soonNoteText: { fontSize: 12.5, fontWeight: '700', color: '#7A3300', flexShrink: 1 },
+  soonNoteMore: { fontSize: 12, fontWeight: '800', color: '#BF360C', marginLeft: 8 },
+  soonBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  soonCard: { backgroundColor: '#fff', borderRadius: 14, padding: 18, maxWidth: 360, width: '100%', borderWidth: 2, borderColor: '#E65100' },
+  soonTitle: { fontSize: 16, fontWeight: '800', color: '#7A3300', marginBottom: 8 },
+  soonBody: { fontSize: 14, color: '#333', lineHeight: 20 },
   tagNote: { fontSize: 11, color: '#7A4A00', backgroundColor: '#FFF8E1', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginHorizontal: 16, marginBottom: 6, lineHeight: 15 },
   resultsCount: {
     fontSize: 12,

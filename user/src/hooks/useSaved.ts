@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useSavedStore } from '../store/savedStore';
 import { getSavedItems, toggleSavedRestaurant, toggleSavedMenuItem } from '../api/functions';
 import type { Restaurant, MenuItem } from '../types';
+import { trackEvent } from '../api/analytics';
 
 export function useSaved() {
   const store = useSavedStore();
@@ -21,6 +22,7 @@ export function useSaved() {
 
   const toggleRestaurant = useCallback(async (placeId: string, restaurant?: Restaurant) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (!store.restaurantIds.has(placeId)) trackEvent('save', undefined, placeId); // saving, not un-saving
     store.toggleRestaurantId(placeId, restaurant); // optimistic
     try {
       await toggleSavedRestaurant(placeId, restaurant);
