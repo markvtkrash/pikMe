@@ -5,6 +5,7 @@ import { OnboardingProgress } from '../../src/components/common/OnboardingProgre
 import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { DIETARY_RESTRICTIONS } from '../../src/constants/dietaryOptions';
+import { activeDiets, DIET_PREFERENCE_NOTE } from '../../src/utils/dietFilter';
 import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function DietaryScreen() {
@@ -36,7 +37,7 @@ export default function DietaryScreen() {
       <OnboardingProgress step={2} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>Dietary Restrictions</Text>
+          <Text style={styles.title}>Dietary Preferences</Text>
           <TopContinue onPress={handleContinue} />
         </View>
         <Text style={styles.subtitle}>Select all that apply</Text>
@@ -58,6 +59,7 @@ export default function DietaryScreen() {
             );
           })}
         </View>
+        {activeDiets(selected).length > 0 && <Text style={styles.dietNote}>{DIET_PREFERENCE_NOTE}</Text>}
       </ScrollView>
       <ContinueBar onPress={handleContinue} label="Continue →" />
     </View>
@@ -69,6 +71,7 @@ const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { paddingHorizontal: 24, paddingBottom: 48 },
   title: { fontSize: 26, fontWeight: '700', color: '#222', marginBottom: 6, marginTop: 8 },
+  dietNote: { fontSize: 14, lineHeight: 20, color: '#7A4A00', backgroundColor: '#FFF3E0', borderRadius: 10, borderWidth: 1, borderColor: '#E65100', paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16 },
   subtitle: { fontSize: 15, color: '#666', marginBottom: 28 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
   chip: {

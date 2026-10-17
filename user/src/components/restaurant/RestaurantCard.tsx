@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import type { Restaurant } from '../../types';
 import { formatDistance } from '../../utils/geo';
-import { getHoursDisplay } from '../../utils/hours';
+import { getHoursDisplay, isRestaurantOpen } from '../../utils/hours';
 import { useSavedStore } from '../../store/savedStore';
 import { useSaved } from '../../hooks/useSaved';
 import { useCustomerConfig } from '../../hooks/useCustomerConfig';
@@ -60,6 +60,8 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
   const isSaved = useSavedStore((s) => s.restaurantIds.has(restaurant.placeId));
   const { toggleRestaurant } = useSaved();
   const hoursDisplay = getHoursDisplay(restaurant.openingHours);
+  // open or closed from the weekly schedule and the clock (the stored snapshot only when there is no schedule)
+  const isOpen = isRestaurantOpen(restaurant);
   const [couponCount, setCouponCount] = useState(0);
   const badge = menuBadge(restaurant.menuStatus);
 
@@ -114,13 +116,13 @@ export function RestaurantCard({ restaurant, selected = false, compact = false, 
         {/* Status */}
         {!hideStatus && (
           <View style={styles.statusPill}>
-            <View style={[styles.dot, { backgroundColor: hoursDisplay.isOpen ? '#1565C0' : '#EF5350' }]} />
+            <View style={[styles.dot, { backgroundColor: isOpen ? '#1565C0' : '#EF5350' }]} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.statusTxt, { color: tc(hoursDisplay.isOpen ? '#1565C0' : '#EF5350') }]}>
-                {hoursDisplay.todayHours || (hoursDisplay.isOpen ? 'Open' : 'Closed')}
+              <Text style={[styles.statusTxt, { color: tc(isOpen ? '#1565C0' : '#EF5350') }]}>
+                {hoursDisplay.todayHours || (isOpen ? 'Open' : 'Closed')}
               </Text>
               {hoursDisplay.timeUntil && (
-                <Text style={[styles.statusSubtxt, { color: tc(hoursDisplay.isOpen ? '#1565C0' : '#EF5350') }]}>
+                <Text style={[styles.statusSubtxt, { color: tc(isOpen ? '#1565C0' : '#EF5350') }]}>
                   {hoursDisplay.timeUntil}
                 </Text>
               )}

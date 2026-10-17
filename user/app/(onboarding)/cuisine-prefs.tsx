@@ -5,6 +5,8 @@ import { OnboardingProgress } from '../../src/components/common/OnboardingProgre
 import { TopContinue, ContinueBar } from '../../src/components/common/OnboardingActions';
 import { useUserProfileStore } from '../../src/store/userProfileStore';
 import { CUISINE_OPTIONS } from '../../src/constants/dietaryOptions';
+import { useCustomerConfig } from '../../src/hooks/useCustomerConfig';
+import { categoryChoices } from '../../src/utils/profilePlaces';
 import { useThemedStyles } from '../../src/theme/useTheme';
 
 export default function CuisinePrefsScreen() {
@@ -12,6 +14,12 @@ export default function CuisinePrefsScreen() {
   const router = useRouter();
   const { draft, updateDraft } = useUserProfileStore();
   const [selected, setSelected] = useState<string[]>(draft.cuisinePreferences);
+  // The choices are the cuisine categories the filters and the owners use. An older server sends no list: the earlier fixed list is shown then.
+  const { data: customerConfig } = useCustomerConfig();
+  const fromCategories = categoryChoices(customerConfig?.categories ?? [], 'cuisine');
+  const options: { value: string; label: string; emoji?: string }[] = fromCategories.length > 0
+    ? fromCategories.map((c) => ({ ...c, emoji: CUISINE_OPTIONS.find((o) => o.value === c.value)?.emoji ?? '🍽️' }))
+    : [...CUISINE_OPTIONS];
 
   function toggle(value: string) {
     setSelected((prev) =>
@@ -38,7 +46,7 @@ export default function CuisinePrefsScreen() {
         </Text>
 
         <View style={styles.grid}>
-          {CUISINE_OPTIONS.map((item) => {
+          {options.map((item) => {
             const isSelected = selected.includes(item.value);
             return (
               <TouchableOpacity

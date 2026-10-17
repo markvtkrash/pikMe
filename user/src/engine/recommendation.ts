@@ -53,16 +53,11 @@ function getWeights(goals: UserProfile['healthGoals']): Weights {
 
 // ── Hard filters ─────────────────────────────────────────────────────────────
 
-const VEGAN_PATTERN =
-  /chicken|beef|pork|fish|shrimp|turkey|bacon|ham|lamb|dairy|cheese|butter|milk|egg|mayo/i;
-const VEGETARIAN_PATTERN =
-  /chicken|beef|pork|fish|shrimp|turkey|bacon|ham|lamb/i;
-const GLUTEN_PATTERN =
-  /bread|pasta|bun|wrap|tortilla|wheat|flour|sandwich|sub|burger|waffle|pancake/i;
-
+// A diet (vegetarian, vegan, gluten free) is NOT a hard filter here. It used to remove dishes by name before the menu page ever saw them, which hid
+// them silently and could not be turned off. The menu page's "Matches my diet" chip (utils/dietFilter.ts) does it now, in the open: the person sees it,
+// can turn it off, and a dish that stays is still marked as unconfirmed. Allergens and the calorie cap below stay hard filters.
 function passesHardFilters(
   item: MenuItem,
-  restrictions: UserProfile['dietaryRestrictions'],
   allergens: string[],
   targets: NutritionTargets
 ): boolean {
@@ -71,11 +66,6 @@ function passesHardFilters(
 
   // Calorie hard cap: 1.5× user's max meal calories
   if (targets.maxMealCalories && cal > targets.maxMealCalories * 1.5) return false;
-
-  // Dietary restrictions
-  if (restrictions.includes('vegan') && VEGAN_PATTERN.test(name)) return false;
-  if (restrictions.includes('vegetarian') && VEGETARIAN_PATTERN.test(name)) return false;
-  if (restrictions.includes('gluten_free') && GLUTEN_PATTERN.test(name)) return false;
 
   // Allergens
   for (const allergen of allergens) {
@@ -214,10 +204,9 @@ export function scoreAndRankItems(
   const targets = profile.nutritionTargets ?? {};
   const allergens = profile.allergens ?? [];
   // Religious values are never used, even if a stored profile still has some.
-  const restrictions = stripReligiousDietary(profile.dietaryRestrictions ?? []) as UserProfile['dietaryRestrictions'];
 
   const passed = items.filter((item) =>
-    passesHardFilters(item, restrictions, allergens, targets)
+    passesHardFilters(item, allergens, targets)
   );
 
   const ranked = passed

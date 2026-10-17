@@ -18,6 +18,9 @@ import { resolveLayout, withGridSpacer, type Spacer } from '../../src/utils/menu
 import { unverifiedListNote, INGREDIENT_BANNER, FILTER_CAPTION } from '../../src/utils/menuItemNotices';
 import { trackEvent } from '../../src/api/analytics';
 import { useShare } from '../../src/hooks/useShare';
+import { isRestaurantOpen } from '../../src/utils/hours';
+import { useUserProfile } from '../../src/hooks/useUserProfile';
+import { activeDiets, DIET_FILTER_CAPTION, DIET_FILTER_LABEL, keywordConflictsWithDiet, matchesDiet } from '../../src/utils/dietFilter';
 import { restaurantShareMessage } from '../../src/utils/shareText';
 import { menuComingSoonNote, MENU_SOON_LINE, MENU_EMPTY_TITLE, MENU_EMPTY_BODY } from '../../src/utils/menuStatus';
 import { MenuItemSkeleton } from '../../src/components/menu/MenuItemSkeleton';
@@ -103,6 +106,12 @@ export default function RestaurantDetailScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [soonOpen, setSoonOpen] = useState(false);
   const [selectedKeywords, setSelectedKeywords] = useState<string[]>([]);
+  // "Matches my diet": on by default for a person who set a diet in their profile, and one tap to turn off. It hides dishes whose NAMES suggest something
+  // outside the diet (see utils/dietFilter.ts); a dish that stays is not confirmed to fit.
+  const { data: userProfile } = useUserProfile();
+  const diets = activeDiets(userProfile?.dietaryRestrictions);
+  const [dietChoice, setDietChoice] = useState<boolean | null>(null);   // null: follow the default (on)
+  const dietFilterOn = diets.length > 0 && (dietChoice ?? true);
   const [couponsOnly, setCouponsOnly] = useState(false);
   const { data: customerConfig } = useCustomerConfig();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -167,6 +176,9 @@ export default function RestaurantDetailScreen() {
     if (searchQuery.trim() !== '' && !name.includes(searchQuery.toLowerCase())) {
       return false;
     }
+
+    // Matches my diet: the name gives no sign of conflicting with the person's diet
+    if (dietFilterOn && !matchesDiet(r.menuItem, diets)) return false;
 
     // Check keyword filters
     if (selectedKeywords.length > 0) {
@@ -325,7 +337,7 @@ export default function RestaurantDetailScreen() {
               </View>
 
               <View style={styles.metaRow}>
-                {!restaurant.openNow
+                {!isRestaurantOpen(restaurant)
                   ? <View style={styles.statusClosed}><Text style={styles.statusClosedTxt}>Closed</Text></View>
                   : <View style={styles.statusOpen}><View style={styles.openDot} /><Text style={styles.statusOpenTxt}>Open now</Text></View>
                 }
@@ -439,6 +451,30 @@ export default function RestaurantDetailScreen() {
 
               {/* Keyword filters */}
               <View style={styles.keywordContainer}>
+                {diets.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      const turningOn = !dietFilterOn;
+                      setDietChoice(turningOn);
+                      // a Fish, Chicken... chip the diet rules out would only give an empty list: it is deselected when the diet chip is turned on
+                      if (turningOn) {
+                        setSelectedKeywords((prev) => prev.filter((label) => !keywordConflictsWithDiet(KEYWORD_FILTERS.find((f) => f.label === label)?.keywords ?? [], diets)));
+                      }
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: dietFilterOn }}
+                    style={[
+                      styles.keywordButton,
+                      dietFilterOn
+                        ? { backgroundColor: '#2E7D32', borderColor: '#2E7D32', borderWidth: 2 }
+                        : { backgroundColor: tc('#fff', 'backgroundColor'), borderColor: '#2E7D32', borderWidth: 1.5 },
+                    ]}
+                  >
+                    <Text style={[styles.keywordText, { color: dietFilterOn ? '#fff' : tc('#1B5E20') }]}>
+                      {dietFilterOn ? '✓ ' : ''}{DIET_FILTER_LABEL}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   onPress={() => setSelectedKeywords([])}
                   style={[
@@ -458,6 +494,8 @@ export default function RestaurantDetailScreen() {
                     <TouchableOpacity
                       key={filter.label}
                       onPress={() => {
+                        // choosing a chip the diet rules out (Chicken for a vegetarian) turns "Matches my diet" off, so the list is not empty
+                        if (!isSelected && dietFilterOn && keywordConflictsWithDiet(filter.keywords, diets)) setDietChoice(false);
                         setSelectedKeywords((prev) =>
                           prev.includes(filter.label)
                             ? prev.filter((k) => k !== filter.label)
@@ -478,12 +516,12 @@ export default function RestaurantDetailScreen() {
                   );
                 })}
               </View>
-              <Text style={styles.filterCaption}>{FILTER_CAPTION}</Text>
+              <Text style={styles.filterCaption}>{dietFilterOn ? DIET_FILTER_CAPTION : FILTER_CAPTION}</Text>
             </View>
           )}
 
           {/* Results count */}
-          {(searchQuery || selectedKeywords.length > 0 || couponsOnly) && !isLoading && (
+          {(searchQuery || selectedKeywords.length > 0 || couponsOnly || dietFilterOn) && !isLoading && (
             <Text style={styles.resultsCount}>
               {displayData.length} {displayData.length === 1 ? 'item' : 'items'} found
             </Text>

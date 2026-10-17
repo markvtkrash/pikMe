@@ -16,6 +16,8 @@ describe('userProfileStore', () => {
       healthGoals: [],
       allergens: [],
       cuisinePreferences: [],
+      venuePreferences: [],
+      servicePreferences: [],
       nutritionTargets: {},
     });
     expect(s.onboardingComplete).toBeNull();
@@ -43,6 +45,8 @@ describe('userProfileStore', () => {
       healthGoals: [],
       allergens: [],
       cuisinePreferences: [],
+      venuePreferences: [],
+      servicePreferences: [],
       nutritionTargets: {},
     });
   });

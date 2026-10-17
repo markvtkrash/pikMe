@@ -249,6 +249,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   return {
     ...profile,
     dietaryRestrictions: stripReligiousDietary(profile.dietaryRestrictions) as UserProfile['dietaryRestrictions'],
+    // an older server does not send these two
+    venuePreferences: profile.venuePreferences ?? [],
+    servicePreferences: profile.servicePreferences ?? [],
   };
 }
 
@@ -262,6 +265,9 @@ export async function upsertUserProfile(profile: Omit<UserProfile, 'id'>): Promi
     p_nutrition_targets:    profile.nutritionTargets,
     p_search_radius_meters: profile.searchRadiusMeters,
     p_onboarding_complete:  profile.onboardingComplete,
+    // not sent (undefined) leaves what is stored alone, as for an older app
+    p_venue_preferences:    profile.venuePreferences,
+    p_service_preferences:  profile.servicePreferences,
   });
   if (error) throw error;
 }

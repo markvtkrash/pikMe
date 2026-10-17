@@ -11,6 +11,8 @@ export function minimalProfile(email: string | null | undefined): Omit<UserProfi
     healthGoals: [],
     allergens: [],
     cuisinePreferences: [],
+    venuePreferences: [],
+    servicePreferences: [],
     nutritionTargets: {},
     searchRadiusMeters: 2000,
     onboardingComplete: false,

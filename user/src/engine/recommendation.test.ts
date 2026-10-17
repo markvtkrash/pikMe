@@ -64,15 +64,20 @@ describe('scoreAndRankItems', () => {
     expect(rec.reasons).toContain('Low calorie');
   });
 
-  it('filters out vegan-violating items for vegan users', () => {
-    const profile = makeProfile({ dietaryRestrictions: ['vegan'] });
-    const restaurant = makeRestaurant();
-    const chicken = makeItem({ itemId: 'chicken', name: 'Grilled Chicken Salad' });
-    const salad = makeItem({ itemId: 'salad', name: 'Garden Salad' });
+  it('does not remove items for a diet: the menu page\'s "Matches my diet" chip does that, in the open and switchable off', () => {
+    for (const diet of ['vegan', 'vegetarian', 'gluten_free']) {
+      const profile = makeProfile({ dietaryRestrictions: [diet] as any });
+      const chicken = makeItem({ itemId: 'chicken', name: 'Grilled Chicken Salad' });
+      const salad = makeItem({ itemId: 'salad', name: 'Garden Salad' });
+      const results = scoreAndRankItems(profile, [chicken, salad], makeRestaurant());
+      expect(results.map((r) => r.menuItem.itemId).sort()).toEqual(['chicken', 'salad']);
+    }
+  });
 
-    const results = scoreAndRankItems(profile, [chicken, salad], restaurant);
-
-    expect(results.map((r) => r.menuItem.itemId)).toEqual(['salad']);
+  it('still removes an item whose name has one of the customer\'s allergens', () => {
+    const profile = makeProfile({ allergens: ['shrimp'] });
+    const results = scoreAndRankItems(profile, [makeItem({ itemId: 'a', name: 'Shrimp Tacos' }), makeItem({ itemId: 'b', name: 'Bean Tacos' })], makeRestaurant());
+    expect(results.map((r) => r.menuItem.itemId)).toEqual(['b']);
   });
 
   it('does not filter anything on religious dietary values, even if a stored profile has them', () => {
@@ -98,19 +103,15 @@ describe('scoreAndRankItems', () => {
     );
   });
 
-  it('still applies the supported restrictions when religious values are also present', () => {
+  it('religious values alongside a diet change nothing: both dishes stay, ranked as for the diet alone', () => {
     const items = [
       makeItem({ itemId: 'veg', name: 'Garden Salad' }),
       makeItem({ itemId: 'meat', name: 'Chicken Wrap' }),
     ];
-
-    const result = scoreAndRankItems(
-      makeProfile({ dietaryRestrictions: ['vegetarian', 'halal'] as any }),
-      items,
-      makeRestaurant()
-    );
-
-    expect(result.map((r) => r.menuItem.itemId)).toEqual(['veg']);
+    const withReligious = scoreAndRankItems(makeProfile({ dietaryRestrictions: ['vegetarian', 'halal'] as any }), items, makeRestaurant());
+    const dietOnly = scoreAndRankItems(makeProfile({ dietaryRestrictions: ['vegetarian'] }), items, makeRestaurant());
+    expect(withReligious.map((r) => r.menuItem.itemId).sort()).toEqual(['meat', 'veg']);
+    expect(withReligious.map((r) => [r.menuItem.itemId, r.score])).toEqual(dietOnly.map((r) => [r.menuItem.itemId, r.score]));
   });
 
   it('filters out items above 1.5x the max meal calorie cap', () => {
@@ -227,8 +228,8 @@ describe('scoreAndRankItems', () => {
     expect(results[30].menuItem.itemId).toBe(couponId);
   });
 
-  it('still removes items that break the customer\'s allergens, diet or calorie limit, even with 30+ confirmed', () => {
-    const profile = makeProfile({ dietaryRestrictions: ['vegan'] });
+  it('still removes items that break the customer\'s allergens or calorie limit, even with 30+ confirmed', () => {
+    const profile = makeProfile({ allergens: ['bacon'] });
     const items = [...manyItems(35, true, 'v'), makeItem({ itemId: 'bacon', name: 'Bacon Cheeseburger', isVerified: true })];
     const results = scoreAndRankItems(profile, items, makeRestaurant());
     expect(results.map((r) => r.menuItem.itemId)).not.toContain('bacon');
@@ -236,7 +237,7 @@ describe('scoreAndRankItems', () => {
   });
 
   it('returns an empty array when every item fails a hard filter', () => {
-    const profile = makeProfile({ dietaryRestrictions: ['vegan'] });
+    const profile = makeProfile({ allergens: ['bacon'] });
     const restaurant = makeRestaurant();
     const item = makeItem({ name: 'Bacon Cheeseburger' });
 

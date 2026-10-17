@@ -8,6 +8,8 @@ export interface OnboardingDraft {
   healthGoals: string[];
   allergens: string[];
   cuisinePreferences: string[];
+  venuePreferences: string[];
+  servicePreferences: string[];
   nutritionTargets: NutritionTargets;
 }
 
@@ -26,6 +28,8 @@ const defaultDraft: OnboardingDraft = {
   healthGoals: [],
   allergens: [],
   cuisinePreferences: [],
+  venuePreferences: [],
+  servicePreferences: [],
   nutritionTargets: {},
 };
 

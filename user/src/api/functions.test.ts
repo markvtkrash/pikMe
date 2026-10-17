@@ -333,6 +333,14 @@ describe('getUserProfile', () => {
     const profile = { id: 'u1', displayName: 'Alex', dietaryRestrictions: ['vegan'] };
     rpc.mockResolvedValue({ data: profile, error: null });
 
+    // an older server sends no place choices: they come back as empty lists
+    await expect(getUserProfile()).resolves.toEqual({ ...profile, venuePreferences: [], servicePreferences: [] });
+  });
+
+  it('returns the place choices a newer server sends', async () => {
+    const profile = { id: 'u1', displayName: 'Alex', dietaryRestrictions: [], cuisinePreferences: ['thai'], venuePreferences: ['cafe'], servicePreferences: ['takeaway'] };
+    rpc.mockResolvedValue({ data: profile, error: null });
+
     await expect(getUserProfile()).resolves.toEqual(profile);
   });
 
@@ -402,6 +410,39 @@ describe('upsertUserProfile', () => {
       p_search_radius_meters: 5000,
       p_onboarding_complete: true,
     });
+  });
+
+  it('sends the place and ordering choices when the profile has them', async () => {
+    rpc.mockResolvedValue({ error: null });
+    await upsertUserProfile({
+      displayName: 'Alex', dietaryRestrictions: [], healthGoals: [], cuisinePreferences: ['thai'], allergens: [], nutritionTargets: {},
+      searchRadiusMeters: 5000, onboardingComplete: true, venuePreferences: ['cafe'], servicePreferences: ['takeaway', 'delivery'],
+    });
+    const args = rpc.mock.calls[0][1];
+    expect(args.p_venue_preferences).toEqual(['cafe']);
+    expect(args.p_service_preferences).toEqual(['takeaway', 'delivery']);
+    expect(args.p_cuisine_preferences).toEqual(['thai']);
+  });
+
+  it('leaves them out when the profile has none to send, so the server keeps what is stored', async () => {
+    rpc.mockResolvedValue({ error: null });
+    await upsertUserProfile({
+      displayName: 'Alex', dietaryRestrictions: [], healthGoals: [], cuisinePreferences: [], allergens: [], nutritionTargets: {},
+      searchRadiusMeters: 5000, onboardingComplete: true,
+    });
+    const args = rpc.mock.calls[0][1];
+    expect(args.p_venue_preferences).toBeUndefined();
+    expect(args.p_service_preferences).toBeUndefined();
+  });
+
+  it('an empty list is sent as an empty list (it clears the choices)', async () => {
+    rpc.mockResolvedValue({ error: null });
+    await upsertUserProfile({
+      displayName: 'Alex', dietaryRestrictions: [], healthGoals: [], cuisinePreferences: [], allergens: [], nutritionTargets: {},
+      searchRadiusMeters: 5000, onboardingComplete: true, venuePreferences: [], servicePreferences: [],
+    });
+    expect(rpc.mock.calls[0][1].p_venue_preferences).toEqual([]);
+    expect(rpc.mock.calls[0][1].p_service_preferences).toEqual([]);
   });
 });
 

@@ -12,28 +12,39 @@ const DOCUMENTS: Record<DocumentType, { title: string; content: string }> = {
     title: 'Privacy Policy',
     content: `# Privacy Policy - ${BRAND_NAME}
 
-**Effective Date:** June 17, 2026
+**Effective Date:** October 17, 2026
 
 ${BRAND_NAME} is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application.
 
 ## Information We Collect
 
+**Account**
+- Your email address and password (the password is stored securely and we cannot read it)
+- Used to sign you in and to reset your password
+
 **Location Information**
-- GPS/Precise location used to find nearby restaurants (with your permission)
-- Not permanently stored; used for current session only
+- Precise location used to find nearby restaurants (with your permission)
+- Your coordinates are sent to Google to find restaurants and to work out which state you are in
+- We do not keep a history of where you have been. To avoid repeating searches, our servers keep the results of recent searches for an area, and the state of an area, for up to 30 days. These are kept by area and are not linked to your account
 
 **User Profile Information**
-- Dietary preferences, health goals, allergens, cuisine preferences
+- Dietary preferences, health goals, cuisine preferences, the kinds of places and ways of getting food you like, allergens if you provide them
 - Display name
-- Encrypted and stored in Supabase database
+- Stored in our database
 
 **Usage Data**
 - Menu items viewed, items saved/bookmarked
-- Chat interactions with Menu Mentor
+- Quick Find questions and answers
 - Timestamps of usage
 
+**Waitlist**
+- If you ask to be told when ${BRAND_NAME} opens in your state, we store your email address and that state
+
+**On Your Device Only**
+- Some settings, such as the restaurant filters you last used, are saved on your phone and are not sent to us
+
 **App Activity Counts**
-- Anonymous events such as opening the app, searching, viewing a restaurant or menu, saving, and signing up
+- Anonymous events such as opening the app, searching, viewing a restaurant or menu, saving, sharing, and signing up
 - Sent with a random ID created on your phone, not linked to your account, email, name, location, or what you type in a search
 
 **Technical Information**
@@ -65,17 +76,26 @@ ${BRAND_NAME} is committed to protecting your privacy. This Privacy Policy expla
 
 ## Third-Party Services
 
-**Google Places API**
-- Purpose: Restaurant information, location data
+**Google Maps Platform (Places and Geocoding)**
+- Purpose: Restaurant search and location lookup
 - Privacy: https://policies.google.com/privacy
 
+**SerpApi**
+- Purpose: Finding restaurant menu links. It receives place IDs only, no personal information
+
 **Supabase**
-- Purpose: User data storage
+- Purpose: Account and user data storage
 - Privacy: https://supabase.com/privacy
 
-**Anthropic (Claude AI)**
-- Purpose: Menu recommendations
-- Privacy: https://www.anthropic.com/legal/privacy
+**AI service providers**
+- Purpose: Quick Find, Quick take, and estimated menu items
+- Anthropic (Claude): https://www.anthropic.com/legal/privacy
+- Quicksilver (quicksilverpro.io), which provides access to other AI models
+- Which one handles a request depends on our settings
+
+**What we send to AI providers:** your Quick Find questions, the names of nearby restaurants and dishes, dish nutrition estimates, and the profile choices that help tailor an answer (such as dietary preferences, health goals, cuisine preferences and allergens you have provided). If you describe your preferences in your own words during setup, that text is sent too. We do not send your name or email address. Quick Find uses only menu items we have confirmed.
+
+Where a restaurant has not confirmed its menu, the items shown are AI estimates and are labeled as such.
 
 ## Data Security
 
@@ -91,12 +111,17 @@ We implement industry-standard encryption and security measures to protect your 
 
 Contact us at support@markvtkrash.com to exercise these rights.
 
+## Children
+
+${BRAND_NAME} is not intended for children under 13, and we do not knowingly collect personal information from them. If you believe a child has given us information, contact support@markvtkrash.com and we will delete it.
+
 ## Data Retention
 
 - Profile data: Kept until account deletion
 - Usage data: Kept for up to 12 months for analytics
 - Anonymous app activity counts: Deleted after 180 days
 - Chat history: Kept until manually deleted by user
+- Waitlist emails: Kept until the state opens or you ask us to remove them
 
 ## Changes to This Policy
 
@@ -110,7 +135,7 @@ For questions, contact: support@markvtkrash.com`,
     title: 'Terms of Service',
     content: `# Terms of Service - ${BRAND_NAME}
 
-**Effective Date:** June 17, 2026
+**Effective Date:** October 17, 2026
 
 Welcome to ${BRAND_NAME}! These Terms of Service ("Terms") govern your use of our application. By using ${BRAND_NAME}, you agree to these Terms.
 
@@ -143,15 +168,19 @@ ${BRAND_NAME} is provided "as-is" without warranties. We are NOT liable for:
 
 You use ${BRAND_NAME} at your own risk.
 
-## 4. Indemnification
+## 4. Information Shown in the App
+
+Restaurant details, opening hours, distances, menus and nutrition information come from third parties and from AI estimates, and may be incomplete, out of date, or wrong. A menu that a restaurant has not confirmed is labeled as estimated, and a dish on it may not be offered. Coupons are offered by the restaurants, not by us, and are subject to their terms. Please read our Food Disclaimer.
+
+## 5. Indemnification
 
 You agree to indemnify and hold ${BRAND_NAME} harmless from claims arising from your use of the app or violation of these Terms.
 
-## 5. Intellectual Property
+## 6. Intellectual Property
 
 All content, features, and functionality are owned by ${BRAND_NAME} or its licensors. You may not copy or distribute without permission.
 
-## 6. Prohibited Activities
+## 7. Prohibited Activities
 
 You may NOT:
 - Harass or abuse other users
@@ -160,7 +189,7 @@ You may NOT:
 - Transmit viruses or malware
 - Engage in fraudulent activities
 
-## 7. Termination
+## 8. Termination
 
 We reserve the right to terminate or suspend your account for:
 - Violation of these Terms
@@ -168,23 +197,23 @@ We reserve the right to terminate or suspend your account for:
 - Abuse
 - Inactivity
 
-## 8. Dispute Resolution
+## 9. Dispute Resolution
 
 - First: Contact us at support@markvtkrash.com
 - Then: Good-faith negotiation
 - Finally: Binding arbitration (if necessary)
 
-## 9. Changes to Terms
+## 10. Changes to Terms
 
 We may update these Terms anytime. Continued use means you accept changes.
 
-## 10. Contact
+## 11. Contact
 
-For legal matters, contact: legal@pikme.app
+For questions or legal matters, contact: support@markvtkrash.com
 
 ---
 
-Last Updated: June 17, 2026`,
+Last Updated: October 17, 2026`,
   },
   food_disclaimer: {
     title: 'Food Disclaimer',
@@ -210,7 +239,9 @@ Last Updated: June 17, 2026`,
 
 **Critical Warning:**
 
-Allergen and dietary restriction information could have changed since our last update. Cross-contamination may occur during food preparation.
+Allergen and dietary information could have changed since our last update. Cross-contamination may occur during food preparation.
+
+**Dietary preferences and dish names:** Dietary preferences you set, and filters such as "Matches my diet", use the words in a dish's name. A name does not show every ingredient or how a dish is made, so a dish that stays in a list may not fit your diet, and a dish that is hidden might have. Always confirm with the restaurant staff before you order.
 
 **ALWAYS:**
 1. Inform restaurant staff of allergies
@@ -233,21 +264,25 @@ If you have medical conditions, serious allergies, or dietary restrictions:
 - Verify all information independently
 - Take extra precautions
 
-## AI-Generated Recommendations
+## Estimated Menus and AI Suggestions
 
-Menu items and recommendations are AI-generated and may:
+Where a restaurant has not confirmed its menu, the items shown are AI estimates and are labeled "estimated". Estimated menus, Quick Find and Quick take are AI-generated and may:
 - Contain inaccuracies
-- Not reflect actual menu availability
+- Not reflect actual menu availability (a dish may not be offered)
 - Not match your preferences
 - Require verification with restaurants
 
-**Use recommendations as SUGGESTIONS ONLY, not definitive advice.**
+**Use them as SUGGESTIONS ONLY, not definitive advice.**
+
+## Hours, Distances and Availability
+
+Opening hours, distances and other restaurant details come from third parties and can be out of date. Check with the restaurant before you go.
 
 ## Religious/Cultural Dietary Requirements
 
-PikMe does not collect or use religious or cultural preferences, and its menu information does not indicate whether food meets any religious dietary requirement.
+${BRAND_NAME} does not collect or use religious or cultural preferences, and its menu information does not indicate whether food meets any religious dietary requirement.
 - Certification and preparation methods vary by restaurant
-- Vegan products may use processing aids
+- Vegetarian, vegan and gluten-free products may use processing aids
 - Always confirm with restaurant staff
 
 ## Food Safety
@@ -282,7 +317,7 @@ By using ${BRAND_NAME}, you acknowledge:
 
 **Stay Safe. Verify Important Information. Trust But Verify.**
 
-Last Updated: June 17, 2026`,
+Last Updated: October 17, 2026`,
   },
 };
 

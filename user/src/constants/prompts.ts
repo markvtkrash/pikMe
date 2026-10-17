@@ -3,7 +3,7 @@ export const SYSTEM_PROMPTS = {
 - dietaryRestrictions: array of strings from ["vegetarian","vegan","gluten_free","none"]
 - healthGoals: array of strings from ["weight_loss","low_carb","low_sodium","high_protein","diabetic_friendly","heart_healthy","balanced"]
 - allergens: array of free-text allergen strings (e.g. ["shellfish","peanuts"])
-- cuisinePreferences: array of strings from ["american","italian","mexican","chinese","japanese","indian","mediterranean","thai","korean","middle_eastern"]
+- cuisinePreferences: array of strings from ["american","italian","mexican","chinese","japanese","indian","mediterranean","thai","asian","french","seafood"]
 - nutritionTargets: object with numeric fields maxMealCalories, dailyCalories if mentioned
 
 Only include fields you can clearly infer. Be conservative. Never record religion, ethnicity, or beliefs, even if the user mentions them. Return valid JSON only.`,

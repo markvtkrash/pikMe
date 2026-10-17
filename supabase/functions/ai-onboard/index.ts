@@ -86,7 +86,7 @@ Return ONLY valid JSON with these exact fields (omit any field not mentioned in 
   "dietaryRestrictions": [],   // only values from: vegetarian, vegan, gluten_free, none
   "healthGoals": [],           // only values from: weight_loss, low_carb, low_sodium, high_protein, diabetic_friendly, heart_healthy, balanced
   "allergens": [],             // free-text allergens (e.g. "peanuts", "shellfish", "dairy")
-  "cuisinePreferences": []     // only values from: american, italian, mexican, chinese, japanese, indian, mediterranean, thai, korean, middle_eastern
+  "cuisinePreferences": []     // only values from: american, italian, mexican, chinese, japanese, indian, mediterranean, thai, asian, french, seafood
 }
 
 User description: "${freeText.replace(/"/g, '\\"')}"

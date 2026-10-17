@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
   StyleSheet, RefreshControl, Platform, Linking,
@@ -28,6 +28,10 @@ import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { Restaurant } from '../../../src/types';
 import { sortByDistanceAndMenu } from '../../../src/utils/menuStatus';
 import { trackEvent } from '../../../src/api/analytics';
+import { useRememberedFiltersStore } from '../../../src/store/rememberedFiltersStore';
+import { readyToRestore } from '../../../src/utils/rememberedFilters';
+import { planStartFilters, profileSignature } from '../../../src/utils/profilePlaces';
+import { useUserProfile } from '../../../src/hooks/useUserProfile';
 import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const ALL = 'All';
@@ -75,6 +79,22 @@ export default function ExploreScreen() {
   const { data: customerConfig } = useCustomerConfig();
   const categories = customerConfig?.categories ?? [];
   const [filters, setFilters] = useState<CategoryFilters>(NO_CATEGORY_FILTERS);
+  // "Remember my filters": every change the person makes is kept on the device, and Explore starts with the last ones (decided once per launch, when
+  // the restaurants and the saved choice are both in). See utils/rememberedFilters.ts.
+  const rememberedHydrated = useRememberedFiltersStore((s) => s.hydrated);
+  const remembered = useRememberedFiltersStore((s) => s.filters);
+  const seededFrom = useRememberedFiltersStore((s) => s.seededFrom);
+  const remember = useRememberedFiltersStore((s) => s.remember);
+  const seedFilters = useRememberedFiltersStore((s) => s.seed);
+  // The profile's choices (kind of place, how you get the food, cuisine) are the same categories as these filters. When they have changed since
+  // Explore last started from them, it starts from them again. decidedFor is the profile state the decision was made for (null: not decided yet).
+  const { data: profile, isLoading: profileLoading } = useUserProfile();
+  const profileSig = profileSignature(profile);
+  const decidedFor = useRef<string | null>(null);
+  function updateFilters(next: CategoryFilters) {
+    setFilters(next);
+    remember(next);
+  }
 
   // Fetching always covers the max radius (see useNearbyRestaurants); the
   // distance picker just filters that same data client-side, no refetch.
@@ -84,6 +104,26 @@ export default function ExploreScreen() {
   );
 
   const curated = useMemo(() => isCurated(withinRadius, categories), [withinRadius, categories]);
+
+  // What to start with, decided once per launch and again whenever the profile's choices change: the profile's choices when they are new, otherwise
+  // the filters the person used last time. It waits for the restaurants, the category list, the profile and the saved choice, and never replaces a
+  // choice the person made before it was decided. If nothing here matches, Explore starts unfiltered. See planStartFilters.
+  useEffect(() => {
+    if (!customerConfig || profileLoading) return;
+    const firstDecision = decidedFor.current === null;
+    if (!readyToRestore({
+      hydrated: rememberedHydrated,
+      restaurantCount: withinRadius.length,
+      alreadyDecided: decidedFor.current === profileSig,
+      currentlyFiltered: firstDecision && anyCategoryFilter(filters),
+    })) return;
+    decidedFor.current = profileSig;
+    const start = planStartFilters({ remembered, seededFrom, profile, restaurants: withinRadius, categories });
+    if (!start.plan.applied) return;
+    setFilters(start.plan.filters);
+    if (start.source === 'profile' && start.seededFrom !== null) seedFilters(start.plan.filters, start.seededFrom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerConfig, profileLoading, rememberedHydrated, withinRadius, profileSig]);
 
   // anonymous usage count: someone searched (once per launch; what they typed is never sent)
   useEffect(() => {
@@ -127,7 +167,7 @@ export default function ExploreScreen() {
     setSearch('');
     setActiveType(ALL);
     setActiveCuisine(ALL);
-    setFilters(NO_CATEGORY_FILTERS);
+    updateFilters(NO_CATEGORY_FILTERS);
     setCouponsOnly(false);
   }
 
@@ -146,12 +186,12 @@ export default function ExploreScreen() {
   function removeActiveChip(chip: ActiveChip) {
     if (chip.kind === 'legacyType') setActiveType(ALL);
     else if (chip.kind === 'legacyCuisine') setActiveCuisine(ALL);
-    else setFilters((f) => removeChip(f, chip));
+    else updateFilters(removeChip(filters, chip));
   }
 
   // "Clear all" in the sheet clears the filters in it; search and Coupons Only are left as they are.
   function clearSheetFilters() {
-    setFilters(NO_CATEGORY_FILTERS);
+    updateFilters(NO_CATEGORY_FILTERS);
     setActiveType(ALL);
     setActiveCuisine(ALL);
   }
@@ -368,7 +408,7 @@ export default function ExploreScreen() {
         categories={categories}
         curated={curated}
         filters={filters}
-        onChange={setFilters}
+        onChange={updateFilters}
         onClear={clearSheetFilters}
         resultCount={filtered.length}
         legacy={{

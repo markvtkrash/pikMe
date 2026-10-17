@@ -24,6 +24,7 @@ import { hideNativePasswordReveal } from '../src/utils/hideNativePasswordReveal'
 import { useThemedStyles } from '../src/theme/useTheme';
 import { useProfileReminderStore } from '../src/store/profileReminderStore';
 import { trackEvent } from '../src/api/analytics';
+import { useRememberedFiltersStore } from '../src/store/rememberedFiltersStore';
 
 // the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
 hideNativePasswordReveal();
@@ -138,7 +139,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (!newSession) {
         setOnboardingComplete(null);
         // signed out: the next person to sign in on this device is reminded too (a "Not now" is kept for one person only)
-        if (_event === 'SIGNED_OUT') useProfileReminderStore.getState().reset();
+        if (_event === 'SIGNED_OUT') {
+          useProfileReminderStore.getState().reset();
+          // and the filters remembered on this phone belong to the person who just left
+          useRememberedFiltersStore.getState().clear();
+        }
       }
     });
 

@@ -41,6 +41,8 @@ export default function LocationPermissionScreen() {
         healthGoals: draft.healthGoals,
         allergens: draft.allergens,
         cuisinePreferences: draft.cuisinePreferences,
+        venuePreferences: draft.venuePreferences,
+        servicePreferences: draft.servicePreferences,
         nutritionTargets: draft.nutritionTargets,
         searchRadiusMeters: 2000,
         onboardingComplete: true,

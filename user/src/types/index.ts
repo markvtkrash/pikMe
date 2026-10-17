@@ -11,18 +11,11 @@ export interface UserProfile {
     | 'heart_healthy'
     | 'balanced'
   )[];
-  cuisinePreferences: (
-    | 'american'
-    | 'italian'
-    | 'mexican'
-    | 'chinese'
-    | 'japanese'
-    | 'indian'
-    | 'mediterranean'
-    | 'thai'
-    | 'korean'
-    | 'middle_eastern'
-  )[];
+  // The three below are category keys (restaurant_categories, migration 129): the same list as the Explore filters and the owner's questions
+  // ("What do you serve", "What is your place", "How can customers get food").
+  cuisinePreferences: string[];
+  venuePreferences?: string[];
+  servicePreferences?: string[];
   allergens: string[];
   nutritionTargets: NutritionTargets;
   searchRadiusMeters: number;

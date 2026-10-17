@@ -14,6 +14,10 @@ import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../sr
 import { useFaceIdStore } from '../../../src/store/faceIdStore';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
+import { useCustomerConfig } from '../../../src/hooks/useCustomerConfig';
+import { categoryChoices, choiceLabels } from '../../../src/utils/profilePlaces';
+import { toggleFilter } from '../../../src/utils/categories';
+import { activeDiets, DIET_PREFERENCE_NOTE } from '../../../src/utils/dietFilter';
 import { useThemedStyles } from '../../../src/theme/useTheme';
 
 // Alert (../../../src/utils/alert) renders an actual in-app modal on every
@@ -89,6 +93,9 @@ export default function ProfileScreen() {
   }, []);
   const [isSaving, setIsSaving] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile> | null>(null);
+  // the categories (what a place is, how you get the food, what it serves): the same list the Explore filters and the owners use
+  const { data: customerConfig } = useCustomerConfig();
+  const categories = customerConfig?.categories ?? [];
   const [isDeleting, setIsDeleting] = useState(false);
   const [faceIdAvailable, setFaceIdAvailable] = useState(false);
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
@@ -135,6 +142,8 @@ export default function ProfileScreen() {
         healthGoals: profile.healthGoals,
         allergens: profile.allergens,
         cuisinePreferences: profile.cuisinePreferences,
+        venuePreferences: profile.venuePreferences ?? [],
+        servicePreferences: profile.servicePreferences ?? [],
         nutritionTargets: profile.nutritionTargets,
       });
       setIsEditing(true);
@@ -156,6 +165,8 @@ export default function ProfileScreen() {
         healthGoals: editForm.healthGoals || profile.healthGoals,
         allergens: editForm.allergens || profile.allergens,
         cuisinePreferences: editForm.cuisinePreferences || profile.cuisinePreferences,
+        venuePreferences: editForm.venuePreferences || profile.venuePreferences || [],
+        servicePreferences: editForm.servicePreferences || profile.servicePreferences || [],
         nutritionTargets: editForm.nutritionTargets || profile.nutritionTargets,
         // Allergens are no longer collected or edited here; whatever is already stored is passed through unchanged.
         // Not editable here (nothing reads it); the stored value is passed through unchanged.
@@ -226,11 +237,16 @@ export default function ProfileScreen() {
   const goalLabels = form.healthGoals
     .map((v) => HEALTH_GOALS.find((g) => g.value === v)?.label ?? v);
 
-  const cuisineLabels = form.cuisinePreferences
-    .map((v) => {
-      const found = CUISINE_OPTIONS.find((c) => c.value === v);
-      return found ? `${found.emoji} ${found.label}` : v;
-    });
+  // with the category list, the labels are the admin's; an older server sends no list, and the earlier fixed cuisine list is used then
+  const hasCategories = categories.length > 0;
+  const cuisineLabels = hasCategories
+    ? choiceLabels(form.cuisinePreferences, categories, 'cuisine')
+    : form.cuisinePreferences.map((v) => {
+        const found = CUISINE_OPTIONS.find((c) => c.value === v);
+        return found ? `${found.emoji} ${found.label}` : v;
+      });
+  const venueLabels = choiceLabels(form.venuePreferences, categories, 'venue');
+  const serviceLabels = choiceLabels(form.servicePreferences, categories, 'service');
 
   // Edit / Save / Cancel are shown at the top AND the bottom of the profile, so nobody has to scroll for them.
   const actionButtons = (top: boolean) => isEditing ? (
@@ -290,9 +306,9 @@ export default function ProfileScreen() {
         </View>
       ))}
 
-      {/* Dietary Restrictions */}
+      {/* Dietary Preferences */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dietary Restrictions</Text>
+        <Text style={styles.sectionTitle}>Dietary Preferences</Text>
         {isEditing ? (
           <ChipRow
             options={DIETARY_RESTRICTIONS}
@@ -307,9 +323,10 @@ export default function ProfileScreen() {
         ) : (
           <LabelRow
             items={dietLabels}
-            emptyText={form.dietaryRestrictions.includes('none') ? 'No restrictions' : 'None set'}
+            emptyText={form.dietaryRestrictions.includes('none') ? 'No preferences' : 'None set'}
           />
         )}
+        {activeDiets(form.dietaryRestrictions).length > 0 && <Text style={styles.dietNote}>{DIET_PREFERENCE_NOTE}</Text>}
       </View>
 
       {/* Health Goals */}
@@ -331,12 +348,43 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* Places I like: the same three groups as the Explore filters, and what owners choose for their restaurant */}
+      {hasCategories && (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Kind of Place</Text>
+            {isEditing ? (
+              <ChipRow
+                options={categoryChoices(categories, 'venue')}
+                selected={form.venuePreferences ?? []}
+                onToggle={(val) => setEditForm({ ...form, venuePreferences: toggleFilter(form.venuePreferences ?? [], val) })}
+              />
+            ) : (
+              <LabelRow items={venueLabels} emptyText="No preferences set" />
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>How I Like to Get Food</Text>
+            {isEditing ? (
+              <ChipRow
+                options={categoryChoices(categories, 'service')}
+                selected={form.servicePreferences ?? []}
+                onToggle={(val) => setEditForm({ ...form, servicePreferences: toggleFilter(form.servicePreferences ?? [], val) })}
+              />
+            ) : (
+              <LabelRow items={serviceLabels} emptyText="No preferences set" />
+            )}
+          </View>
+        </>
+      )}
+
       {/* Cuisine Preferences */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Cuisine Preferences</Text>
         {isEditing ? (
           <ChipRow
-            options={CUISINE_OPTIONS}
+            options={hasCategories ? categoryChoices(categories, 'cuisine') : CUISINE_OPTIONS}
             selected={form.cuisinePreferences}
             onToggle={(val) => {
               const updated = form.cuisinePreferences.includes(val)
@@ -491,6 +539,8 @@ const baseStyles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: 'center',
   },
+  // under the diet choices: names are not ingredients, verify with the staff
+  dietNote: { fontSize: 13, lineHeight: 18, color: '#7A4A00', backgroundColor: '#FFF3E0', borderRadius: 8, borderWidth: 1, borderColor: '#E65100', paddingHorizontal: 10, paddingVertical: 8, marginTop: 10 },
   signOutText: { color: '#e53e3e', fontSize: 15, fontWeight: '600' },
   signOutEmail: { color: '#7A7A7A', fontSize: 12.5, marginTop: 2, paddingHorizontal: 12 },
   deleteBtn: {
