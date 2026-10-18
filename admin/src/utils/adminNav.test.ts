@@ -3,7 +3,7 @@ import { NAV_ITEMS, QUICK_NAV, QUICK_NAV_MIN_WIDTH, isNavActive, isNavItemActive
 describe('QUICK_NAV', () => {
   it('has the requested links, in order', () => {
     expect(QUICK_NAV.map((l) => l.label)).toEqual([
-      'Menu Management', 'Manage Users', 'Franchise Menu Management', 'Manage Restaurants', 'Create Restaurant Owner', 'Tools',
+      'Menu Management', 'Manage Users', 'Franchise Menu Management', 'Manage Restaurants', 'Manage Owners', 'Create Restaurant Owner', 'Tools',
     ]);
   });
 
@@ -17,7 +17,8 @@ describe('QUICK_NAV', () => {
     expect(byLabel['Menu Management']).toBe('/admin/menu-management');
     expect(byLabel['Manage Users']).toBe('/admin/users');
     expect(byLabel['Franchise Menu Management']).toBe('/admin/chain-menus');
-    expect(byLabel['Manage Restaurants']).toBe('/admin/owners');
+    expect(byLabel['Manage Restaurants']).toBe('/admin/restaurants');
+    expect(byLabel['Manage Owners']).toBe('/admin/owners');
     expect(byLabel['Create Restaurant Owner']).toBe('/admin/create-owner');
     expect(byLabel['Tools']).toBe('/admin/tools');
   });
@@ -35,7 +36,7 @@ describe('NAV_ITEMS', () => {
 
   it('keeps every page that was in the menu before, including Franchise Menu Management', () => {
     const labels = NAV_ITEMS.map((i) => i.label);
-    for (const expected of ['Dashboard', 'Pending Claims', 'Menu Management', 'Users', 'Manage Restaurants', 'Franchise Menu Management', 'Tools']) {
+    for (const expected of ['Dashboard', 'Pending Claims', 'Menu Management', 'Users', 'Manage Owners', 'Manage Restaurants', 'Franchise Menu Management', 'Tools']) {
       expect(labels).toContain(expected);
     }
   });

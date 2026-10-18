@@ -11,6 +11,8 @@ import { OptionPickerModal } from '../../src/components/common/OptionPickerModal
 import {
   buildCityOptions, buildStateOptions, countWithoutLocation, filterButtonLabel, matchesLocation, validCity,
 } from '../../src/utils/menuLocation';
+import { CONFIRM_FILTERS, ConfirmFilter, matchesConfirmFilter } from '../../src/utils/menuConfirmFilter';
+import { FRANCHISE_FILTERS, FranchiseFilter, matchesFranchiseFilter } from '../../src/utils/menuFranchiseFilter';
 
 const PAGE_SIZE = 50;
 
@@ -42,6 +44,8 @@ export default function AdminMenuManagementScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<SourceFilter>('all');
+  const [confirmFilter, setConfirmFilter] = useState<ConfirmFilter>('all');
+  const [franchiseFilter, setFranchiseFilter] = useState<FranchiseFilter>('all');
   const [stateFilter, setStateFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [picker, setPicker] = useState<'state' | 'city' | null>(null);
@@ -86,6 +90,8 @@ export default function AdminMenuManagementScreen() {
     const query = searchQuery.trim().toLowerCase();
     return rows.filter((r) => {
       if (filter !== 'all' && r.source !== filter) return false;
+      if (!matchesConfirmFilter(r, confirmFilter)) return false;
+      if (!matchesFranchiseFilter(r, franchiseFilter)) return false;
       if (!matchesLocation(r, stateFilter, cityFilter)) return false;
       if (!query) return true;
       return (
@@ -95,7 +101,7 @@ export default function AdminMenuManagementScreen() {
         (r.owner_email ?? '').toLowerCase().includes(query)
       );
     });
-  }, [rows, searchQuery, filter, stateFilter, cityFilter]);
+  }, [rows, searchQuery, filter, confirmFilter, franchiseFilter, stateFilter, cityFilter]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount - 1);
@@ -173,6 +179,28 @@ export default function AdminMenuManagementScreen() {
               <Text style={styles.filterChipText}>Clear</Text>
             </TouchableOpacity>
           )}
+        </View>
+        <View style={styles.filterRow}>
+          {CONFIRM_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f.value}
+              style={[styles.filterChip, confirmFilter === f.value && styles.filterChipActive]}
+              onPress={() => { setConfirmFilter(f.value); setPage(0); }}
+            >
+              <Text style={[styles.filterChipText, confirmFilter === f.value && styles.filterChipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.filterRow}>
+          {FRANCHISE_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f.value}
+              style={[styles.filterChip, franchiseFilter === f.value && styles.filterChipActive]}
+              onPress={() => { setFranchiseFilter(f.value); setPage(0); }}
+            >
+              <Text style={[styles.filterChipText, franchiseFilter === f.value && styles.filterChipTextActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 

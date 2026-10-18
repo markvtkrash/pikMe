@@ -5,8 +5,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BrandBar } from '../../../src/components/common/BrandBar';
-import { signUpRestaurantOwner } from '../../../src/api/restaurantAuth';
+import { signUpRestaurantOwner, getRestaurantForOwner } from '../../../src/api/restaurantAuth';
 import { useRestaurantOwnerStore } from '../../../src/store/restaurantOwnerStore';
+import { supabase } from '../../../src/api/supabase';
 import { DataSourcesNotice } from '../../../src/components/common/DataSourcesNotice';
 import { IconText } from '../../../src/components/common/AppIcon';
 import { useEnterChain } from '../../../src/hooks/useEnterChain';
@@ -14,7 +15,7 @@ import { PasswordInput } from '../../../src/components/common/PasswordInput';
 
 export default function RestaurantSignupScreen() {
   const router = useRouter();
-  const { setOwner, setSession } = useRestaurantOwnerStore();
+  const { setOwner, setRestaurant, setSession, setRestaurantError, setMustChangePassword } = useRestaurantOwnerStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -41,11 +42,45 @@ export default function RestaurantSignupScreen() {
     setLoading(true);
     try {
       const result = await signUpRestaurantOwner(email.trim(), password, businessName.trim());
-      setSuccessMsg(result.message || 'Account created! Check your email to confirm.');
-      // After a delay, navigate to login
-      setTimeout(() => {
-        router.push('/restaurant/auth/login');
-      }, 2000);
+
+      // The project's Auth settings decide whether signUp() comes back with a
+      // session (email confirmation off) or not (confirmation required). When
+      // there's no session we genuinely can't sign the owner in yet, so fall
+      // back to the old "check your email" message.
+      if (!result.session) {
+        setSuccessMsg(result.message || 'Account created! Check your email to confirm.');
+        setTimeout(() => {
+          router.push('/restaurant/auth/login');
+        }, 2000);
+        return;
+      }
+
+      // From here on, mirror exactly what a normal login does, so a fresh
+      // signup lands wherever signing in would have taken this owner.
+      await supabase.auth.setSession(result.session);
+      setMustChangePassword(false);
+
+      let restaurant = null;
+      let lookupError: string | null = null;
+      try {
+        restaurant = await getRestaurantForOwner();
+      } catch (lookupErr: any) {
+        lookupError = lookupErr?.message || 'Could not load your restaurant';
+      }
+
+      setOwner(result.user);
+      setSession(result.session);
+      setRestaurantError(lookupError);
+
+      if (restaurant) {
+        setRestaurant(restaurant);
+        router.replace('/restaurant/dashboard');
+      } else if (lookupError) {
+        router.replace('/restaurant/dashboard');
+      } else {
+        // Brand new owner, nothing claimed yet — same place login sends them.
+        router.replace('/restaurant/claim');
+      }
     } catch (err: any) {
       setError(err.message || 'Signup failed');
     } finally {

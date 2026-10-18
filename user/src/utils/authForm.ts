@@ -61,6 +61,15 @@ export const AGREEMENT_TITLE = 'Before you create your account';
 export const AGREEMENT_INTRO = 'Please read and agree to continue.';
 export const AGREEMENT_BUTTON = 'I Agree, Create Account';
 
+// The live legal pages (markvtkrash.com) — shared with Help so there is one definition
+// instead of two drifting copies.
+export const LEGAL_LINKS = {
+  privacy: 'https://www.markvtkrash.com/legal/privacy',
+  terms: 'https://www.markvtkrash.com/legal/terms',
+  disclaimer: 'https://www.markvtkrash.com/legal/food-disclaimer',
+  support: 'mailto:support@markvtkrash.com',
+};
+
 /** The message to show after a failed sign-in. The server's "Invalid login credentials" is the same whether the email has no account or the
  *  password is wrong, so it gets a hint that points to Create Account. Any other message is shown as it is. */
 export function signInErrorMessage(serverMessage: string | null | undefined): string {

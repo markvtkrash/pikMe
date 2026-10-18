@@ -187,7 +187,7 @@ export default function AdminDashboard() {
     { key: 'relocations', icon: '📍', title: 'Relocation Requests', href: '/admin/relocations', color: '#00796B', bg: '#E0F2F1', count: stats.pendingRelocations },
     { key: 'menu', icon: '🍽️', title: 'Menu Management', href: '/admin/menu-management', color: '#7B1FA2', bg: '#F3E5F5' },
     { key: 'coupons', icon: '🎟️', title: 'Coupon Management', href: '/admin/coupons', color: '#E65100', bg: '#FFF3E0', count: stats.totalCoupons, detail: `${stats.activeCoupons} active` },
-    { key: 'owners', icon: '🏪', title: 'Manage Restaurants', href: '/admin/owners', color: '#C2185B', bg: '#FCE4EC' },
+    { key: 'owners', icon: '🏪', title: 'Manage Owners', href: '/admin/owners', color: '#C2185B', bg: '#FCE4EC' },
     { key: 'users', icon: '👥', title: 'Manage Users', href: '/admin/users', color: '#0277BD', bg: '#E1F5FE', count: stats.totalUsers },
     { key: 'create-owner', icon: '➕', title: 'Create Restaurant Owner', href: '/admin/create-owner', color: '#3949AB', bg: '#E8EAF6' },
     { key: 'reports', icon: '📊', title: 'Reports', href: '/admin/reports', color: '#F9A825', bg: '#FFFDE7' },

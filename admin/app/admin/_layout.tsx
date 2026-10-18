@@ -23,13 +23,13 @@ export default function AdminLayout() {
       <Stack.Screen name="index" options={{ title: 'Dashboard' }} />
       <Stack.Screen name="claims" options={{ title: 'Pending Claims' }} />
       <Stack.Screen name="relocations" options={{ title: '📍 Relocations' }} />
-      <Stack.Screen name="restaurants" options={{ title: '🍽️ Restaurants' }} />
+      <Stack.Screen name="restaurants" options={{ title: '🍽️ Manage Restaurants' }} />
       <Stack.Screen name="menu-management" options={{ title: '🧾 Menu Management' }} />
       <Stack.Screen name="menu-management/[id]" options={{ title: 'Menu Items' }} />
       <Stack.Screen name="menu-view" options={{ title: '👁 View Menu' }} />
       <Stack.Screen name="menu-edit" options={{ title: '📝 Manual Edit' }} />
       <Stack.Screen name="coupons" options={{ title: '🎟️ Coupon Management' }} />
-      <Stack.Screen name="owners" options={{ title: '🏪 Manage Restaurants' }} />
+      <Stack.Screen name="owners" options={{ title: '🏪 Manage Owners' }} />
       <Stack.Screen name="users" options={{ title: '👥 All Users' }} />
       <Stack.Screen name="create-owner" options={{ title: '➕ Create Owner' }} />
       <Stack.Screen name="reports" options={{ title: '📊 Reports' }} />

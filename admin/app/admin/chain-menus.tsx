@@ -10,6 +10,7 @@ import {
   clearChainMenuLink, getChainMenuSources, markChainMenuStale, pullChainMenuNow, setChainBuiltInMenuUrl, setChainMenuLink,
 } from '../../src/api/chainMenus';
 import AddFranchiseModal from '../../src/components/common/AddFranchiseModal';
+import { FranchiseLookupPanel } from '../../src/components/common/FranchiseLookupPanel';
 import LinkSuggestionsPanel from '../../src/components/common/LinkSuggestionsPanel';
 import ChainStoreSection from '../../src/components/common/ChainStoreSection';
 import {
@@ -61,6 +62,7 @@ export default function AdminChainMenusScreen() {
   // Chain name shown in the "marked for refresh" confirmation window (null = closed).
   const [readyFor, setReadyFor] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [viewingList, setViewingList] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -154,9 +156,14 @@ export default function AdminChainMenusScreen() {
                 Each chain's menu is built once from its official menu page. Chains marked "Needs attention" could
                 not be read automatically: tap one and enter its menu link by hand. That link is then used as is.
               </Text>
-              <TouchableOpacity style={styles.addBtn} onPress={() => setAdding(true)} accessibilityRole="button">
-                <IconText style={styles.addBtnText} emoji="➕">Add franchise</IconText>
-              </TouchableOpacity>
+              <View style={styles.addRow}>
+                <TouchableOpacity style={styles.addBtn} onPress={() => setAdding(true)} accessibilityRole="button">
+                  <IconText style={styles.addBtnText} emoji="➕">Add franchise</IconText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.viewListBtn} onPress={() => setViewingList(true)} accessibilityRole="button">
+                  <IconText style={styles.viewListBtnText} emoji="📋">View Franchise List</IconText>
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity style={styles.createOwnerLink} onPress={() => router.push('/admin/create-owner')}>
                 <Text style={styles.createOwnerLinkText}>
                   ➕ Need a store's Google place ID for a chain? Create a restaurant owner for one of its locations
@@ -260,6 +267,14 @@ export default function AdminChainMenusScreen() {
           loadRows();
         }}
       />
+
+      <Modal visible={viewingList} animationType="slide" onRequestClose={() => setViewingList(false)}>
+        <View style={styles.listModalContainer}>
+          <View style={styles.listModalWrapper}>
+            <FranchiseLookupPanel onClose={() => setViewingList(false)} />
+          </View>
+        </View>
+      </Modal>
 
       <EditModal
         source={editing}
@@ -498,8 +513,13 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
   hint: { fontSize: 12, color: '#666', paddingBottom: 6 },
-  addBtn: { alignSelf: 'flex-start', backgroundColor: '#2E7D32', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 8, elevation: 2 },
+  addRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+  addBtn: { alignSelf: 'flex-start', backgroundColor: '#2E7D32', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, elevation: 2 },
   addBtnText: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  viewListBtn: { alignSelf: 'flex-start', backgroundColor: '#ECEFF1', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, elevation: 2 },
+  viewListBtnText: { fontSize: 12, fontWeight: '800', color: '#455A64' },
+  listModalContainer: { flex: 1, backgroundColor: '#f6f6f6' },
+  listModalWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
   createOwnerLink: { paddingVertical: 6, marginBottom: 6 },
   createOwnerLinkText: { fontSize: 12, fontWeight: '700', color: '#1565C0' },
   list: { paddingHorizontal: 16, paddingVertical: 12 },

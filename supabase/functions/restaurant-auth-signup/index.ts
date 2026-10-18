@@ -80,11 +80,24 @@ serve(async (req) => {
       );
     }
 
+    // signUp() already returns a session when email confirmation is turned
+    // off in the project's Auth settings — if so, hand it back in the same
+    // shape restaurant-auth-login uses, so the app can sign the owner in
+    // immediately instead of sending them to log in by hand. When
+    // confirmation is required, authData.session is null and the client
+    // falls back to "check your email" as before.
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Restaurant owner account created. Check your email to confirm.",
+        message: authData.session
+          ? "Restaurant owner account created."
+          : "Restaurant owner account created. Check your email to confirm.",
         userId: authData.user.id,
+        session: authData.session,
+        mustChangePassword: false,
+        user: authData.session
+          ? { id: authData.user.id, email: authData.user.email, businessName }
+          : null,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

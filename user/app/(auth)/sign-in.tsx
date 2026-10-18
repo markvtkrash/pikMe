@@ -7,10 +7,10 @@ import { useRouter } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import { Alert } from '../../src/utils/alert';
 import {
-  AGREEMENT_BUTTON, AGREEMENT_DOCUMENTS, AGREEMENT_INTRO, AGREEMENT_TITLE, AGREEMENT_VERSION, CHECK_EMAIL_MESSAGE, CREATE_NEEDS_TITLE, signInErrorMessage,
+  AGREEMENT_BUTTON, AGREEMENT_DOCUMENTS, AGREEMENT_INTRO, AGREEMENT_TITLE, AGREEMENT_VERSION, CHECK_EMAIL_MESSAGE, CREATE_NEEDS_TITLE, LEGAL_LINKS, signInErrorMessage,
   validateRegister, validateSignIn, type FormField, type FormProblem,
 } from '../../src/utils/authForm';
-import { LegalDocumentModal, type DocumentType } from '../../src/components/common/LegalDocumentModal';
+import { InAppWebViewModal } from '../../src/components/common/InAppWebViewModal';
 import { useThemedStyles } from '../../src/theme/useTheme';
 import { trackEvent } from '../../src/api/analytics';
 
@@ -61,8 +61,9 @@ export default function SignInScreen() {
   const passwordRef = useRef<TextInput>(null);
   const [success, setSuccess] = useState('');
 
-  const [showLegalModal, setShowLegalModal] = useState(false);
-  const [currentDocument, setCurrentDocument] = useState<DocumentType>('privacy_policy');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToFoodDisclaimer, setAgreedToFoodDisclaimer] = useState(false);
+  const [webViewState, setWebViewState] = useState<{ url: string; title: string } | null>(null);
 
   function clearMessages() {
     setError('');
@@ -112,12 +113,16 @@ export default function SignInScreen() {
       }
       return;
     }
+    setAgreedToTerms(false);
+    setAgreedToFoodDisclaimer(false);
     setShowAgreement(true);
   }
 
   // The person agreed in the popup: make the account.
   async function confirmRegister() {
     setShowAgreement(false);
+    setAgreedToTerms(false);
+    setAgreedToFoodDisclaimer(false);
     setBusy('register');
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({ email: email.trim(), password });
@@ -216,18 +221,54 @@ export default function SignInScreen() {
           <View style={styles.agreementCard}>
             <Text style={styles.agreementTitle}>{AGREEMENT_TITLE}</Text>
             <Text style={styles.agreementIntro}>{AGREEMENT_INTRO}</Text>
-            {AGREEMENT_DOCUMENTS.map((doc) => (
-              <TouchableOpacity
-                key={doc.type}
-                style={styles.agreementRow}
-                onPress={() => { setCurrentDocument(doc.type); setShowLegalModal(true); }}
-                accessibilityRole="button"
-              >
-                <Text style={styles.agreementRowText}>{doc.label}</Text>
-                <Text style={styles.agreementRowGo}>Read ›</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity style={[styles.button, styles.registerButton, styles.agreementButton]} onPress={confirmRegister} accessibilityRole="button">
+
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreedToTerms }}
+            >
+              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                {agreedToTerms && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkLabel}>
+                I agree to the{' '}
+                <Text style={styles.checkLink} onPress={() => setWebViewState({ url: LEGAL_LINKS.terms, title: 'Terms of Service' })}>
+                  Terms of Service
+                </Text>
+                {' '}and{' '}
+                <Text style={styles.checkLink} onPress={() => setWebViewState({ url: LEGAL_LINKS.privacy, title: 'Privacy Policy' })}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setAgreedToFoodDisclaimer(!agreedToFoodDisclaimer)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreedToFoodDisclaimer }}
+            >
+              <View style={[styles.checkbox, agreedToFoodDisclaimer && styles.checkboxChecked]}>
+                {agreedToFoodDisclaimer && <Text style={styles.checkmark}>✓</Text>}
+              </View>
+              <Text style={styles.checkLabel}>
+                I have read and understand the{' '}
+                <Text style={styles.checkLink} onPress={() => setWebViewState({ url: LEGAL_LINKS.disclaimer, title: 'Food Disclaimer' })}>
+                  Food Disclaimer
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.button, styles.registerButton, styles.agreementButton,
+                !(agreedToTerms && agreedToFoodDisclaimer) && styles.buttonDisabled,
+              ]}
+              onPress={confirmRegister}
+              disabled={!(agreedToTerms && agreedToFoodDisclaimer)}
+              accessibilityRole="button"
+            >
               <Text style={styles.buttonText}>{AGREEMENT_BUTTON}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.agreementCancel} onPress={() => setShowAgreement(false)} accessibilityRole="button">
@@ -237,8 +278,12 @@ export default function SignInScreen() {
         </View>
       )}
 
-      {/* Legal Document Modal */}
-      <LegalDocumentModal visible={showLegalModal} documentType={currentDocument} onClose={() => setShowLegalModal(false)} />
+      <InAppWebViewModal
+        visible={!!webViewState}
+        url={webViewState?.url ?? ''}
+        title={webViewState?.title ?? ''}
+        onClose={() => setWebViewState(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -284,12 +329,15 @@ const baseStyles = StyleSheet.create({
   agreementCard: { backgroundColor: '#fff', borderRadius: 16, padding: 18, width: '100%', maxWidth: 380, borderWidth: 2, borderColor: '#2E7D32' },
   agreementTitle: { fontSize: 22, fontWeight: '800', color: '#1B5E20', marginBottom: 6 },
   agreementIntro: { fontSize: 16, color: '#444', marginBottom: 14 },
-  agreementRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 11, marginBottom: 8, backgroundColor: '#F4F9FF',
+  checkRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 5, borderWidth: 2, borderColor: '#aaa',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
   },
-  agreementRowText: { fontSize: 18, fontWeight: '700', color: '#0D47A1' },
-  agreementRowGo: { fontSize: 16, fontWeight: '800', color: '#1565C0' },
+  checkboxChecked: { backgroundColor: '#FF6B6B', borderColor: '#FF6B6B' },
+  checkmark: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  checkLabel: { flex: 1, fontSize: 15, color: '#333', lineHeight: 21 },
+  checkLink: { color: '#1565C0', fontWeight: '700', textDecorationLine: 'underline' },
   agreementButton: { flex: 0, marginTop: 8 },
   agreementCancel: { alignItems: 'center', paddingVertical: 12 },
   agreementCancelText: { fontSize: 17, fontWeight: '700', color: '#666' },

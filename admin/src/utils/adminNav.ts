@@ -16,10 +16,10 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: '🏠', href: '/admin', match: '/admin' },
   { label: 'Pending Claims', icon: '📋', href: '/admin/claims', match: '/admin/claims' },
   { label: 'Relocations', icon: '📍', href: '/admin/relocations', match: '/admin/relocations' },
-  { label: 'Restaurants', icon: '🍽️', href: '/admin/restaurants', match: '/admin/restaurants' },
+  { label: 'Manage Restaurants', icon: '🍽️', href: '/admin/restaurants', match: '/admin/restaurants' },
   { label: 'Menu Management', icon: '🧾', href: '/admin/menu-management', match: '/admin/menu-management' },
   { label: 'Coupons', icon: '🎟️', href: '/admin/coupons', match: '/admin/coupons' },
-  { label: 'Manage Restaurants', icon: '🏪', href: '/admin/owners', match: '/admin/owners' },
+  { label: 'Manage Owners', icon: '🏪', href: '/admin/owners', match: '/admin/owners' },
   { label: 'Users', icon: '👥', href: '/admin/users', match: '/admin/users' },
   { label: 'Create Owner', icon: '➕', href: '/admin/create-owner', match: '/admin/create-owner' },
   // The independent restaurant menu issues report is one of the reports, so Reports lights up on it.
@@ -52,7 +52,8 @@ export const QUICK_NAV: { label: string; href: string }[] = [
   { label: 'Menu Management', href: '/admin/menu-management' },
   { label: 'Manage Users', href: '/admin/users' },
   { label: 'Franchise Menu Management', href: '/admin/chain-menus' },
-  { label: 'Manage Restaurants', href: '/admin/owners' },
+  { label: 'Manage Restaurants', href: '/admin/restaurants' },
+  { label: 'Manage Owners', href: '/admin/owners' },
   { label: 'Create Restaurant Owner', href: '/admin/create-owner' },
   { label: 'Tools', href: '/admin/tools' },
 ];

@@ -470,11 +470,11 @@ const baseStyles = StyleSheet.create({
     overflow: 'hidden',
     gap: 0,
   },
-  searchIcon: { fontSize: 20, paddingLeft: 12 },
+  searchIcon: { fontSize: 17, paddingLeft: 12 },
   searchInput: {
     flex: 1,
-    height: 48,
-    fontSize: 19,
+    height: 40,
+    fontSize: 16,
     color: '#141414',
     paddingHorizontal: 10,
     paddingVertical: 0,
@@ -482,9 +482,9 @@ const baseStyles = StyleSheet.create({
     // on the web the browser draws its own outline round the field when it is tapped: the blue box is the outline already
     ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', outlineWidth: 0 } as any) : {}),
   },
-  micButton: { marginRight: 10, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD' },
+  micButton: { marginRight: 8, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3F2FD' },
   micButtonOn: { backgroundColor: '#FFCDD2' },
-  micIcon: { fontSize: 15 },
+  micIcon: { fontSize: 13 },
 
   moreFiltersRow: {
     flexDirection: 'row',

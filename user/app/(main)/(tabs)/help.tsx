@@ -7,13 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import { InAppWebViewModal } from '../../../src/components/common/InAppWebViewModal';
 import { useThemedStyles } from '../../../src/theme/useTheme';
-
-const LEGAL_LINKS = {
-  privacy: 'https://www.markvtkrash.com/legal/privacy',
-  terms: 'https://www.markvtkrash.com/legal/terms',
-  disclaimer: 'https://www.markvtkrash.com/legal/food-disclaimer',
-  support: 'mailto:support@markvtkrash.com',
-};
+import { LEGAL_LINKS } from '../../../src/utils/authForm';
 
 const HELP_ITEMS = [
   {

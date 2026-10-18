@@ -7,11 +7,10 @@ import { Alert } from '../../src/utils/alert';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '../../src/api/supabase';
 import {
-  adminListOwners, adminSetOwnerActive, adminSetRestaurantStatus,
-  adminUpdateOwner, adminReassignOwner, adminDeleteRestaurant, AdminOwnerRow,
+  adminListOwners, adminSetOwnerActive,
+  adminUpdateOwner, adminReassignOwner, AdminOwnerRow,
 } from '../../src/api/restaurantAuth';
 import { ResetOwnerPasswordModal, ResetOwnerTarget } from '../../src/components/common/ResetOwnerPasswordModal';
-import { buildDeleteMessage } from '../../src/utils/restaurantDelete';
 import { IconText } from '../../src/components/common/AppIcon';
 import { useEnterChain } from '../../src/hooks/useEnterChain';
 import { getFranchiseNameSet } from '../../src/api/franchiseKinds';
@@ -125,74 +124,6 @@ export default function AdminOwnersScreen() {
     });
   }
 
-  function handleToggleRestaurantStatus(owner: AdminOwnerRow) {
-    if (!owner.restaurant_id || !owner.restaurant_status) return;
-    const nextStatus = owner.restaurant_status === 'closed' ? 'approved' : 'closed';
-    setConfirmAction({
-      title: nextStatus === 'closed' ? 'Mark restaurant closed?' : 'Reopen restaurant?',
-      message: nextStatus === 'closed'
-        ? `${owner.restaurant_name} will be hidden from customer search. Menu and coupon history is kept for auditing.`
-        : `${owner.restaurant_name} will be visible to customers again.`,
-      confirmLabel: nextStatus === 'closed' ? 'Mark Closed' : 'Reopen',
-      destructive: nextStatus === 'closed',
-      onConfirm: async () => {
-        setBusyId(owner.owner_id);
-        try {
-          await adminSetRestaurantStatus(owner.restaurant_id!, nextStatus);
-          setOwners((prev) =>
-            prev.map((o) =>
-              o.owner_id === owner.owner_id ? { ...o, restaurant_status: nextStatus } : o
-            )
-          );
-        } catch (error: any) {
-          Alert.alert('Error', error.message || 'Failed to update restaurant');
-        } finally {
-          setBusyId(null);
-        }
-      },
-    });
-  }
-
-  // Permanent delete of a closed restaurant (migration 091). A dry run first, so the confirm window
-  // can say exactly what will be removed; the owner login stays and just has no restaurant.
-  async function handleDeleteRestaurant(owner: AdminOwnerRow) {
-    if (!owner.restaurant_id || owner.restaurant_status !== 'closed') return;
-    const restaurantId = owner.restaurant_id;
-    setBusyId(owner.owner_id);
-    let counts;
-    try {
-      counts = await adminDeleteRestaurant(restaurantId, true);
-    } catch (error: any) {
-      setBusyId(null);
-      Alert.alert('Error', error.message || 'Could not check what would be deleted');
-      return;
-    }
-    setBusyId(null);
-    setConfirmAction({
-      title: 'Delete restaurant permanently?',
-      message: buildDeleteMessage(counts),
-      confirmLabel: 'Delete',
-      destructive: true,
-      onConfirm: async () => {
-        setBusyId(owner.owner_id);
-        try {
-          await adminDeleteRestaurant(restaurantId, false);
-          setOwners((prev) =>
-            prev.map((o) =>
-              o.owner_id === owner.owner_id
-                ? { ...o, restaurant_id: null, restaurant_name: null, restaurant_status: null, claimed_at: null, google_place_id: null, restaurant_address: null }
-                : o
-            )
-          );
-        } catch (error: any) {
-          Alert.alert('Error', error.message || 'Failed to delete restaurant');
-        } finally {
-          setBusyId(null);
-        }
-      },
-    });
-  }
-
   function openEdit(owner: AdminOwnerRow) {
     setEditTarget(owner);
     setEditBusinessName(owner.business_name);
@@ -293,7 +224,7 @@ export default function AdminOwnersScreen() {
     <View style={styles.container}>
       <View style={styles.pageWrapper}>
         <View style={styles.header}>
-          <Text style={styles.title}>Manage Restaurants</Text>
+          <Text style={styles.title}>Manage Owners</Text>
           <Text style={styles.count}>{owners.length}</Text>
         </View>
 
@@ -389,28 +320,6 @@ export default function AdminOwnersScreen() {
                       </Text>
                     )}
                   </TouchableOpacity>
-
-                  {item.restaurant_id && (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, isClosed ? styles.actionBtnOk : styles.actionBtnWarn]}
-                      onPress={() => handleToggleRestaurantStatus(item)}
-                      disabled={isBusy}
-                    >
-                      <Text style={[styles.actionBtnText, isClosed ? styles.actionBtnOkText : styles.actionBtnWarnText]}>
-                        {isClosed ? '🔓 Reopen' : '🔒 Mark Closed'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {item.restaurant_id && isClosed && (
-                    <TouchableOpacity
-                      style={[styles.actionBtn, styles.actionBtnWarn]}
-                      onPress={() => handleDeleteRestaurant(item)}
-                      disabled={isBusy}
-                    >
-                      <IconText style={[styles.actionBtnText, styles.actionBtnWarnText]} emoji="🗑">Delete</IconText>
-                    </TouchableOpacity>
-                  )}
 
                   {item.restaurant_id && (
                     <TouchableOpacity style={styles.actionBtn} onPress={() => openReassign(item)} disabled={isBusy}>
