@@ -10,7 +10,7 @@ export interface RestaurantShareInput {
   cuisine?: string | null;
 }
 
-/** "Check out Magic Noodle on VektraVibe." plus the cuisine and the address when known. Empty when there is no name. */
+/** "Check out Magic Noodle on VectraVibe." plus the cuisine and the address when known. Empty when there is no name. */
 export function restaurantShareMessage({ name, address, cuisine }: RestaurantShareInput): string {
   const n = clean(name);
   if (!n) return '';
@@ -29,7 +29,7 @@ export interface DishShareInput {
   confirmed: boolean;
 }
 
-/** "Egg Rolls at Magic Noodle, on VektraVibe." An estimated dish adds "(estimated menu)". Empty when the dish or the restaurant has no name. */
+/** "Egg Rolls at Magic Noodle, on VectraVibe." An estimated dish adds "(estimated menu)". Empty when the dish or the restaurant has no name. */
 export function dishShareMessage({ dish, restaurantName, confirmed }: DishShareInput): string {
   const d = clean(dish);
   const r = clean(restaurantName);

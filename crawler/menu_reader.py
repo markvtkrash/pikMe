@@ -39,10 +39,12 @@ How it finds the menu on a site
      it stops early and says so in the manifest.
 
 Output per restaurant (pages/<restaurant>/):
-  page_01.txt ...      menu text from pages detected as menus (best first)
+  page_01.txt ...      menu text from pages detected as menus (best first), and from any PDF menu's real
+                       text (read in memory and added as one more page, after the on-screen pages)
   api_01.json ...      menu-like data captured from the site's API calls
   embedded_01.json ... menu-like data built into page code
-  pdf_01.pdf ...       nutrition / menu PDFs
+  pdf_01.pdf ...       the raw nutrition / menu PDFs themselves (only kept when SAVE_PDFS is on; their text
+                       is read into a page_NN.txt either way)
   items_index.txt      unique item names from the JSON data
   manifest.json        every page visited, its result, and what was saved
 Plus crawl_report.csv: one row per restaurant, status good / weak / empty.
@@ -50,7 +52,7 @@ Plus crawl_report.csv: one row per restaurant, status good / weak / empty.
 Input: chains.csv with columns restaurant_name, website, menu_url
 
 Setup:
-  pip install playwright httpx
+  pip install playwright httpx pypdf
   playwright install chromium
 
 Run:
@@ -67,6 +69,7 @@ import csv
 import gzip
 import heapq
 import html as htmllib
+import io
 import json
 import re
 import sys
@@ -95,6 +98,7 @@ MAX_SITEMAP_SEEDS = 40
 MAX_PDFS = 3
 MAX_JSON_BYTES = 8_000_000
 MAX_PDF_BYTES = 30_000_000
+MAX_PDF_PAGES = 30             # a menu is a few pages; more is a catalogue or a guide, not worth the time to read
 PAGE_DELAY = 1.5               # seconds between pages on one site
 PAGE_TIMEOUT = 120             # hard limit for one page, seconds
 RESTAURANT_TIMEOUT = 20 * 60   # hard limit for one restaurant, seconds
@@ -511,6 +515,25 @@ async def allowed(http, url) -> bool:
     return True if rp is None else rp.can_fetch(BOT_NAME, url)
 
 
+def pdf_text(data: bytes) -> str:
+    """The real text in a PDF's bytes, or "" when there is none to read (a scanned menu, too many pages, a
+    damaged or encrypted file). pypdf is imported here rather than at module level, so a problem loading it
+    can only ever affect a PDF link, never an ordinary page or the rest of this script."""
+    try:
+        from pypdf import PdfReader
+    except Exception as e:
+        print(f"could not load pypdf: {e}", file=sys.stderr)
+        return ""
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if len(reader.pages) > MAX_PDF_PAGES:
+            return ""
+        return "\n".join(page.extract_text() or "" for page in reader.pages).strip()
+    except Exception as e:
+        print(f"could not read PDF: {e}", file=sys.stderr)
+        return ""
+
+
 async def sitemap_seeds(http, website, base, menu_path) -> list[tuple[str, int]]:
     rp = await get_robots(http, website)
     queue = list((rp.site_maps() or []) if rp else [])
@@ -737,7 +760,7 @@ async def crawl_restaurant(browser, http, row: dict, args) -> dict:
     manifest = {"restaurant_name": name, "website": website, "menu_url": menu_url,
                 "started_at": datetime.now(timezone.utc).isoformat(),
                 "visited": [], "saved": [], "pdfs": [], "json_sources": [],
-                "location_gate": None, "errors": []}
+                "location_gate": None, "errors": [], "pdf_text_chars": 0}
 
     # ---- seeds: given menu URL, homepage, sitemap ----
     heap, counter, queued = [], 0, set()
@@ -1036,15 +1059,29 @@ async def crawl_restaurant(browser, http, row: dict, args) -> dict:
                                                 encoding="utf-8")
 
     # ---- save: PDFs ----
-    for i, (url, _) in enumerate(sorted(pdf_links.items(), key=lambda x: -x[1])[:MAX_PDFS if SAVE_PDFS else 0], 1):
+    # Always downloaded and read for menu text (a PDF is often the ONLY menu a site has); SAVE_PDFS only
+    # controls whether the raw file itself is also kept on disk (crawl_places.py turns that off so a run
+    # doesn't fill the disk). Real text is saved as one more page_NN.txt, in the same reading order as the
+    # on-screen pages above, so it flows through collect_text/collect_names exactly like a scraped page --
+    # no change needed anywhere else that reads a restaurant's folder.
+    for i, (url, _) in enumerate(sorted(pdf_links.items(), key=lambda x: -x[1])[:MAX_PDFS], 1):
         try:
             if not await allowed(http, url):
                 continue
             r = await limited(http.get(url, timeout=60), 120)
-            if r.status_code < 400 and r.content.startswith(b"%PDF") and len(r.content) <= MAX_PDF_BYTES:
+            if not (r.status_code < 400 and r.content.startswith(b"%PDF") and len(r.content) <= MAX_PDF_BYTES):
+                continue
+            if SAVE_PDFS:
                 fname = f"pdf_{i:02d}.pdf"
                 (folder / fname).write_bytes(r.content)
                 manifest["pdfs"].append({"file": fname, "url": url, "bytes": len(r.content)})
+            text = pdf_text(r.content)
+            if text:
+                n += 1
+                fname = f"page_{n:02d}.txt"
+                (folder / fname).write_text(f"SOURCE: {url}\n\n{text}", encoding="utf-8")
+                manifest["saved"].append({"file": fname, "url": url, "score": 0, "items": 0, "pdf": True})
+                manifest["pdf_text_chars"] += len(text)
         except Exception as ex:
             manifest["errors"].append(f"pdf {url}: {ex}")
 

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Activity
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Alert } from '../../src/utils/alert';
 import { getRestaurantMenu, AdminMenuItem } from '../../src/api/menuAdmin';
+import { googleMenuSearchUrl, openInNewPage } from '../../src/utils/googleMenuSearch';
 
 type ItemFilter = 'all' | 'verified' | 'unverified' | 'out_of_stock';
 
@@ -73,9 +74,25 @@ export default function AdminMenuViewScreen() {
           initialNumToRender={20}
           ListHeaderComponent={
             <View>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Text style={styles.backBtnText}>← Back to Menu Management</Text>
-              </TouchableOpacity>
+              <View style={styles.headerButtonsRow}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                  <Text style={styles.backBtnText}>← Back to Menu Management</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: '/admin/menu-edit', params: { name, placeId, address } } as any)}
+                  style={styles.editBtn}
+                >
+                  <Text style={styles.editBtnText}>Edit Menu</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => openInNewPage(googleMenuSearchUrl(name, address))}
+                  style={styles.searchBtn}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Search Google for ${name}'s menu`}
+                >
+                  <Text style={styles.searchBtnText}>🔎 Find Menu on Google</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.title}>{name}</Text>
               <Text style={styles.subtitle}>
                 Current menu items (read-only){placeId && address ? ` · ${address}` : ''}
@@ -168,8 +185,13 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, paddingBottom: 32 },
 
+  headerButtonsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
   backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  editBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#E65100', alignSelf: 'flex-start' },
+  editBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  searchBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#ECEFF1', borderWidth: 1.5, borderColor: '#1565C0', alignSelf: 'flex-start' },
+  searchBtnText: { fontSize: 14, fontWeight: '800', color: '#1565C0' },
   title: { fontSize: 22, fontWeight: '800', color: '#222' },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 14 },
 

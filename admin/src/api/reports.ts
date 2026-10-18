@@ -102,24 +102,6 @@ export interface MenuHealthSnapshot {
   restaurant_count: number;
 }
 
-export interface RestaurantNoMenuItems {
-  total_count: number;
-  // Null for a city-imported restaurant (no owner); use place_id to tell rows apart.
-  restaurant_id: string | null;
-  restaurant_name: string;
-  // The claim status for a claimed restaurant; null for a city import (see read_status).
-  status: string | null;
-  // When it was claimed, or when the city search found it.
-  claimed_at: string | null;
-  place_id: string | null;
-  address: string | null;
-  is_franchise: boolean;
-  // Migration 138.
-  source: 'claimed' | 'city';
-  // For a city import: what the menu crawler did (pending / crawling / done / no_items / error / needs_attention), else null.
-  read_status: string | null;
-}
-
 export interface SupportSnapshotRow {
   ticket_type: string;
   status: string;
@@ -151,22 +133,24 @@ export interface MenuHealthFilter {
   city: string;
   // Migration 138: '' = claimed and city-imported restaurants, 'claimed', or 'city'.
   source?: string;
+  // Migration 151: '' = franchise and independent, 'franchise', or 'independent'.
+  franchise?: string;
+  // Migration 152: true = only restaurants with zero menu items (folds in the old, separate
+  // "no menu items" report); false/omitted = restaurants with at least one item, as before.
+  noItems?: boolean;
 }
 
 function filterArgs(filter: MenuHealthFilter) {
-  return { p_state: filter.state || null, p_city: filter.city || null, p_source: filter.source || null };
+  return {
+    p_state: filter.state || null, p_city: filter.city || null, p_source: filter.source || null,
+    p_franchise: filter.franchise || null,
+  };
 }
 
 export async function getMenuHealthSnapshot(filter: MenuHealthFilter): Promise<MenuHealthSnapshot | null> {
   const { data, error } = await supabase.rpc('admin_report_menu_health_snapshot', filterArgs(filter));
   if (error) throw error;
   return data?.[0] || null;
-}
-
-export async function getRestaurantsNoMenuItems(filter: MenuHealthFilter, limit: number, offset: number): Promise<RestaurantNoMenuItems[]> {
-  const { data, error } = await supabase.rpc('admin_report_restaurants_no_menu_items', { ...filterArgs(filter), p_limit: limit, p_offset: offset });
-  if (error) throw error;
-  return data || [];
 }
 
 // The regions and cities that have restaurants, with counts, for the report's filter.
@@ -202,9 +186,12 @@ export interface MenuHealthByRestaurantRow {
   source: 'claimed' | 'city';
 }
 
-// A page of restaurants with at least one menu item (total_count is the whole filtered count).
+// A page of restaurants matching the filter's noItems flag (total_count is the whole filtered count) --
+// at least one menu item by default, or (migration 152) only restaurants with zero items.
 export async function getMenuHealthByRestaurant(filter: MenuHealthFilter, limit: number, offset: number): Promise<MenuHealthByRestaurantRow[]> {
-  const { data, error } = await supabase.rpc('admin_report_menu_health_by_restaurant', { ...filterArgs(filter), p_limit: limit, p_offset: offset });
+  const { data, error } = await supabase.rpc('admin_report_menu_health_by_restaurant', {
+    ...filterArgs(filter), p_limit: limit, p_offset: offset, p_no_items: !!filter.noItems,
+  });
   if (error) throw error;
   return data || [];
 }
@@ -266,4 +253,19 @@ export async function deleteCachedRestaurants(placeIds: string[]): Promise<Delet
   const { data, error } = await supabase.rpc('admin_delete_cached_restaurants', { p_place_ids: placeIds });
   if (error) throw error;
   return data as DeleteCachedRestaurantsResult;
+}
+
+export interface AgreementRow {
+  user_id: string;
+  email: string;
+  agreement_type: string;
+  version: string;
+  agreed_at: string;
+  ip_address: string | null;
+  user_agent: string | null;
+}
+
+// Every signup/consent agreement ever recorded, newest first — admin-only (migration 150).
+export function getAllAgreements(): Promise<AgreementRow[]> {
+  return fetchAllPages<AgreementRow>('admin_get_all_agreements');
 }

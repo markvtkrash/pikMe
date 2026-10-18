@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getUnconfirmedClickedRestaurants } from '../../api/unconfirmedClicks';
 import {
@@ -26,6 +26,7 @@ export default function UnconfirmedClickedList() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const load = useCallback(async (pageIndex: number) => {
     setLoading(true);
@@ -49,14 +50,8 @@ export default function UnconfirmedClickedList() {
   const pageCount = pageCountFor(total, UNCONFIRMED_PAGE_SIZE);
   const range = pageRange(page, total, UNCONFIRMED_PAGE_SIZE);
 
-  return (
-    <View>
-      {failed ? (
-        <Text style={styles.warning}>The list could not be loaded. Check that migration 119 is applied.</Text>
-      ) : (
-        <Text style={styles.line}>{loading && rows.length === 0 ? 'Loading…' : describeTotal(total)}</Text>
-      )}
-
+  const rowList = (
+    <>
       {rows.map((r) => {
         const state = describeCrawlState(r.crawl_state);
         const place = [r.address, r.city].filter(Boolean).join(', ');
@@ -91,13 +86,56 @@ export default function UnconfirmedClickedList() {
 
       {loading && rows.length > 0 && <ActivityIndicator size="small" style={styles.spinner} />}
       <PagerBar page={page} pageCount={pageCount} from={range.from} to={range.to} total={total} onPage={(p) => !loading && setPage(p)} />
+    </>
+  );
+
+  return (
+    <View>
+      {failed ? (
+        <Text style={styles.warning}>The list could not be loaded. Check that migration 119 is applied.</Text>
+      ) : (
+        <TouchableOpacity
+          style={[styles.countBtn, loading && rows.length === 0 && styles.countBtnDisabled]}
+          onPress={() => setOpen(true)}
+          disabled={loading && rows.length === 0}
+          accessibilityRole="button"
+          accessibilityLabel="See which restaurants were opened without a confirmed menu item"
+        >
+          <Text style={styles.countBtnText}>
+            {loading && rows.length === 0 ? 'Loading…' : describeTotal(total)}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.overlay}>
+          <View style={styles.card}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{describeTotal(total)}</Text>
+              <TouchableOpacity onPress={() => setOpen(false)} accessibilityRole="button" accessibilityLabel="Close">
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.list}>{rowList}</ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   line: { fontSize: 12, color: '#555', marginBottom: 6 },
+  countBtn: { alignSelf: 'flex-start', backgroundColor: '#ECEFF1', borderWidth: 1.5, borderColor: '#1565C0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, marginBottom: 10 },
+  countBtnDisabled: { opacity: 0.5 },
+  countBtnText: { fontSize: 13, fontWeight: '800', color: '#1565C0' },
   warning: { fontSize: 12, color: '#E65100', marginBottom: 6 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, width: '100%', maxWidth: 480, maxHeight: '80%', borderWidth: 1, borderColor: '#CFD8DC' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  modalTitle: { fontSize: 15, fontWeight: '800', color: '#222', flex: 1, marginRight: 10 },
+  closeText: { fontSize: 18, color: '#666', fontWeight: '700', paddingHorizontal: 6 },
+  list: { flexGrow: 0 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: '#eee' },
   rowText: { flex: 1 },
   name: { fontSize: 13, fontWeight: '700', color: '#222' },

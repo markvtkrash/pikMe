@@ -131,12 +131,22 @@ def main():
         check(mock.rpc_calls("admin_report_menu_health_snapshot")[-1].get("p_state") == "__none__", "'No region on record' is sent as __none__")
         check("Nowhere Diner" in body, "the restaurant with no readable region is listed")
 
-        # 8. the no-items list shows what the crawler did
+        # 8. the "0 Menu Items" filter folds in what used to be a separate list
         pick(page, "Region:", "TX")
+        page.wait_for_timeout(600)
         body = text_of(page)
-        check("Waiting to be read" in body, "city restaurants not yet read say so")
-        check("Read, no dishes found on the site" in body, "a read page with no dishes says so")
+        check("Austin Imported 01" in body, "before the filter, restaurants with items are listed")
+        check("Austin Waiting 01" not in body, "before the filter, zero-item restaurants are not listed")
+        click_text(page, "0 Menu Items", exact=True, nth=0)
+        page.wait_for_timeout(800)
+        body = text_of(page)
         page.screenshot(path=str(SHOTS / "08-no-items.png"))
+        check(mock.rpc_calls("admin_report_menu_health_by_restaurant")[-1].get("p_no_items") is True, "the filter is sent to the server")
+        check("Austin Waiting 01" in body, "a zero-item city import appears once the filter is on")
+        check("Austin Imported 01" not in body, "a restaurant with items drops out once the filter is on")
+        click_text(page, "0 Menu Items", exact=True, nth=0)
+        page.wait_for_timeout(600)
+        check("Austin Imported 01" in text_of(page), "toggling the filter off restores restaurants with items")
 
         # 9. when the regions cannot be loaded, the page says so (and does not claim there are no restaurants)
         failing = MockBackend(fail=["admin_menu_health_locations"])

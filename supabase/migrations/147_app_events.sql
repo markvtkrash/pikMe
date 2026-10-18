@@ -34,7 +34,7 @@ GRANT USAGE, SELECT ON SEQUENCE public.app_events_id_seq TO service_role;
 -- The events the app may send. The app keeps the same list (user/src/utils/analyticsEvents.ts); a test checks that every name there is listed here.
 CREATE OR REPLACE FUNCTION public._analytics_events()
 RETURNS TEXT[] LANGUAGE sql IMMUTABLE AS $$
-  SELECT ARRAY['app_open', 'search', 'restaurant_view', 'menu_view', 'save', 'sign_up', 'coupon_view', 'share'];
+  SELECT ARRAY['app_open', 'search', 'restaurant_view', 'menu_view', 'save', 'sign_up', 'coupon_view', 'share', 'agreement_record_failed'];
 $$;
 
 -- ── The app's call ────────────────────────────────────────────────────────

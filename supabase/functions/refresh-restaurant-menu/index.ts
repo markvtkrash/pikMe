@@ -144,6 +144,24 @@ async function deterministicLinkId(restaurantName: string, itemName: string): Pr
   return 'link_' + hex.slice(0, 24);
 }
 
+const DEFAULT_LINK_EXTRACT_MAX_TOKENS = 8192;
+const MIN_LINK_EXTRACT_MAX_TOKENS = 1024;
+const MAX_LINK_EXTRACT_MAX_TOKENS = 32000;
+
+// The linkExtractMaxTokens setting (app_config, else the env var, else the default) -- shared with
+// extract-menu-from-link (migration 153), same fix migration 109 already gave extract-menu-from-text's
+// textExtractMaxTokens: a reply cut short here silently drops the rest of a long real menu, which looks
+// like items are being capped even though nothing actually limits how many are returned.
+function parseMaxTokens(...candidates: (string | null | undefined)[]): number {
+  for (const raw of candidates) {
+    const text = (raw ?? '').trim();
+    if (!/^[0-9]{1,6}$/.test(text)) continue;
+    const n = Number(text);
+    if (n >= MIN_LINK_EXTRACT_MAX_TOKENS && n <= MAX_LINK_EXTRACT_MAX_TOKENS) return n;
+  }
+  return DEFAULT_LINK_EXTRACT_MAX_TOKENS;
+}
+
 interface ExtractResult {
   items: unknown[];
   error?: string;
@@ -178,10 +196,11 @@ async function loadDbConfig(keys: string[]): Promise<Record<string, string>> {
 
 // Sends real page text to the LLM and asks it to EXTRACT, not invent.
 async function extractItemsFromText(pageText: string, restaurantName: string): Promise<ExtractResult> {
-  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel', 'linkExtractMaxTokens']);
   const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
   const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
   const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  const MAX_TOKENS = parseMaxTokens(dbConfig.linkExtractMaxTokens, Deno.env.get('LINK_EXTRACT_MAX_TOKENS'));
 
   const prompt = `Below is the real, scraped text content of a restaurant's menu webpage for "${restaurantName}". Extract the ACTUAL menu items explicitly present in this text. Do NOT invent, guess, or add items that aren't there. If this text does not appear to contain a real menu, return an empty JSON array: [].
 
@@ -223,7 +242,7 @@ ${pageText}
         body: JSON.stringify({
           model: QUICKSILVER_MODEL,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 2048,
+          max_tokens: MAX_TOKENS,
         }),
         signal: controller.signal,
       });
@@ -249,7 +268,7 @@ ${pageText}
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -312,12 +331,35 @@ ${pageText}
   return { items };
 }
 
+const MAX_PDF_BYTES = 15 * 1024 * 1024; // keep the edge function's memory/time bounded
+const MAX_PDF_PAGES = 30; // a real menu PDF is a handful of pages; this guards against an abusive link
+const PDF_PARSE_TIMEOUT_MS = 20000; // unpdf's serverless build parses on this isolate's event loop, with no worker to bound it itself
+
+// Pulls the real text out of a PDF's raw bytes with unpdf (same as extract-menu-from-link's copy of this
+// logic -- see the note at the top of this file). Returns '' on any failure (too large, too many pages,
+// couldn't parse) rather than an error, matching this function's own style below: a candidate URL that
+// doesn't pan out just falls through to the next one instead of aborting. unpdf is loaded dynamically,
+// only once a PDF actually turns up -- the same esm.sh URL and version get-chain-menu already uses and
+// has proven works in this runtime -- so a problem loading it can only ever affect a PDF link.
+async function textFromPdfBytes(bytes: ArrayBuffer): Promise<string> {
+  if (bytes.byteLength > MAX_PDF_BYTES) return '';
+  try {
+    const { extractText, getDocumentProxy } = await import('https://esm.sh/unpdf@1.8.1');
+    const pdf = await getDocumentProxy(new Uint8Array(bytes));
+    if (pdf.numPages > MAX_PDF_PAGES) return '';
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PDF parse timed out')), PDF_PARSE_TIMEOUT_MS));
+    const { text } = await Promise.race([extractText(pdf, { mergePages: true }), timeout]);
+    return String(text).slice(0, 12000);
+  } catch (e) {
+    const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    console.warn('[refresh-restaurant-menu] PDF parse failed:', detail, e instanceof Error ? e.stack : '');
+    return '';
+  }
+}
+
 // A plain fetch of the page (server-rendered pages only). Never throws for "didn't find a menu here"
 // — the caller just tries the next candidate URL.
 async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<ExtractResult> {
-  if (url.pathname.toLowerCase().endsWith('.pdf')) {
-    return { items: [], error: 'PDF not supported' };
-  }
   if (!(await isSafeUrl(url))) {
     return { items: [], error: 'Restricted address' };
   }
@@ -330,7 +372,9 @@ async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<Ext
     });
     if (pageRes.ok) {
       const contentType = pageRes.headers.get('content-type') || '';
-      if (!contentType.includes('application/pdf')) {
+      if (contentType.includes('application/pdf') || url.pathname.toLowerCase().endsWith('.pdf')) {
+        pageText = await textFromPdfBytes(await pageRes.arrayBuffer());
+      } else {
         const html = await pageRes.text();
         pageText = htmlToText(html).slice(0, 12000);
       }

@@ -1,18 +1,18 @@
 /**
- * VektraVibe Brand Theme
+ * VectraVibe Brand Theme
  * Based on BRAND-GUIDELINES.md
  */
 
-export const BRAND_NAME = 'VektraVibe';
+export const BRAND_NAME = 'VectraVibe';
 
 export const BRAND_COLORS = {
   // Primary
-  primary: '#1565C0', // VektraVibe Blue
+  primary: '#1565C0', // VectraVibe Blue
   primaryDark: '#0D47A1', // Dark Blue
   primaryLight: '#E3F2FD', // Light Blue
 
   // Accents
-  accent: '#c62828', // VektraVibe Red
+  accent: '#c62828', // VectraVibe Red
   success: '#1565C0', // Check Blue
   warning: '#e65100', // Orange
   error: '#c62828', // Red

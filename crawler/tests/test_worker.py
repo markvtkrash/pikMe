@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import crawl_places  # noqa: E402
+import menu_reader  # noqa: E402
 from crawl_places import Api, clean_stale_folders, folder_key, load_env_file, parse_args  # noqa: E402
 
 
@@ -140,6 +141,54 @@ class ArgsAndLock(unittest.TestCase):
             again = crawl_places.acquire_lock(path)
             self.assertTrue(again)
             again.close()
+
+
+class _AllowGuard:
+    """Test only: skips the real DNS/address check so read_link() can be driven directly."""
+    async def check(self, url):
+        return True, "", True
+
+
+class ReadLinkPdfText(unittest.TestCase):
+    """A PDF menu's extracted text has no "- Name | ..." card lines (that format only ever comes from the
+    on-screen card detector, which never runs on a PDF), so page_card_names()/collect_names() find nothing
+    in it even when it holds a real menu. read_link() must still treat enough real PDF text as "ok" on its
+    own -- otherwise a restaurant whose only menu is a PDF would always be reported as no_items/error and
+    the real text menu_reader.py already extracted would never reach the server."""
+
+    def _read(self, pdf_text_chars, page_text=""):
+        with tempfile.TemporaryDirectory() as d:
+            menu_reader.OUTPUT_DIR = Path(d)
+            key = "pdf-text-test"
+            folder = menu_reader.OUTPUT_DIR / menu_reader.slugify(key)
+            folder.mkdir(parents=True)
+            if page_text:
+                (folder / "page_01.txt").write_text(f"SOURCE: https://x.example.com/menu.pdf\n\n{page_text}")
+
+            async def fake_crawl(*a, **k):
+                return {"pdf_text_chars": pdf_text_chars, "errors": [], "visited": []}
+
+            orig = menu_reader.crawl_restaurant
+            menu_reader.crawl_restaurant = fake_crawl
+            try:
+                return asyncio.run(crawl_places.read_link(
+                    None, None, _AllowGuard(), key, "https://x.example.com/menu.pdf", parse_args([])
+                ))
+            finally:
+                menu_reader.crawl_restaurant = orig
+
+    def test_enough_pdf_text_is_ok_even_with_no_cards_or_names(self):
+        status, names, text, detail = self._read(
+            pdf_text_chars=250, page_text="Carne Asada Taco 210 Cal\nChicken Burrito 640 Cal\n"
+        )
+        self.assertEqual(status, "ok")
+        self.assertIn("Carne Asada Taco", text)   # the real PDF text itself, not just a name list
+        self.assertIn("PDF text chars", detail)
+
+    def test_a_little_pdf_text_is_not_enough_on_its_own(self):
+        status, names, text, detail = self._read(pdf_text_chars=20, page_text="Call us for hours.")
+        self.assertNotEqual(status, "ok")
+        self.assertEqual((names, text), ([], ""))  # nothing is sent to the server when it isn't "ok"
 
 
 if __name__ == "__main__":

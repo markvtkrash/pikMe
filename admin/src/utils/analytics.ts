@@ -48,6 +48,7 @@ export const EVENT_LABELS: Record<string, string> = {
   sign_up: 'Signed up',
   coupon_view: 'Looked at a coupon',
   share: 'Shared',
+  agreement_record_failed: 'A signup agreement failed to record',
 };
 
 export function eventLabel(event: string): string {

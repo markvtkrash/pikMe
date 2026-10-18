@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import * as Print from 'expo-print';
 import { Alert } from '../../src/utils/alert';
 import { getRestaurantsWithMenuCounts, RestaurantMenuSummary } from '../../src/api/menuAdmin';
 import { IconText } from '../../src/components/common/AppIcon';
@@ -13,6 +14,7 @@ import {
 } from '../../src/utils/menuLocation';
 import { CONFIRM_FILTERS, ConfirmFilter, matchesConfirmFilter } from '../../src/utils/menuConfirmFilter';
 import { FRANCHISE_FILTERS, FranchiseFilter, matchesFranchiseFilter } from '../../src/utils/menuFranchiseFilter';
+import { buildMenuManagementExportHtml } from '../../src/utils/menuManagementExport';
 
 const PAGE_SIZE = 50;
 
@@ -50,6 +52,7 @@ export default function AdminMenuManagementScreen() {
   const [cityFilter, setCityFilter] = useState('');
   const [picker, setPicker] = useState<'state' | 'city' | null>(null);
   const [page, setPage] = useState(0);
+  const [exporting, setExporting] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -109,6 +112,19 @@ export default function AdminMenuManagementScreen() {
   const firstShown = filtered.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const lastShown = Math.min((safePage + 1) * PAGE_SIZE, filtered.length);
 
+  // Exports every row the current search/filters match, not just the current page.
+  async function handleExportPdf() {
+    setExporting(true);
+    try {
+      await Print.printAsync({ html: buildMenuManagementExportHtml(filtered) });
+    } catch (error: any) {
+      console.error('[admin-menu-management] Export error:', error);
+      Alert.alert('Error', error.message || 'Failed to export PDF');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   // Independents work on one location (its place ID); franchises on the one menu shared by name.
   function menuParams(item: RestaurantMenuSummary) {
     const params: Record<string, string> = { name: item.restaurant_name };
@@ -136,7 +152,19 @@ export default function AdminMenuManagementScreen() {
     <View style={styles.pageWrapper}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu Management</Text>
-        <Text style={styles.count}>{rows.length}</Text>
+        <View style={styles.headerRight}>
+          <TouchableOpacity style={styles.exportBtn} onPress={() => router.push('/admin/reports/menu-health' as any)} accessibilityRole="button">
+            <IconText style={styles.exportBtnText} numberOfLines={1} emoji="📊">Menu Data Health</IconText>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExportPdf} disabled={exporting} accessibilityRole="button">
+            {exporting ? (
+              <ActivityIndicator size="small" color="#1565C0" />
+            ) : (
+              <IconText style={styles.exportBtnText} numberOfLines={1} emoji="📄">Export PDF</IconText>
+            )}
+          </TouchableOpacity>
+          <Text style={styles.count}>{rows.length}</Text>
+        </View>
       </View>
       <Text style={styles.headerSubtitle}>
         View the current menu of any restaurant. Claimed restaurants can also be updated from a photo or pasted text.
@@ -288,10 +316,14 @@ export default function AdminMenuManagementScreen() {
                   >
                     <IconText style={styles.manualBtnText} numberOfLines={1} emoji="📝">Manual Edit</IconText>
                   </TouchableOpacity>
-                  {claimed && item.restaurant_id && (
+                  {(claimed ? !!item.restaurant_id : !!item.place_id) && (
                     <TouchableOpacity
                       style={styles.updateBtn}
-                      onPress={() => router.push(`/admin/menu-management/${item.restaurant_id}` as any)}
+                      onPress={() => router.push(
+                        claimed
+                          ? (`/admin/menu-management/${item.restaurant_id}` as any)
+                          : ({ pathname: '/admin/menu-management/by-place', params: { placeId: item.place_id } } as any)
+                      )}
                     >
                       <IconText style={styles.updateBtnText} numberOfLines={1} emoji="🔄">Update Menu</IconText>
                     </TouchableOpacity>
@@ -335,6 +367,9 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 24, fontWeight: '800', color: '#222' },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  exportBtn: { borderWidth: 1.5, borderColor: '#1565C0', backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7, minWidth: 40, alignItems: 'center', justifyContent: 'center' },
+  exportBtnText: { fontSize: 12, fontWeight: '700', color: '#1565C0' },
   count: { fontSize: 18, fontWeight: '800', color: '#1565C0', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   headerSubtitle: { fontSize: 13, color: '#666', backgroundColor: '#fff', paddingHorizontal: 16, paddingBottom: 12, elevation: 2 },
 

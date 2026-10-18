@@ -1,6 +1,6 @@
 import {
   chosenLabel, cityOptionsFor, filterReady, menuLinkParams, NO_REGION, pageInfo, regionOptions, verifiedPercent, HealthLocationRow,
-  SOURCE_CHOICES, sourceLabel, readStatusLabel, rowKey,
+  SOURCE_CHOICES, sourceLabel, rowKey,
 } from './menuHealth';
 
 const rows: HealthLocationRow[] = [
@@ -104,16 +104,6 @@ describe('source', () => {
     expect(sourceLabel('city')).toBe('City import');
     expect(sourceLabel('claimed')).toBe('Claimed');
     expect(sourceLabel(null)).toBe('Claimed');
-  });
-});
-
-describe('readStatusLabel', () => {
-  it.each([
-    ['pending', 'Waiting to be read'], [null, 'Waiting to be read'], [undefined, 'Waiting to be read'],
-    ['crawling', 'Being read'], ['done', 'Read, no dishes stored'], ['no_items', 'Read, no dishes found on the site'],
-    ['error', 'Could not read, will retry'], ['needs_attention', 'Needs attention'],
-  ])('%s -> %s', (status, label) => {
-    expect(readStatusLabel(status as string | null | undefined)).toBe(label);
   });
 });
 

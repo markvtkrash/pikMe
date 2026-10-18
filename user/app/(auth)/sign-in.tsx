@@ -129,16 +129,18 @@ export default function SignInScreen() {
       if (signUpError) throw signUpError;
       trackEvent('sign_up');
 
-      // Record user agreements after successful account creation
+      // Record user agreements after successful account creation. Each document is its own
+      // try/catch — one failing (a network blip, say) must not also skip the rest, which a single
+      // try/catch around the whole loop would do. A failure here never fails signup, but it fires
+      // an (anonymous) event so a missing consent row doesn't go unnoticed in production.
       if (data.user) {
-        try {
-          // privacy policy, terms of service and the food disclaimer (it used to be acknowledged at the end of the optional food-preferences setup)
-          for (const doc of AGREEMENT_DOCUMENTS) {
+        for (const doc of AGREEMENT_DOCUMENTS) {
+          try {
             await supabase.rpc('record_user_agreement', { p_agreement_type: doc.type, p_version: AGREEMENT_VERSION });
+          } catch (agreementErr) {
+            console.warn('[PikMe auth] Failed to record agreement:', doc.type, agreementErr);
+            trackEvent('agreement_record_failed', { doc: doc.type });
           }
-        } catch (agreementErr) {
-          console.warn('[PikMe auth] Failed to record agreements:', agreementErr);
-          // Don't fail signup if agreement recording fails
         }
       }
 

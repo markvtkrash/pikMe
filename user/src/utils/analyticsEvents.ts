@@ -1,7 +1,11 @@
 // Anonymous usage events (migration 147). Only the names below are sent; the server ignores anything else. Nothing personal goes in an event: no
 // user ID, email, name, location or search text, just a random install ID the app makes on the phone.
 
-export const EVENT_NAMES = ['app_open', 'search', 'restaurant_view', 'menu_view', 'save', 'sign_up', 'coupon_view', 'share'] as const;
+export const EVENT_NAMES = [
+  'app_open', 'search', 'restaurant_view', 'menu_view', 'save', 'sign_up', 'coupon_view', 'share',
+  // Fired when record_user_agreement fails after a successful signup, so a missing consent row doesn't go unnoticed (see sign-in.tsx).
+  'agreement_record_failed',
+] as const;
 export type EventName = (typeof EVENT_NAMES)[number];
 
 export function isEventName(value: unknown): value is EventName {

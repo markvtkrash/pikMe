@@ -11,6 +11,7 @@ import { extractMenuFromImage, extractMenuFromText } from '../../../src/api/rest
 import { confirmAndRetryIfNeeded } from '../../../src/utils/menuReplaceConfirm';
 import PlaceMenuLinkBox from '../../../src/components/common/PlaceMenuLinkBox';
 import { IconText } from '../../../src/components/common/AppIcon';
+import { googleMenuSearchUrl, openInNewPage } from '../../../src/utils/googleMenuSearch';
 
 interface RestaurantInfo {
   // A claimed restaurant has an id; one no owner has claimed is named by its Google place ID instead.
@@ -214,6 +215,25 @@ export default function AdminMenuManagementRestaurantScreen() {
           <Text style={styles.title}>Update Menu</Text>
           <Text style={styles.subtitle}>{restaurant.name}</Text>
         </View>
+        <View style={styles.headerLinks}>
+          <TouchableOpacity
+            style={styles.cityImportsBtn}
+            onPress={() => openInNewPage(googleMenuSearchUrl(restaurant.name, restaurant.address))}
+            accessibilityRole="link"
+            accessibilityLabel={`Search Google for ${restaurant.name}'s menu`}
+          >
+            <Text style={styles.cityImportsBtnText}>🔎 Find Menu on Google</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cityImportsBtn} onPress={() => router.push('/admin/reports/menu-health' as any)}>
+            <Text style={styles.cityImportsBtnText}>Menu Data Health</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cityImportsBtn} onPress={() => router.push('/admin/scheduled-builds' as any)}>
+            <Text style={styles.cityImportsBtnText}>Scheduled Builds</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.cityImportsBtn} onPress={() => router.push('/admin/crawl-cities' as any)}>
+            <Text style={styles.cityImportsBtnText}>City Imports</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -323,9 +343,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f6f6f6' },
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   pageWrapper: { flex: 1, width: '100%', maxWidth: 900, alignSelf: 'center' },
-  header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  header: { backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, elevation: 2, flexDirection: 'row', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' },
+  headerLinks: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
   backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
   backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  cityImportsBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#ECEFF1', alignSelf: 'flex-start', borderWidth: 1.5, borderColor: '#1565C0' },
+  cityImportsBtnText: { fontSize: 14, fontWeight: '800', color: '#1565C0' },
   title: { fontSize: 24, fontWeight: '800', color: '#222', marginBottom: 2 },
   subtitle: { fontSize: 14, color: '#666' },
 

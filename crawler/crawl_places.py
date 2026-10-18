@@ -43,6 +43,11 @@ from items import MIN_NAMES_FOR_OK, collect_names, collect_text, decide_status, 
 from safety import UrlGuard
 
 LOCK_FILE = "/tmp/pikme_crawl_places.lock"
+# A PDF menu's extracted text has no "- Name | ..." card lines (that format comes from the on-screen card
+# detector, which never runs on a PDF), so page_card_names()/collect_names() find nothing in it even when
+# it holds a real menu. This is the separate bar real PDF text clears on its own, so a PDF-only menu still
+# reaches "ok" and gets sent to the server instead of being discarded as "no_items".
+MIN_PDF_TEXT_CHARS = 200
 
 
 def log(msg: str) -> None:
@@ -147,8 +152,9 @@ async def read_link(browser, http, guard: UrlGuard, key: str, link: str, args):
     text = collect_text(folder)
     # menu cards seen on the pages themselves; lines that came from the page's data do not count as a menu
     cards = len(page_card_names(folder))
-    if cards >= MIN_NAMES_FOR_OK or len(names) >= MIN_NAMES_FOR_OK:
-        return "ok", names, text, f"{cards} menu cards and {len(names)} dish names read"
+    pdf_chars = manifest.get("pdf_text_chars", 0) if isinstance(manifest, dict) else 0
+    if cards >= MIN_NAMES_FOR_OK or len(names) >= MIN_NAMES_FOR_OK or pdf_chars >= MIN_PDF_TEXT_CHARS:
+        return "ok", names, text, f"{cards} menu cards, {len(names)} dish names, {pdf_chars} PDF text chars read"
     status, detail = decide_status(names, manifest)
     return status, [], "", detail
 

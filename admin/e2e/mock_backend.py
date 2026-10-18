@@ -69,6 +69,7 @@ class MockBackend:
         state = (body.get("p_state") or "").strip().lower()
         city = (body.get("p_city") or "").strip().lower()
         source = (body.get("p_source") or "").strip().lower()
+        franchise = (body.get("p_franchise") or "").strip().lower()
         out = []
         for r in self.restaurants:
             if state == "__none__":
@@ -79,6 +80,10 @@ class MockBackend:
             if city and (r["city"] or "").lower() != city:
                 continue
             if source and r["source"] != source:
+                continue
+            if franchise == "franchise" and not r["is_franchise"]:
+                continue
+            if franchise == "independent" and r["is_franchise"]:
                 continue
             out.append(r)
         return out
@@ -104,11 +109,12 @@ class MockBackend:
                 "restaurant_count": len(rows),
             }]
         if name == "admin_report_menu_health_by_restaurant":
-            rows = sorted((r for r in self._scope(body) if r["verified_count"] + r["unverified_count"] > 0), key=lambda r: r["restaurant_name"].lower())
+            scoped = self._scope(body)
+            if body.get("p_no_items"):
+                rows = sorted((r for r in scoped if r["verified_count"] + r["unverified_count"] == 0), key=lambda r: (r["since"], r["restaurant_name"].lower()))
+            else:
+                rows = sorted((r for r in scoped if r["verified_count"] + r["unverified_count"] > 0), key=lambda r: r["restaurant_name"].lower())
             return [dict(r, total_count=len(rows)) for r in self._page(rows, body)]
-        if name == "admin_report_restaurants_no_menu_items":
-            rows = sorted((r for r in self._scope(body) if r["verified_count"] + r["unverified_count"] == 0), key=lambda r: (r["since"], r["restaurant_name"].lower()))
-            return [dict(r, total_count=len(rows), claimed_at=r["since"]) for r in self._page(rows, body)]
         return []
 
     # ---- wiring --------------------------------------------------------------------------------------------------------------------

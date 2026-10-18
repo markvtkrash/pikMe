@@ -129,12 +129,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     console.log('[AuthGate] Setting up auth subscription');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('[AuthGate] Initial session from getSession:', !!session, session?.user?.email);
+      if (__DEV__) console.log('[AuthGate] Initial session from getSession:', !!session, session?.user?.email);
       setSession(session);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      console.log('[AuthGate] onAuthStateChange event:', _event, '- session:', !!newSession, newSession?.user?.email);
+      if (__DEV__) console.log('[AuthGate] onAuthStateChange event:', _event, '- session:', !!newSession, newSession?.user?.email);
       setSession(newSession);
       if (!newSession) {
         setOnboardingComplete(null);

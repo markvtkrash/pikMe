@@ -83,20 +83,17 @@ export const SOURCE_CHOICES: { value: HealthSource; label: string }[] = [
   { value: 'city', label: 'City imports' },
 ];
 
+// ── Franchise vs independent (migration 151) ────────────────────────────────────────────────────────────────────────────────────
+export type HealthFranchise = '' | 'franchise' | 'independent';
+
+export const FRANCHISE_CHOICES: { value: HealthFranchise; label: string }[] = [
+  { value: '', label: 'All' },
+  { value: 'franchise', label: 'Franchise' },
+  { value: 'independent', label: 'Independent' },
+];
+
 export function sourceLabel(source: string | null | undefined): string {
   return source === 'city' ? 'City import' : 'Claimed';
-}
-
-// What the menu crawler did for a city-imported restaurant that has no dishes, in plain words. A blank status is treated as waiting.
-export function readStatusLabel(status: string | null | undefined): string {
-  switch (status) {
-    case 'crawling': return 'Being read';
-    case 'done': return 'Read, no dishes stored';
-    case 'no_items': return 'Read, no dishes found on the site';
-    case 'error': return 'Could not read, will retry';
-    case 'needs_attention': return 'Needs attention';
-    default: return 'Waiting to be read';
-  }
 }
 
 // A key for a list row: a claimed restaurant has an id; a city-imported one is told apart by its place ID.

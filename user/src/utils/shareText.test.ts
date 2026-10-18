@@ -4,22 +4,22 @@ import { shareText, type ShareEnv } from './share';
 describe('restaurantShareMessage', () => {
   it('names the restaurant and the app, with the cuisine and address on their own parts', () => {
     expect(restaurantShareMessage({ name: 'Magic Noodle', address: '8013 W 159th St, Overland Park, KS', cuisine: 'Asian' }))
-      .toBe('Check out Magic Noodle on VektraVibe. Asian.\n8013 W 159th St, Overland Park, KS');
+      .toBe('Check out Magic Noodle on VectraVibe. Asian.\n8013 W 159th St, Overland Park, KS');
   });
   it('leaves out what is missing', () => {
-    expect(restaurantShareMessage({ name: 'Magic Noodle' })).toBe('Check out Magic Noodle on VektraVibe.');
-    expect(restaurantShareMessage({ name: 'Magic Noodle', cuisine: 'Asian', address: '' })).toBe('Check out Magic Noodle on VektraVibe. Asian.');
-    expect(restaurantShareMessage({ name: 'Magic Noodle', address: '1 Main St', cuisine: null })).toBe('Check out Magic Noodle on VektraVibe.\n1 Main St');
+    expect(restaurantShareMessage({ name: 'Magic Noodle' })).toBe('Check out Magic Noodle on VectraVibe.');
+    expect(restaurantShareMessage({ name: 'Magic Noodle', cuisine: 'Asian', address: '' })).toBe('Check out Magic Noodle on VectraVibe. Asian.');
+    expect(restaurantShareMessage({ name: 'Magic Noodle', address: '1 Main St', cuisine: null })).toBe('Check out Magic Noodle on VectraVibe.\n1 Main St');
   });
   it('does not double a full stop that the cuisine already ends with', () => {
-    expect(restaurantShareMessage({ name: 'A', cuisine: 'Cafe.' })).toBe('Check out A on VektraVibe. Cafe.');
+    expect(restaurantShareMessage({ name: 'A', cuisine: 'Cafe.' })).toBe('Check out A on VectraVibe. Cafe.');
   });
   it('is empty without a name', () => {
     expect(restaurantShareMessage({ name: '' })).toBe('');
     expect(restaurantShareMessage({ name: '   ' })).toBe('');
   });
   it('tidies spaces and caps a very long name', () => {
-    expect(restaurantShareMessage({ name: '  Magic   Noodle \n House ' })).toBe('Check out Magic Noodle House on VektraVibe.');
+    expect(restaurantShareMessage({ name: '  Magic   Noodle \n House ' })).toBe('Check out Magic Noodle House on VectraVibe.');
     expect(restaurantShareMessage({ name: 'x'.repeat(200) }).length).toBeLessThan(120);
   });
   it('makes no health, safety or "best" claim', () => {
@@ -31,11 +31,11 @@ describe('restaurantShareMessage', () => {
 describe('dishShareMessage', () => {
   it('names the dish, the restaurant and the app', () => {
     expect(dishShareMessage({ dish: 'Egg Rolls (2 pc)', restaurantName: 'Magic Noodle', confirmed: true }))
-      .toBe('Egg Rolls (2 pc) at Magic Noodle, on VektraVibe.');
+      .toBe('Egg Rolls (2 pc) at Magic Noodle, on VectraVibe.');
   });
   it('says "estimated menu" for a dish the restaurant has not confirmed', () => {
     expect(dishShareMessage({ dish: 'Egg Rolls', restaurantName: 'Magic Noodle', confirmed: false }))
-      .toBe('Egg Rolls at Magic Noodle, on VektraVibe (estimated menu).');
+      .toBe('Egg Rolls at Magic Noodle, on VectraVibe (estimated menu).');
   });
   it('is empty when the dish or the restaurant has no name', () => {
     expect(dishShareMessage({ dish: '', restaurantName: 'A', confirmed: true })).toBe('');

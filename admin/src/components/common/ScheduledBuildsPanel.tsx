@@ -47,8 +47,9 @@ function Choices({
 // Management page itself is never affected.
 // standalone: shown on its own page (Tools -> Scheduled Builds), so it is always open and the header does not fold.
 export default function ScheduledBuildsPanel({ standalone = false }: { standalone?: boolean }) {
-  // on its own page the franchises and the independent restaurants are separate tabs; embedded, both show together as before
-  const [tab, setTab] = useState<'franchise' | 'independent'>('franchise');
+  // on its own page the franchises and the independent restaurants are separate tabs; embedded, both show together as before.
+  // The only link to this page today is from City Imports, which is about independent restaurants, so that tab opens first.
+  const [tab, setTab] = useState<'franchise' | 'independent'>('independent');
   const router = useRouter();
   const [status, setStatus] = useState<ChainBuildStatus | null>(null);
   const [open, setOpen] = useState(standalone);
@@ -68,6 +69,18 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
   useEffect(() => {
     load();
   }, [load]);
+
+  // On its own page, keep the status and the lists below it (recent builds, unconfirmed restaurants) fresh
+  // without a manual reload -- bumping logKey remounts them the same way a manual "Run Now" already does.
+  useEffect(() => {
+    if (!standalone) return;
+    const REFRESH_MS = 2 * 60 * 1000;
+    const id = setInterval(() => {
+      load();
+      setLogKey((k) => k + 1);
+    }, REFRESH_MS);
+    return () => clearInterval(id);
+  }, [standalone, load]);
 
   if (!status) {
     // On its own page an empty screen would be confusing; in the old embedded spot it simply stayed hidden.
@@ -202,6 +215,7 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
             <Text style={styles.sectionHint}>
               Restaurants customers opened that have no confirmed menu item. Use Manage to upload a menu.
             </Text>
+            <UnconfirmedClickedList key={`u-${logKey}`} />
             {standalone && (
               <Text style={styles.line}>
                 In the build queue: {status.places_waiting ?? 0} waiting · {status.places_attention ?? 0} need attention
@@ -209,7 +223,6 @@ export default function ScheduledBuildsPanel({ standalone = false }: { standalon
                 {status.place_per_day != null ? ` · up to ${status.place_per_day} a day` : ''}
               </Text>
             )}
-            <UnconfirmedClickedList />
             {standalone && <RecentBuildsList key={`p-${logKey}`} kind="place" />}
           </View>
           )}

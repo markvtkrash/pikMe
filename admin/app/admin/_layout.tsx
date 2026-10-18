@@ -42,6 +42,7 @@ export default function AdminLayout() {
       <Stack.Screen name="reports/franchise-matches" options={{ title: '🍔 Franchise Matches' }} />
       <Stack.Screen name="reports/non-franchise" options={{ title: '🏠 Non-Franchise' }} />
       <Stack.Screen name="reports/support-tickets" options={{ title: '🎧 Support Reports' }} />
+      <Stack.Screen name="reports/agreements" options={{ title: '📝 Signup Agreements' }} />
       <Stack.Screen name="franchises" options={{ title: '🍔 Franchise Lookup' }} />
       <Stack.Screen name="chain-menus" options={{ title: '🔗 Franchise Menu Management' }} />
       <Stack.Screen name="restaurant-menu-issues" options={{ title: '🍽️ Restaurant Menu Issues' }} />

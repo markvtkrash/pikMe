@@ -122,6 +122,15 @@ const REPORTS: ReportCard[] = [
     bg: '#E3F2FD',
     href: '/admin/reports/support-tickets',
   },
+  {
+    key: 'agreements',
+    icon: '📝',
+    title: 'Signup Agreements',
+    subtitle: 'Who agreed to what, which version, and when',
+    color: '#2E7D32',
+    bg: '#E8F5E9',
+    href: '/admin/reports/agreements',
+  },
 ];
 
 export default function AdminReportsScreen() {

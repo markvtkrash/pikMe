@@ -173,6 +173,24 @@ async function safeFetch(startUrl: URL, init: RequestInit, maxRedirects = 5): Pr
   throw new Error('Too many redirects');
 }
 
+const DEFAULT_LINK_EXTRACT_MAX_TOKENS = 8192;
+const MIN_LINK_EXTRACT_MAX_TOKENS = 1024;
+const MAX_LINK_EXTRACT_MAX_TOKENS = 32000;
+
+// The linkExtractMaxTokens setting (app_config, else the env var, else the default) -- shared with
+// refresh-restaurant-menu (migration 153), same fix migration 109 already gave extract-menu-from-text's
+// textExtractMaxTokens: a reply cut short here silently drops the rest of a long real menu, which looks
+// like items are being capped even though nothing actually limits how many are returned.
+function parseMaxTokens(...candidates: (string | null | undefined)[]): number {
+  for (const raw of candidates) {
+    const text = (raw ?? '').trim();
+    if (!/^[0-9]{1,6}$/.test(text)) continue;
+    const n = Number(text);
+    if (n >= MIN_LINK_EXTRACT_MAX_TOKENS && n <= MAX_LINK_EXTRACT_MAX_TOKENS) return n;
+  }
+  return DEFAULT_LINK_EXTRACT_MAX_TOKENS;
+}
+
 async function deterministicId(restaurantName: string, itemName: string): Promise<string> {
   const text = `${restaurantName}::${itemName}::link`.toLowerCase();
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -240,10 +258,11 @@ interface ExtractResult {
 
 // Sends real page text to the LLM and asks it to EXTRACT, not invent.
 async function extractItemsFromText(pageText: string, restaurantName: string): Promise<ExtractResult> {
-  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel']);
+  const dbConfig = await loadDbConfig(['aiProvider', 'claudeModel', 'quicksilverModel', 'linkExtractMaxTokens']);
   const AI_PROVIDER = dbConfig.aiProvider ?? Deno.env.get('AI_PROVIDER') ?? 'claude';
   const CLAUDE_MODEL = dbConfig.claudeModel ?? Deno.env.get('CLAUDE_MODEL') ?? 'claude-haiku-4-5-20251001';
   const QUICKSILVER_MODEL = dbConfig.quicksilverModel ?? Deno.env.get('QUICKSILVER_MODEL') ?? 'deepseek-v4-flash';
+  const MAX_TOKENS = parseMaxTokens(dbConfig.linkExtractMaxTokens, Deno.env.get('LINK_EXTRACT_MAX_TOKENS'));
 
   const prompt = `Below is the real, scraped text content of a restaurant's menu webpage for "${restaurantName}". Extract the ACTUAL menu items explicitly present in this text. Do NOT invent, guess, or add items that aren't there. If this text does not appear to contain a real menu, return an empty JSON array: [].
 
@@ -285,7 +304,7 @@ ${pageText}
         body: JSON.stringify({
           model: QUICKSILVER_MODEL,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 2048,
+          max_tokens: MAX_TOKENS,
         }),
         signal: controller.signal,
       });
@@ -311,7 +330,7 @@ ${pageText}
       },
       body: JSON.stringify({
         model: CLAUDE_MODEL,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
@@ -379,6 +398,66 @@ ${pageText}
   return { items };
 }
 
+const MAX_PDF_BYTES = 15 * 1024 * 1024; // keep the edge function's memory/time bounded
+const MAX_PDF_PAGES = 30; // a real menu PDF is a handful of pages; this guards against an abusive upload
+const PDF_PARSE_TIMEOUT_MS = 20000; // unpdf's serverless build parses on this isolate's event loop, with no worker to bound it itself
+
+// Pulls the real text out of a PDF's raw bytes with unpdf (a PDF.js-based parser built for edge/serverless
+// runtimes -- Deno included -- with no filesystem or canvas dependency for text extraction, which is all
+// this needs; it never renders a page to an image). Returns plain text, same shape the HTML path already
+// produces, so the actual item extraction below doesn't need to know or care that the source was a PDF.
+// unpdf is loaded dynamically, only once a PDF actually turns up -- the same esm.sh URL and version
+// get-chain-menu already uses and has proven works in this runtime -- so a problem loading it can only
+// ever affect a PDF link, never an ordinary one, and never stop the function from booting at all.
+async function textFromPdfBytes(bytes: ArrayBuffer): Promise<{ text: string } | { error: string }> {
+  if (bytes.byteLength > MAX_PDF_BYTES) {
+    return { error: 'That PDF is too large to read (over 15MB).' };
+  }
+  try {
+    const { extractText, getDocumentProxy } = await import('https://esm.sh/unpdf@1.8.1');
+    const pdf = await getDocumentProxy(new Uint8Array(bytes));
+    if (pdf.numPages > MAX_PDF_PAGES) {
+      return { error: `That PDF has too many pages to read (${pdf.numPages}, limit ${MAX_PDF_PAGES}).` };
+    }
+    const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('PDF parse timed out')), PDF_PARSE_TIMEOUT_MS));
+    const { text } = await Promise.race([extractText(pdf, { mergePages: true }), timeout]);
+    return { text: String(text).slice(0, 12000) };
+  } catch (e) {
+    const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    console.error('[extract-menu-from-link] PDF parse error:', detail, e instanceof Error ? e.stack : '');
+    return { error: "Couldn't read that PDF — it may be scanned, encrypted, or corrupted." };
+  }
+}
+
+// A PDF menu link: fetched with the same SSRF-protected fetch used for an HTML page, its text pulled out
+// with unpdf, then handed to extractItemsFromText below -- the exact same prompt, model, and JSON contract
+// already used for a scraped HTML page and for the manual-paste "Update Menu Items From Text" box, so the
+// LLM side of this needed no new code at all.
+async function extractMenuFromPdfUrl(url: URL, restaurantName: string): Promise<ExtractResult> {
+  let bytes: ArrayBuffer;
+  try {
+    const pdfRes = await safeFetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PikMeMenuBot/1.0)' },
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!pdfRes.ok) return { items: [], error: `Could not fetch that PDF (HTTP ${pdfRes.status}).` };
+    bytes = await pdfRes.arrayBuffer();
+  } catch (e) {
+    console.error('[extract-menu-from-link] PDF fetch error:', e);
+    return { items: [], error: 'Could not reach that PDF link. Check the URL and try again.' };
+  }
+
+  const parsed = await textFromPdfBytes(bytes);
+  if ('error' in parsed) return { items: [], error: parsed.error };
+  if (parsed.text.trim().length < 40) {
+    return {
+      items: [],
+      error: "Couldn't find any real text in that PDF. It may be a scanned image rather than a real document — try Manual Entry instead.",
+    };
+  }
+  return extractItemsFromText(parsed.text, restaurantName);
+}
+
 // A plain fetch of the page (server-rendered pages only).
 async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<ExtractResult> {
   let pageText = '';
@@ -390,7 +469,18 @@ async function extractMenuFromUrl(url: URL, restaurantName: string): Promise<Ext
     if (!pageRes.ok) return { items: [], error: `Could not fetch that link (HTTP ${pageRes.status}).` };
     const contentType = pageRes.headers.get('content-type') || '';
     if (contentType.includes('application/pdf')) {
-      return { items: [], error: 'PDF menus are not supported yet — please link to an HTML menu page.' };
+      // Not caught by the .pdf-extension check up front (e.g. a link with no extension that happens to
+      // serve a PDF) -- same text-extraction path, just discovered a step later and reusing the bytes
+      // already fetched above instead of fetching a second time.
+      const parsed = await textFromPdfBytes(await pageRes.arrayBuffer());
+      if ('error' in parsed) return { items: [], error: parsed.error };
+      if (parsed.text.trim().length < 40) {
+        return {
+          items: [],
+          error: "Couldn't find any real text in that PDF. It may be a scanned image rather than a real document — try Manual Entry instead.",
+        };
+      }
+      return extractItemsFromText(parsed.text, restaurantName);
     }
     const html = await pageRes.text();
     pageText = htmlToText(html).slice(0, 12000);
@@ -452,23 +542,27 @@ serve(async (req) => {
     } catch {
       return err('menuUrl must be a valid http(s) URL', 400);
     }
-    if (parsedUrl.pathname.toLowerCase().endsWith('.pdf')) {
-      return err('PDF menus are not supported yet — please link to an HTML menu page.', 400);
-    }
+    const isPdfLink = parsedUrl.pathname.toLowerCase().endsWith('.pdf');
 
+    // The PDF path fetches the URL itself (unlike the earlier Gemini-fetches-it design), so the SSRF
+    // guard applies to it exactly like it does to an HTML link -- this protects OUR server, regardless
+    // of what kind of file is on the other end.
     if (!(await isSafeUrl(parsedUrl))) {
       return err('That link points to a restricted address and cannot be used.', 400);
     }
 
-    // Hard block: only accept a menu link on the restaurant's own website,
-    // as set by the owner on their Restaurant Profile page. Note this is a
+    // Hard block: only accept a menu link on the restaurant's own website, as
+    // set by the owner on their Restaurant Profile page. Note this is a
     // consistency check, not independent verification — website_url is
     // owner-provided, not sourced from Google, so this only guards against
     // pasting a link to an unrelated domain, not a dishonest owner who sets
     // both fields to match. No website_url on file means nothing to check
     // against, so those owners aren't domain-restricted (Manual Entry is the
-    // safer path for a restaurant with no real web presence anyway).
-    if (restaurant.website_url) {
+    // safer path for a restaurant with no real web presence anyway). A PDF
+    // menu is deliberately exempt from this one check -- restaurants commonly
+    // host their PDF menu on a third-party site (a delivery platform, a PDF
+    // host) rather than their own domain.
+    if (restaurant.website_url && !isPdfLink) {
       let ownHostname: string;
       try {
         ownHostname = new URL(restaurant.website_url).hostname.toLowerCase().replace(/^www\./, '');
@@ -498,7 +592,9 @@ serve(async (req) => {
     if (Array.isArray(providedItems) && providedItems.length > 0) {
       items = providedItems;
     } else {
-      const extracted = await extractMenuFromUrl(parsedUrl, restaurantName);
+      const extracted = isPdfLink
+        ? await extractMenuFromPdfUrl(parsedUrl, restaurantName)
+        : await extractMenuFromUrl(parsedUrl, restaurantName);
       if (extracted.items.length === 0) {
         return err(extracted.error || 'Could not extract a menu from that link.', 400);
       }

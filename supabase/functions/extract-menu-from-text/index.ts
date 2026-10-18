@@ -296,11 +296,24 @@ serve(async (req) => {
         .maybeSingle();
       if (!adminRole) return err('Forbidden', 403);
       callerIsAdmin = true;
-      const { data: place } = await serviceSupabase
+      // The Google cache first, then City Imports' own list -- a city-discovered restaurant has
+      // no cached_restaurants row until a real customer searches near it (see admin_get_place_info,
+      // which the admin's by-place page already uses the same way to show this restaurant's name).
+      let place: { name: string } | null = null;
+      const { data: cached } = await serviceSupabase
         .from('cached_restaurants')
         .select('name')
         .eq('place_id', placeId)
         .maybeSingle();
+      place = cached;
+      if (!place) {
+        const { data: cityPlace } = await serviceSupabase
+          .from('city_places')
+          .select('name')
+          .eq('place_id', placeId)
+          .maybeSingle();
+        place = cityPlace;
+      }
       if (!place) return err('Restaurant not found', 404);
       effectiveName = place.name;
     } else {

@@ -18,6 +18,7 @@ import {
   toggleUnverifiedSelection, unverifiedIds, verifiableSelection, verifySelectedQuestion,
 } from '../../src/utils/menuEditSelection';
 import { IconText } from '../../src/components/common/AppIcon';
+import { googleMenuSearchUrl, openInNewPage } from '../../src/utils/googleMenuSearch';
 
 const PAGE_SIZE = 50;
 
@@ -322,9 +323,27 @@ export default function AdminMenuEditScreen() {
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={
             <View>
-              <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-                <Text style={styles.backBtnText}>← Back to Menu Management</Text>
-              </TouchableOpacity>
+              <View style={styles.headerButtonsRow}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+                  <Text style={styles.backBtnText}>← Back to Menu Management</Text>
+                </TouchableOpacity>
+                {!!placeId && (
+                  <TouchableOpacity
+                    onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: { placeId } } as any)}
+                    style={styles.updateToolBtn}
+                  >
+                    <Text style={styles.updateToolBtnText}>Update Menu Tool</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  onPress={() => openInNewPage(googleMenuSearchUrl(name, address))}
+                  style={styles.updateToolBtn}
+                  accessibilityRole="link"
+                  accessibilityLabel={`Search Google for ${name}'s menu`}
+                >
+                  <Text style={styles.updateToolBtnText}>🔎 Find Menu on Google</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.title}>{name}</Text>
               <Text style={styles.subtitle}>Manual Edit — add, update or delete menu items</Text>
 
@@ -545,8 +564,11 @@ const styles = StyleSheet.create({
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f6f6f6' },
   content: { padding: 16, paddingBottom: 32 },
 
+  headerButtonsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
   backBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#1565C0', alignSelf: 'flex-start', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
   backBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  updateToolBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#ECEFF1', alignSelf: 'flex-start', borderWidth: 1.5, borderColor: '#1565C0' },
+  updateToolBtnText: { fontSize: 14, fontWeight: '800', color: '#1565C0' },
   title: { fontSize: 22, fontWeight: '800', color: '#222' },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 12 },
 

@@ -119,6 +119,11 @@ export default function CityImportsScreen() {
     router.push({ pathname: '/admin/menu-view', params: menuViewParams(place) } as any);
   }
 
+  function updateMenu(place: CityPlaceRow) {
+    setListCity(null);
+    router.push({ pathname: '/admin/menu-management/by-place', params: { placeId: place.place_id } } as any);
+  }
+
   async function togglePaused(row: CrawlCityRow) {
     await act(row.id, async () => {
       await saveCrawlCity(row.id, { name: row.name, region: row.region, max: row.max_restaurants, enabled: !row.enabled });
@@ -135,6 +140,12 @@ export default function CityImportsScreen() {
             closed places and places with no website, and the menu crawler then reads each restaurant's website. No owner is needed.
           </Text>
         </View>
+        <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/admin/reports/menu-health' as any)} accessibilityRole="button">
+          <Text style={styles.linkBtnText}>Menu Data Health</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.linkBtn} onPress={() => router.push('/admin/scheduled-builds' as any)} accessibilityRole="button">
+          <Text style={styles.linkBtnText}>Scheduled Builds</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.addBtn} onPress={openAdd} accessibilityRole="button">
           <Text style={styles.addBtnText}>+ Add city</Text>
         </TouchableOpacity>
@@ -212,7 +223,7 @@ export default function CityImportsScreen() {
         <View style={styles.overlay}>
           <View style={[styles.modalCard, styles.listCard]}>
             <Text style={styles.modalTitle}>{listCity ? placesHeading(listCity, places.length || listCity.places_found) : ''}</Text>
-            <Text style={styles.hint}>Restaurants with imported dishes can be opened with View Menu.</Text>
+            <Text style={styles.hint}>Restaurants with imported dishes can be opened with View Menu. Update Menu lets you add a menu by photo, text, or a link for any restaurant here.</Text>
             {placesLoading && <ActivityIndicator size="small" color="#1565C0" style={{ alignSelf: 'flex-start', marginTop: 10 }} />}
             {!!placesError && <Text style={styles.error}>{placesError}</Text>}
             <ScrollView style={styles.placeScroll}>
@@ -230,11 +241,16 @@ export default function CityImportsScreen() {
                     {!!p.website && <Text style={styles.itemMeta} numberOfLines={1}>{p.website}</Text>}
                     {!!dishes && <Text style={styles.itemMeta}>{dishes}</Text>}
                     {!!p.crawl_detail && p.outcome === 'queued' && p.crawl_status !== 'done' && <Text style={styles.itemMeta} numberOfLines={2}>{p.crawl_detail}</Text>}
-                    {canViewMenu(p) && (
-                      <TouchableOpacity onPress={() => viewMenu(p)} accessibilityRole="button" style={styles.viewBtn}>
-                        <Text style={styles.action}>View Menu</Text>
+                    <View style={styles.placeActions}>
+                      {canViewMenu(p) && (
+                        <TouchableOpacity onPress={() => viewMenu(p)} accessibilityRole="button">
+                          <Text style={styles.action}>View Menu</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => updateMenu(p)} accessibilityRole="button">
+                        <Text style={styles.action}>Update Menu</Text>
                       </TouchableOpacity>
-                    )}
+                    </View>
                   </View>
                 );
               })}
@@ -290,6 +306,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#888', lineHeight: 18 },
   addBtn: { backgroundColor: '#1565C0', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  linkBtn: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10, backgroundColor: '#ECEFF1', borderWidth: 1.5, borderColor: '#1565C0' },
+  linkBtnText: { fontSize: 13, fontWeight: '800', color: '#1565C0' },
   hint: { fontSize: 11, color: '#888', marginTop: 4 },
   row: { flexDirection: 'row', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginTop: 8 },
   item: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#e6e6e6', padding: 12, marginBottom: 10 },
@@ -311,7 +329,7 @@ const styles = StyleSheet.create({
   placeRow: { borderTopWidth: 1, borderTopColor: '#eee', paddingVertical: 8 },
   placeTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   placeName: { flex: 1, fontSize: 13, fontWeight: '800', color: '#222' },
-  viewBtn: { alignSelf: 'flex-start', marginTop: 2 },
+  placeActions: { flexDirection: 'row', gap: 16, marginTop: 2 },
   label: { fontSize: 11, fontWeight: '700', color: '#666', marginTop: 12, marginBottom: 5 },
   input: { paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, color: '#222', backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', borderRadius: 8 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 16 },
