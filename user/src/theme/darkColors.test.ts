@@ -1,16 +1,16 @@
 import { darkColor, darkStyle, darkStyles } from './darkColors';
 
 describe('darkColor', () => {
-  it('turns white and the light grays into dark grey surfaces', () => {
-    expect(darkColor('#fff')).toBe('#454545');
-    expect(darkColor('#ffffff')).toBe('#454545');
-    expect(darkColor('#F9F9F9')).not.toBe('#f9f9f9');
-    expect(darkColor('#f0f0f0')).toMatch(/^#[0-5]/);
+  it('turns white and the light grays into the same flat "light black" surface', () => {
+    expect(darkColor('#fff')).toBe('#161616');
+    expect(darkColor('#ffffff')).toBe('#161616');
+    expect(darkColor('#F9F9F9')).toBe('#161616');
+    expect(darkColor('#f0f0f0')).toBe('#161616');
   });
 
-  it('turns dark text into light text', () => {
-    expect(darkColor('#1a1a1a', 'color')).toMatch(/^#[d-f]/);
-    expect(darkColor('#333333', 'color')).toMatch(/^#[c-f]/);
+  it('turns dark text into plain white', () => {
+    expect(darkColor('#1a1a1a', 'color')).toBe('#ffffff');
+    expect(darkColor('#333333', 'color')).toBe('#ffffff');
   });
 
   it('keeps white text white, and dark backgrounds dark', () => {
@@ -30,7 +30,7 @@ describe('darkColor', () => {
   });
 
   it('keeps alpha and leaves shadows and unknown values alone', () => {
-    expect(darkColor('rgba(255,255,255,0.92)')).toMatch(/^rgba\(69, 69, 69, 0\.92\)$/);
+    expect(darkColor('rgba(255,255,255,0.92)')).toBe('rgba(22, 22, 22, 0.92)');
     expect(darkColor('#000', 'shadowColor')).toBe('#000');
     expect(darkColor('transparent')).toBe('transparent');
     expect(darkColor('not-a-color')).toBe('not-a-color');
@@ -40,7 +40,7 @@ describe('darkColor', () => {
 describe('darkStyle / darkStyles', () => {
   it('translates color properties and leaves the rest', () => {
     expect(darkStyle({ backgroundColor: '#fff', color: '#1a1a1a', padding: 8, fontWeight: '700' })).toEqual({
-      backgroundColor: '#454545',
+      backgroundColor: '#161616',
       color: darkColor('#1a1a1a', 'color'),
       padding: 8,
       fontWeight: '700',
@@ -49,7 +49,7 @@ describe('darkStyle / darkStyles', () => {
 
   it('walks a whole StyleSheet and nested objects', () => {
     const out = darkStyles({ card: { backgroundColor: '#fff', shadowOffset: { width: 0, height: 2 } }, t: { color: '#888' } });
-    expect(out.card.backgroundColor).toBe('#454545');
+    expect(out.card.backgroundColor).toBe('#161616');
     expect(out.card.shadowOffset).toEqual({ width: 0, height: 2 });
     expect(out.t.color).toBeDefined();
   });

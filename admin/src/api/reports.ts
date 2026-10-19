@@ -138,12 +138,14 @@ export interface MenuHealthFilter {
   // Migration 152: true = only restaurants with zero menu items (folds in the old, separate
   // "no menu items" report); false/omitted = restaurants with at least one item, as before.
   noItems?: boolean;
+  // Migration 155: a case-insensitive substring match on the restaurant name; '' or omitted = no search.
+  search?: string;
 }
 
 function filterArgs(filter: MenuHealthFilter) {
   return {
     p_state: filter.state || null, p_city: filter.city || null, p_source: filter.source || null,
-    p_franchise: filter.franchise || null,
+    p_franchise: filter.franchise || null, p_search: filter.search || null,
   };
 }
 

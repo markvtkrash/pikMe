@@ -12,6 +12,7 @@ import { upsertUserProfile, deleteAccount } from '../../../src/api/functions';
 import { getMyTickets, markTicketResolutionSeen, SupportTicket } from '../../../src/api/supportTickets';
 import { DIETARY_RESTRICTIONS, HEALTH_GOALS, CUISINE_OPTIONS } from '../../../src/constants/dietaryOptions';
 import { useFaceIdStore } from '../../../src/store/faceIdStore';
+import { useThemeStore } from '../../../src/store/themeStore';
 import { BRAND_COLORS, BRAND_NAME } from '../../../src/constants/brandTheme';
 import type { UserProfile } from '../../../src/types';
 import { useCustomerConfig } from '../../../src/hooks/useCustomerConfig';
@@ -101,6 +102,8 @@ export default function ProfileScreen() {
   const [resolvedTickets, setResolvedTickets] = useState<SupportTicket[]>([]);
   const requireFaceId = useFaceIdStore((s) => s.requireFaceId);
   const setRequireFaceId = useFaceIdStore((s) => s.setRequireFaceId);
+  const themePreference = useThemeStore((s) => s.preference);
+  const setThemePreference = useThemeStore((s) => s.setPreference);
 
   useEffect(() => {
     (async () => {
@@ -400,6 +403,20 @@ export default function ProfileScreen() {
 
       {/* Buttons */}
       <View style={styles.buttonGroup}>{actionButtons(false)}</View>
+
+      {/* Appearance */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Appearance</Text>
+        <View style={styles.switchRow}>
+          <Text style={styles.switchLabel}>Dark mode</Text>
+          <Switch
+            value={themePreference === 'dark'}
+            onValueChange={(v) => setThemePreference(v ? 'dark' : 'light')}
+            trackColor={{ false: '#ddd', true: '#1565C0' }}
+            thumbColor="#fff"
+          />
+        </View>
+      </View>
 
       {/* Security */}
       {faceIdAvailable && (

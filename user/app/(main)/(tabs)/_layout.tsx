@@ -20,9 +20,9 @@ export default function TabLayout() {
         headerShown: false,
         // the height includes the phone's bottom safe area: a fixed height with that area added as padding left no room for the icons and labels
         tabBarStyle: [styles.tabBar, { height: TAB_BAR_HEIGHT + insets.bottom, paddingBottom: insets.bottom + 8 }],
-        // a soft orange band: light enough that the icons keep their own colors; dark labels, deep orange for the tab you are on
-        tabBarActiveTintColor: '#8E2400',
-        tabBarInactiveTintColor: '#3E2723',
+        // the brand blue band: white label for the tab you are on, a lighter muted blue for the rest so both read clearly against it
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#BBDEFB',
         tabBarLabelStyle: [styles.label, narrow && styles.labelNarrow],
         tabBarItemStyle: styles.item,
       }}
@@ -84,10 +84,10 @@ function TabIcon({ emoji, focused }: { emoji: string; focused: boolean; color?: 
 
 const baseStyles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#FFA94D',
-    // a deep orange line along the top of the orange band
+    backgroundColor: '#1565C0',
+    // a darker blue line along the top of the band
     borderTopWidth: 3,
-    borderTopColor: '#E65100',
+    borderTopColor: '#0D47A1',
     paddingBottom: 8,
     paddingTop: 6,
     shadowColor: '#000',
@@ -105,7 +105,7 @@ const baseStyles = StyleSheet.create({
   },
   labelNarrow: { fontSize: 8.5 },
   iconWrap: { alignItems: 'center', justifyContent: 'center', width: 46, height: 32, borderRadius: 16 },
-  // the tab you are on sits in a white pill with an orange outline
-  iconWrapActive: { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#E65100' },
+  // the tab you are on sits in a white pill with a deep-blue outline
+  iconWrapActive: { backgroundColor: '#FFFFFF', borderWidth: 2, borderColor: '#0D47A1' },
   icon: { fontSize: 22 },
 });

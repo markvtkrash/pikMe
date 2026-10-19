@@ -330,7 +330,7 @@ export default function RestaurantDetailScreen() {
                   hitSlop={8}
                   accessibilityRole="button"
                   accessibilityLabel="Share this restaurant"
-                  onPress={() => share(restaurantShareMessage({ name: restaurant.name, address: restaurant.location.address, cuisine: cuisineDisplay }), 'restaurant', restaurant.placeId)}
+                  onPress={() => share(restaurantShareMessage({ name: restaurant.name, address: restaurant.location.address, cuisine: cuisineDisplay, placeId: restaurant.placeId }), 'restaurant', restaurant.placeId)}
                 >
                   <Text style={styles.sharePillTxt}><Text style={styles.shareArrow}>➦</Text> Share</Text>
                 </TouchableOpacity>

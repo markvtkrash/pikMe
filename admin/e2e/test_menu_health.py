@@ -6,8 +6,8 @@ Run it (the admin app must be serving on the port, with the mock address as its 
     EXPO_PUBLIC_SUPABASE_URL=http://localhost:9199 EXPO_PUBLIC_SUPABASE_ANON_KEY=dummy CI=1 npx expo start --web --port 9101
     python e2e/test_menu_health.py            # from another terminal; screenshots go to e2e/screenshots (not committed)
 
-It checks what a person sees and does: nothing loads until a region is chosen, the Region / City / Source filters, paging, the "no region
-on record" choice, the restaurant links, and that the page logs no errors. The SQL is tested separately in supabase/tests.
+It checks what a person sees and does: nothing loads until a region is chosen, the Region / City / Source / search filters, paging, the
+"no region on record" choice, the restaurant links, and that the page logs no errors. The SQL is tested separately in supabase/tests.
 """
 
 import os
@@ -147,6 +147,17 @@ def main():
         click_text(page, "0 Menu Items", exact=True, nth=0)
         page.wait_for_timeout(600)
         check("Austin Imported 01" in text_of(page), "toggling the filter off restores restaurants with items")
+
+        # 8b. the search box narrows by name, debounced (not a request per keystroke)
+        page.get_by_placeholder("Search by name…").fill("Dallas")
+        page.wait_for_timeout(900)
+        body = text_of(page)
+        page.screenshot(path=str(SHOTS / "08b-search.png"))
+        check(mock.rpc_calls("admin_report_menu_health_by_restaurant")[-1].get("p_search") == "Dallas", "the search text is sent to the server")
+        check("Dallas Imported 1" in body and "Austin Imported 01" not in body, "the search narrows the list to matching names")
+        page.get_by_placeholder("Search by name…").fill("")
+        page.wait_for_timeout(900)
+        check("Austin Imported 01" in text_of(page), "clearing the search restores the full list")
 
         # 9. when the regions cannot be loaded, the page says so (and does not claim there are no restaurants)
         failing = MockBackend(fail=["admin_menu_health_locations"])

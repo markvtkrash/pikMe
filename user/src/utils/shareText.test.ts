@@ -26,6 +26,20 @@ describe('restaurantShareMessage', () => {
     const msg = restaurantShareMessage({ name: 'Magic Noodle', address: '1 Main St', cuisine: 'Asian' }).toLowerCase();
     for (const w of ['healthy', 'best', 'safe', 'allerg', 'chain']) expect(msg).not.toContain(w);
   });
+  it('ends with a real link to the place when a place ID is given', () => {
+    expect(restaurantShareMessage({ name: 'Magic Noodle', placeId: 'ChIJabc123' }))
+      .toBe('Check out Magic Noodle on VectraVibe.\nhttps://www.markvtkrash.com/r/ChIJabc123');
+    expect(restaurantShareMessage({ name: 'Magic Noodle', address: '1 Main St', placeId: 'ChIJabc123' }))
+      .toBe('Check out Magic Noodle on VectraVibe.\n1 Main St\nhttps://www.markvtkrash.com/r/ChIJabc123');
+  });
+  it('has no link line when there is no place ID', () => {
+    expect(restaurantShareMessage({ name: 'Magic Noodle', placeId: null })).toBe('Check out Magic Noodle on VectraVibe.');
+    expect(restaurantShareMessage({ name: 'Magic Noodle', placeId: '' })).toBe('Check out Magic Noodle on VectraVibe.');
+  });
+  it('encodes a place ID that is not already URL-safe', () => {
+    expect(restaurantShareMessage({ name: 'Magic Noodle', placeId: 'abc/def?x=1' }))
+      .toBe('Check out Magic Noodle on VectraVibe.\nhttps://www.markvtkrash.com/r/abc%2Fdef%3Fx%3D1');
+  });
 });
 
 describe('dishShareMessage', () => {
@@ -44,6 +58,16 @@ describe('dishShareMessage', () => {
   it('carries no nutrition numbers or health claims', () => {
     const msg = dishShareMessage({ dish: 'Cucumber Salad', restaurantName: 'Magic Noodle', confirmed: false }).toLowerCase();
     for (const w of ['calorie', 'protein', 'healthy', 'low carb', 'safe', 'allerg']) expect(msg).not.toContain(w);
+  });
+  it('ends with a real link to the place when a place ID is given', () => {
+    expect(dishShareMessage({ dish: 'Egg Rolls', restaurantName: 'Magic Noodle', confirmed: true, placeId: 'ChIJabc123' }))
+      .toBe('Egg Rolls at Magic Noodle, on VectraVibe.\nhttps://www.markvtkrash.com/r/ChIJabc123');
+    expect(dishShareMessage({ dish: 'Egg Rolls', restaurantName: 'Magic Noodle', confirmed: false, placeId: 'ChIJabc123' }))
+      .toBe('Egg Rolls at Magic Noodle, on VectraVibe (estimated menu).\nhttps://www.markvtkrash.com/r/ChIJabc123');
+  });
+  it('has no link line when there is no place ID', () => {
+    expect(dishShareMessage({ dish: 'Egg Rolls', restaurantName: 'Magic Noodle', confirmed: true, placeId: null }))
+      .toBe('Egg Rolls at Magic Noodle, on VectraVibe.');
   });
 });
 

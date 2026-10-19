@@ -70,6 +70,7 @@ class MockBackend:
         city = (body.get("p_city") or "").strip().lower()
         source = (body.get("p_source") or "").strip().lower()
         franchise = (body.get("p_franchise") or "").strip().lower()
+        search = (body.get("p_search") or "").strip().lower()
         out = []
         for r in self.restaurants:
             if state == "__none__":
@@ -84,6 +85,8 @@ class MockBackend:
             if franchise == "franchise" and not r["is_franchise"]:
                 continue
             if franchise == "independent" and r["is_franchise"]:
+                continue
+            if search and search not in r["restaurant_name"].lower():
                 continue
             out.append(r)
         return out

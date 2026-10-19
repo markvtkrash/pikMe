@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, TextInput } from 'react-native';
 import { Alert } from '../../../src/utils/alert';
 import { useRouter } from 'expo-router';
 import {
@@ -55,7 +55,16 @@ export default function AdminMenuHealthReport() {
   const [source, setSource] = useState<HealthSource>('');
   const [franchise, setFranchise] = useState<HealthFranchise>('');
   const [noItems, setNoItems] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [picker, setPicker] = useState<'region' | 'city' | null>(null);
+
+  // Debounced: a server round-trip per keystroke would spam the report, so the typed text only becomes
+  // the actual search after a short pause.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const [loading, setLoading] = useState(false);
   const [menuHealth, setMenuHealth] = useState<MenuHealthSnapshot | null>(null);
@@ -82,14 +91,15 @@ export default function AdminMenuHealthReport() {
     loadLocations();
   }, [loadLocations]);
 
-  // The headline numbers and the restaurant list for the chosen region/city/source/franchise/no-items filter.
+  // The headline numbers and the restaurant list for the chosen region/city/source/franchise/no-items/search filter.
   const loadReport = useCallback(async (
-    nextRegion: string, nextCity: string, nextSource: HealthSource, nextFranchise: HealthFranchise, nextNoItems: boolean
+    nextRegion: string, nextCity: string, nextSource: HealthSource, nextFranchise: HealthFranchise, nextNoItems: boolean,
+    nextSearch: string
   ) => {
     if (!filterReady(nextRegion)) return;
     setLoading(true);
     try {
-      const filter = { state: nextRegion, city: nextCity, source: nextSource, franchise: nextFranchise, noItems: nextNoItems };
+      const filter = { state: nextRegion, city: nextCity, source: nextSource, franchise: nextFranchise, noItems: nextNoItems, search: nextSearch };
       const [snapshot, rows] = await Promise.all([
         getMenuHealthSnapshot(filter),
         getMenuHealthByRestaurant(filter, PAGE_SIZE, 0),
@@ -106,12 +116,12 @@ export default function AdminMenuHealthReport() {
   }, []);
 
   useEffect(() => {
-    loadReport(region, city, source, franchise, noItems);
-  }, [region, city, source, franchise, noItems, loadReport]);
+    loadReport(region, city, source, franchise, noItems, search);
+  }, [region, city, source, franchise, noItems, search, loadReport]);
 
   async function goTablePage(next: number) {
     try {
-      setTableRows(await getMenuHealthByRestaurant({ state: region, city, source, franchise, noItems }, PAGE_SIZE, next * PAGE_SIZE));
+      setTableRows(await getMenuHealthByRestaurant({ state: region, city, source, franchise, noItems, search }, PAGE_SIZE, next * PAGE_SIZE));
       setTablePage(next);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to load that page');
@@ -171,6 +181,25 @@ export default function AdminMenuHealthReport() {
           </TouchableOpacity>
           {ready && (
             <TouchableOpacity style={styles.clearBtn} onPress={() => chooseRegion('')} accessibilityRole="button">
+              <Text style={styles.clearText}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.filterDivider} />
+
+        <View style={styles.filterGroup}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name…"
+            placeholderTextColor="#999"
+            value={searchInput}
+            onChangeText={setSearchInput}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {!!searchInput && (
+            <TouchableOpacity style={styles.clearBtn} onPress={() => setSearchInput('')} accessibilityRole="button">
               <Text style={styles.clearText}>Clear</Text>
             </TouchableOpacity>
           )}
@@ -332,6 +361,7 @@ const styles = StyleSheet.create({
   filterGroupLabel: { fontSize: 11, fontWeight: '700', color: '#999', textTransform: 'uppercase', letterSpacing: 0.3 },
   filterDivider: { width: 1, height: 22, backgroundColor: '#D8DCE1' },
   pickerBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5' },
+  searchInput: { minWidth: 160, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B0BEC5', fontSize: 13, color: '#222' },
   pickerBtnOn: { backgroundColor: '#1565C0', borderColor: '#1565C0' },
   pickerBtnOff: { opacity: 0.45 },
   pickerText: { fontSize: 12, fontWeight: '700', color: '#444' },

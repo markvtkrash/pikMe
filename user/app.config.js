@@ -36,6 +36,12 @@ export default {
       config: {
         usesNonExemptEncryption: false,
       },
+      // ITMS-90683: the app has no photo-library feature itself, but a bundled native module
+      // statically links a Photos API symbol Apple's binary scanner flags regardless of whether
+      // it's actually called. Apple requires this string to exist even then.
+      infoPlist: {
+        NSPhotoLibraryUsageDescription: `${BRAND_NAME} may use your photo library if you choose to save or share an image from the app.`,
+      },
     },
     android: {
       adaptiveIcon: {

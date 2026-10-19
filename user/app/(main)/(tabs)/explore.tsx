@@ -35,6 +35,9 @@ import { useUserProfile } from '../../../src/hooks/useUserProfile';
 import { useThemedStyles } from '../../../src/theme/useTheme';
 
 const ALL = 'All';
+// Clears the floating brand logo pinned top-left on every screen (app/_layout.tsx's FloatingLogo,
+// top: insets.top + 8, ~34px tall) so this screen's own header never renders underneath it.
+const TOP_CLEARANCE = 50;
 
 function matchesCuisine(r: Restaurant, cuisine: (typeof CUISINE_FILTERS)[number]): boolean {
   if (r.cuisineTypes.some((t) => cuisine.types.includes(t))) return true;
@@ -204,7 +207,7 @@ export default function ExploreScreen() {
 
   if (locationLoading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + TOP_CLEARANCE }]}>
         <View style={styles.staticHeader}>
           <Text style={styles.greeting}>{greeting()} 👋</Text>
           <Text style={styles.subGreeting}>Finding your location…</Text>
@@ -222,7 +225,7 @@ export default function ExploreScreen() {
 
   if (locationError) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.container, { paddingTop: insets.top + TOP_CLEARANCE }]}>
         <View style={styles.staticHeader}>
           <Text style={styles.greeting}>Location needed</Text>
           <Text style={styles.subGreeting}>{BRAND_NAME} needs your location to find nearby restaurants</Text>
@@ -249,7 +252,7 @@ export default function ExploreScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top + TOP_CLEARANCE }]}>
       {/* Sticky header */}
       <View style={styles.header}>
         <View style={styles.greetingRow}>

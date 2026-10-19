@@ -275,18 +275,20 @@ const baseLockStyles = StyleSheet.create({
 // their own small top clearance to stay clear of this badge; see each
 // screen's own insets.top usage.
 function FloatingLogo() {
-  const floatingLogoStyles = useThemedStyles(baseFloatingLogoStyles);
+  // Deliberately NOT useThemedStyles: this badge stays the same soft-white pill with solid brand-blue
+  // text in both themes, the same way it already stays readable over photos and maps in light mode --
+  // dark mode must not touch it.
   const insets = useSafeAreaInsets();
   return (
     <View
-      style={[floatingLogoStyles.container, { top: insets.top + 8 }]}
+      style={[baseFloatingLogoStyles.container, { top: insets.top + 8 }]}
       pointerEvents="none"
       accessible
       accessibilityLabel={BRAND_NAME}
     >
-      <Image source={require('../assets/logo.png')} style={floatingLogoStyles.logo} />
+      <Image source={require('../assets/logo.png')} style={baseFloatingLogoStyles.logo} />
       {/* The app name beside the logo: bold brand blue on a soft white pill, so it stays readable over photos and maps. */}
-      <Text style={floatingLogoStyles.name} numberOfLines={1}>{BRAND_NAME}</Text>
+      <Text style={baseFloatingLogoStyles.name} numberOfLines={1}>{BRAND_NAME}</Text>
     </View>
   );
 }

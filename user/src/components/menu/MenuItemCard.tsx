@@ -275,7 +275,7 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
 
   const shareButton = (
     <TouchableOpacity
-      onPress={() => share(dishShareMessage({ dish: item.name, restaurantName: recommendation.restaurant?.name ?? item.restaurantName, confirmed: item.isVerified === true }), 'dish', item.itemId)}
+      onPress={() => share(dishShareMessage({ dish: item.name, restaurantName: recommendation.restaurant?.name ?? item.restaurantName, confirmed: item.isVerified === true, placeId: recommendation.restaurant?.placeId }), 'dish', item.itemId)}
       hitSlop={10}
       style={styles.shareWrap}
       accessibilityRole="button"

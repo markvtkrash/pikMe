@@ -1,8 +1,9 @@
 // Dark mode: the app's styles are written with light-mode colors, and each color is translated here when the phone (or the person's own choice) is on dark.
 // One place to tune the dark palette, instead of a second color in every style.
 //
-//   neutral light colors (white, the light grays)   flip to near-black / dark grays
+//   neutral light colors (white, the light grays)   all flip to the SAME flat "light black" (#161616)
 //   neutral dark colors used as a background        stay (they are deliberate dark surfaces: overlays, toasts)
+//   neutral dark text (near-black body copy)        becomes plain white (#ffffff)
 //   light tints (the pale blue / red / orange)      flip to a dark tint of the same hue
 //   saturated mid colors used as a background       stay (buttons, badges)
 //   saturated colors used as text or icons          are lightened so they read on a dark surface
@@ -14,8 +15,25 @@ type Rgba = { r: number; g: number; b: number; a: number };
 const TEXT_PROPS = new Set(['color', 'textDecorationColor', 'tintColor', 'placeholderTextColor']);
 const KEEP_PROPS = new Set(['shadowColor', 'textShadowColor']);
 
-const DARK_FLOOR = 0.27; // lightness of what was pure white: #454545 (a medium dark grey, not near-black)
-const DARK_SPAN = 0.66; // so pure black text still becomes #ededed
+// Neutral backgrounds (white cards, light-gray pages) all become the SAME flat "light black" -- a dark
+// charcoal, not a medium gray and not pure #000. A gradient here previously meant a once-white card could
+// come out darker than the lighter-gray page behind it (an inverted, confusing hierarchy); one flat value
+// sidesteps that entirely.
+const DARK_BG = { r: 0x16, g: 0x16, b: 0x16 };
+// Neutral text (near-black body copy, placeholders, etc.) becomes plain white, not a shade of light gray.
+const DARK_TEXT = { r: 0xff, g: 0xff, b: 0xff };
+// Pale tinted backgrounds (a light blue page background, a light blue/red/orange badge) still flip to a
+// dark tint of the same hue rather than the flat DARK_BG, so a badge's color-coding survives -- but close
+// in darkness to DARK_BG (0.086) rather than the old, noticeably lighter ~0.27-0.3, so a page background
+// like this doesn't read as a different, lighter layer than the "light black" cards sitting on it.
+const DARK_TINT_L = 0.12;
+
+// A flat dark-mode color, as a plain hex when fully opaque or an rgba() that keeps the original alpha
+// (e.g. a semi-transparent white overlay stays semi-transparent, just dark instead of light).
+function flat({ r, g, b }: { r: number; g: number; b: number }, a: number): string {
+  if (a >= 1) return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+  return `rgba(${r}, ${g}, ${b}, ${Math.round(a * 1000) / 1000})`;
+}
 
 function parseColor(input: string): Rgba | null {
   const s = input.trim().toLowerCase();
@@ -58,8 +76,6 @@ function fromHsl(h: number, s: number, l: number, a: number): string {
   return '#' + [r, g, b].map((v) => to(v).toString(16).padStart(2, '0')).join('');
 }
 
-const flip = (l: number) => DARK_FLOOR + (1 - l) * DARK_SPAN;
-
 /** The dark-mode version of one color. `prop` is the style property it belongs to (text colors are treated differently from backgrounds). */
 export function darkColor(value: string, prop: string = 'backgroundColor'): string {
   if (KEEP_PROPS.has(prop)) return value;
@@ -69,11 +85,11 @@ export function darkColor(value: string, prop: string = 'backgroundColor'): stri
   const neutral = s < 0.12;
 
   if (TEXT_PROPS.has(prop)) {
-    if (neutral) return l > 0.9 ? value : fromHsl(h, s, flip(l), rgba.a);
+    if (neutral) return l > 0.9 ? value : flat(DARK_TEXT, rgba.a);
     return l < 0.62 ? fromHsl(h, s, 0.62, rgba.a) : value;
   }
-  if (neutral) return l < 0.35 ? value : fromHsl(h, s, flip(l), rgba.a);
-  if (l >= 0.8) return fromHsl(h, s * 0.6, flip(l), rgba.a);
+  if (neutral) return l < 0.35 ? value : flat(DARK_BG, rgba.a);
+  if (l >= 0.8) return fromHsl(h, s * 0.6, DARK_TINT_L, rgba.a);
   return value;
 }
 

@@ -1,8 +1,7 @@
-// The app is always LIGHT: there is no Dark choice for customers (the dark palette is kept in src/theme for later). The type keeps both values
-// so the dark code paths still compile.
+// The person's chosen appearance: Light (default) or Dark, set from Profile.
 export type ThemePreference = 'light' | 'dark';
 
-/** Always light, including a 'dark' saved by an earlier version of the app. */
-export function normalizeThemePreference(_value: unknown): ThemePreference {
-  return 'light';
+/** A valid saved preference, else the default (light) -- an unreadable or pre-dark-mode value never breaks the app. */
+export function normalizeThemePreference(value: unknown): ThemePreference {
+  return value === 'dark' ? 'dark' : 'light';
 }
