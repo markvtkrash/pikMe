@@ -75,7 +75,10 @@ export default function UnconfirmedClickedList() {
             </View>
             <TouchableOpacity
               style={styles.manageBtn}
-              onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: { placeId: r.place_id } } as any)}
+              onPress={() => router.push({
+                pathname: '/admin/menu-management/by-place',
+                params: r.address ? { placeId: r.place_id, address: r.address } : { placeId: r.place_id },
+              } as any)}
               accessibilityRole="button"
             >
               <Text style={styles.manageText}>Manage</Text>

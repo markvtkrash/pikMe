@@ -3,6 +3,11 @@
 // The searches made for every city, in order: first a general one, then one per kind of food, so a big city is covered
 // beyond the ~60 results a single Google search can return. Each search is read page by page (20 a page) until Google has
 // no more pages for it.
+//
+// This is the DEFAULT/fallback list only -- the admin's Config page (app_config key cityCrawlSearchTerms, a comma-separated
+// value) is read by index.ts and passed into buildQuery/stopReasonAfterPage instead, whenever it has something in it. Kept
+// here too so a missing or empty config row (before migration 158, or if an admin clears it) still searches something, and
+// so the tests below have a fixed list to assert against.
 export const CUISINES = [
   'American', 'Italian', 'Mexican', 'Chinese', 'Japanese', 'sushi', 'Thai', 'Indian', 'Korean', 'Vietnamese',
   'Mediterranean', 'Greek', 'Middle Eastern', 'French', 'Spanish', 'Caribbean', 'Southern', 'barbecue', 'seafood',
@@ -17,10 +22,12 @@ export const PAGE_SIZE = 20;
 const MAX_NAME = 200;
 
 // "Italian restaurants in Austin, TX" for query number `index` (0 is the general search); null once the list is used up.
-export function buildQuery(index: number, city: string, region: string): string | null {
-  if (!Number.isInteger(index) || index < 0 || index >= TOTAL_QUERIES) return null;
+// `terms` defaults to the built-in list, but the caller passes the admin's configured one when there is one.
+export function buildQuery(index: number, city: string, region: string, terms: string[] = CUISINES): string | null {
+  const total = 1 + terms.length;
+  if (!Number.isInteger(index) || index < 0 || index >= total) return null;
   const where = [city.trim(), region.trim()].filter(Boolean).join(', ');
-  return index === 0 ? `restaurants in ${where}` : `${CUISINES[index - 1]} restaurants in ${where}`;
+  return index === 0 ? `restaurants in ${where}` : `${terms[index - 1]} restaurants in ${where}`;
 }
 
 export interface FoundPlace {
@@ -77,9 +84,11 @@ export function nextPosition(queryIndex: number, nextPageToken: unknown): { quer
 }
 
 // Why the search should stop after this page, or null to go on. `callsAfterThis` counts this page's request.
-export function stopReasonAfterPage(next: { queryIndex: number; pageToken: string | null }, callsAfterThis: number, callLimit: number):
-  'ran_out_of_results' | 'call_limit' | null {
-  if (next.queryIndex >= TOTAL_QUERIES && !next.pageToken) return 'ran_out_of_results';
+// `totalQueries` defaults to the built-in list's count; the caller passes the admin's configured count when there is one.
+export function stopReasonAfterPage(
+  next: { queryIndex: number; pageToken: string | null }, callsAfterThis: number, callLimit: number, totalQueries: number = TOTAL_QUERIES
+): 'ran_out_of_results' | 'call_limit' | null {
+  if (next.queryIndex >= totalQueries && !next.pageToken) return 'ran_out_of_results';
   if (callsAfterThis >= callLimit) return 'call_limit';
   return null;
 }

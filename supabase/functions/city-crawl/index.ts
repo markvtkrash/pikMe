@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
-  addressInCity, buildQuery, describeGoogleError, nextPosition, PAGE_SIZE, parseCityRequest, parsePlaces,
+  addressInCity, buildQuery, CUISINES, describeGoogleError, nextPosition, PAGE_SIZE, parseCityRequest, parsePlaces,
   stopReasonAfterPage,
 } from './cityCrawlUtils.ts';
 
@@ -39,6 +39,16 @@ function json(body: unknown, status = 200) {
 }
 
 class GoogleError extends Error {}
+
+// The admin's configured search terms (app_config key cityCrawlSearchTerms, comma-separated), or the built-in
+// default when the row is missing or empty -- same table/row the admin's Config page already edits generically.
+async function searchTerms(supabase: ReturnType<typeof createClient>): Promise<string[]> {
+  const { data } = await supabase.from('app_config').select('value').eq('key', 'cityCrawlSearchTerms').maybeSingle();
+  const raw = (data?.value as string | undefined)?.trim();
+  if (!raw) return CUISINES;
+  const terms = raw.split(',').map((t) => t.trim()).filter(Boolean);
+  return terms.length > 0 ? terms : CUISINES;
+}
 
 // One Google Places (New) text-search request. Throws GoogleError with a message that never includes the key.
 async function searchText(textQuery: string, pageToken: string | null): Promise<{ places: ReturnType<typeof parsePlaces>; nextPageToken: unknown }> {
@@ -126,6 +136,7 @@ serve(async (req) => {
 
     const { data: limitData } = await supabase.rpc('crawl_city_call_limit');
     const callLimit = typeof limitData === 'number' ? limitData : 60;
+    const terms = await searchTerms(supabase);
     const here = { queryIndex: Number(city.query_index) || 0, pageToken: (city.page_token as string | null) ?? null };
     const record = async (places: unknown[], calls: number, next: typeof here, stop: string | null) => {
       const { data, error } = await supabase.rpc('record_city_discovery', {
@@ -137,7 +148,7 @@ serve(async (req) => {
     };
 
     // already at its request limit, or every search is used up: finish without another Google request
-    const query = buildQuery(here.queryIndex, city.name, city.region);
+    const query = buildQuery(here.queryIndex, city.name, city.region, terms);
     if (Number(city.google_calls_last_run) >= callLimit || (query === null && !here.pageToken)) {
       const stop = query === null && !here.pageToken ? 'ran_out_of_results' : 'call_limit';
       const r = await record([], 0, here, stop);
@@ -157,7 +168,7 @@ serve(async (req) => {
 
     const next = nextPosition(here.queryIndex, page.nextPageToken);
     const callsAfter = Number(city.google_calls_last_run) + 1;
-    const stop = stopReasonAfterPage(next, callsAfter, callLimit);
+    const stop = stopReasonAfterPage(next, callsAfter, callLimit, 1 + terms.length);
     const inCity = page.places.filter((p) => addressInCity(p.address, city.name));
     const r = await record(inCity, 1, next, stop);
     console.log(`${LOG} ${city.name}: search ${here.queryIndex}, ${page.places.length} places (${inCity.length} in the city), counted ${r.counted}${r.finished ? `, finished (${r.stop_reason})` : ''}`);

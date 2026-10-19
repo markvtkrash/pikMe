@@ -23,6 +23,13 @@ describe('buildQuery', () => {
   it('has no repeated kinds of food', () => {
     expect(new Set(CUISINES.map((c) => c.toLowerCase())).size).toBe(CUISINES.length);
   });
+  it('searches a given term list instead of the built-in default, when one is passed (the admin\'s Config page override)', () => {
+    const terms = ['Korean BBQ', 'food truck'];
+    expect(buildQuery(0, 'Austin', 'TX', terms)).toBe('restaurants in Austin, TX');
+    expect(buildQuery(1, 'Austin', 'TX', terms)).toBe('Korean BBQ restaurants in Austin, TX');
+    expect(buildQuery(2, 'Austin', 'TX', terms)).toBe('food truck restaurants in Austin, TX');
+    expect(buildQuery(3, 'Austin', 'TX', terms)).toBeNull();
+  });
 });
 
 describe('parsePlaces', () => {
@@ -96,6 +103,10 @@ describe('stopReasonAfterPage', () => {
   });
   it('reports running out first when both apply', () => {
     expect(stopReasonAfterPage({ queryIndex: TOTAL_QUERIES, pageToken: null }, 60, 60)).toBe('ran_out_of_results');
+  });
+  it('uses a given total instead of the built-in count, when one is passed (the admin\'s Config page override)', () => {
+    expect(stopReasonAfterPage({ queryIndex: 3, pageToken: null }, 5, 60, 3)).toBe('ran_out_of_results');
+    expect(stopReasonAfterPage({ queryIndex: 2, pageToken: null }, 5, 60, 3)).toBeNull();
   });
 });
 

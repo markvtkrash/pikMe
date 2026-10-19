@@ -111,6 +111,9 @@ export default function RecentBuildsList({ kind }: { kind?: 'chain' | 'place' })
               )}
               <Text style={[styles.badge, { backgroundColor: tone.bg, color: tone.fg }]}>
                 {outcome.label}{r.outcome === 'ok' ? ` · ${r.item_count} items` : ''}
+                {(outcome.tone === 'bad' || outcome.tone === 'warn') && r.verified_count != null && (
+                  <Text style={r.verified_count === 0 ? styles.verifiedCountZero : styles.verifiedCount}>{` (${r.verified_count} verified)`}</Text>
+                )}
               </Text>
             </View>
             <Text style={styles.meta}>
@@ -157,6 +160,8 @@ const styles = StyleSheet.create({
   chainWrap: { flex: 1 },
   chainLink: { color: '#1565C0', textDecorationLine: 'underline' },
   badge: { fontSize: 10, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
+  verifiedCount: { color: '#2E7D32' },
+  verifiedCountZero: { color: '#c62828' },
   meta: { fontSize: 11, color: '#888' },
   detail: { fontSize: 11, color: '#c62828' },
   manageBtn: { alignSelf: 'flex-start', marginTop: 4, backgroundColor: '#1565C0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },

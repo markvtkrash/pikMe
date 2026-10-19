@@ -318,6 +318,9 @@ export interface ChainBuildLogRow {
   kind?: 'chain' | 'place';
   // the restaurant's place for an independent row (migration 120); null for franchises
   place_id?: string | null;
+  // how many of the restaurant's menu items are currently verified (migration 157); null for a franchise
+  // row, since one build covers many locations rather than a single restaurant's menu
+  verified_count?: number | null;
 }
 
 // How far back the list looks.

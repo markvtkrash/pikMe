@@ -36,7 +36,10 @@ export default function AdminMenuManagementRestaurantScreen() {
   const router = useRouter();
   // /admin/menu-management/<restaurant id> for a claimed restaurant, or
   // /admin/menu-management/by-place?placeId=<Google place ID> for one nobody has claimed (saved by its place ID).
-  const { id, placeId } = useLocalSearchParams<{ id: string; placeId?: string }>();
+  // address: carried over from whichever list screen linked here, since admin_get_place_info has no
+  // address at all for a place that's only known from a customer click or a saved menu item (it was
+  // never cached from Google) -- a caller that already had one on screen should not lose it.
+  const { id, placeId, address: addressParam } = useLocalSearchParams<{ id: string; placeId?: string; address?: string }>();
   const [restaurant, setRestaurant] = useState<RestaurantInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +69,7 @@ export default function AdminMenuManagementRestaurantScreen() {
         if (error) throw error;
         const data = Array.isArray(info) ? info[0] : info;
         if (data) {
-          setRestaurant({ placeId: data.place_id, name: data.name, address: data.address ?? '' });
+          setRestaurant({ placeId: data.place_id, name: data.name, address: data.address || addressParam || '' });
           return;
         }
         // Not in the Google cache: it may be a claimed restaurant (an owner's menu link recorded under its place ID),

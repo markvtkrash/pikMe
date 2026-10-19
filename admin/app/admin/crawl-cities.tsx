@@ -121,7 +121,10 @@ export default function CityImportsScreen() {
 
   function updateMenu(place: CityPlaceRow) {
     setListCity(null);
-    router.push({ pathname: '/admin/menu-management/by-place', params: { placeId: place.place_id } } as any);
+    router.push({
+      pathname: '/admin/menu-management/by-place',
+      params: place.address ? { placeId: place.place_id, address: place.address } : { placeId: place.place_id },
+    } as any);
   }
 
   async function togglePaused(row: CrawlCityRow) {

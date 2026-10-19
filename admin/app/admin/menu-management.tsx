@@ -322,7 +322,10 @@ export default function AdminMenuManagementScreen() {
                       onPress={() => router.push(
                         claimed
                           ? (`/admin/menu-management/${item.restaurant_id}` as any)
-                          : ({ pathname: '/admin/menu-management/by-place', params: { placeId: item.place_id } } as any)
+                          : ({
+                              pathname: '/admin/menu-management/by-place',
+                              params: item.address ? { placeId: item.place_id, address: item.address } : { placeId: item.place_id },
+                            } as any)
                       )}
                     >
                       <IconText style={styles.updateBtnText} numberOfLines={1} emoji="🔄">Update Menu</IconText>

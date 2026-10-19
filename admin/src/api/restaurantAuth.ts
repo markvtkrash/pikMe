@@ -190,6 +190,14 @@ export async function adminSetRestaurantStatus(restaurantId: string, status: 'ap
   if (error) throw error;
 }
 
+export async function adminUpdateRestaurantName(restaurantId: string, name: string) {
+  const { error } = await supabase.rpc('admin_update_restaurant_name', {
+    p_restaurant_id: restaurantId,
+    p_name: name,
+  });
+  if (error) throw error;
+}
+
 export async function adminUpdateOwner(params: {
   ownerId: string;
   businessName: string;

@@ -10,6 +10,7 @@ import { adminSetRestaurantStatus, adminDeleteRestaurant } from '../../src/api/r
 import { deleteCachedRestaurants } from '../../src/api/reports';
 import { buildDeleteMessage } from '../../src/utils/restaurantDelete';
 import { RestaurantCategoriesModal } from '../../src/components/common/RestaurantCategoriesModal';
+import { EditRestaurantNameModal } from '../../src/components/common/EditRestaurantNameModal';
 import { IconText } from '../../src/components/common/AppIcon';
 import { OptionPickerModal } from '../../src/components/common/OptionPickerModal';
 import {
@@ -55,6 +56,7 @@ export default function AdminRestaurantsScreen() {
   const [picker, setPicker] = useState<'state' | 'city' | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [editingCategories, setEditingCategories] = useState<{ id: string; name: string } | null>(null);
+  const [editingName, setEditingName] = useState<{ id: string; name: string } | null>(null);
 
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
@@ -369,6 +371,15 @@ export default function AdminRestaurantsScreen() {
                         <IconText style={styles.categoriesLink} emoji="🏷️">Categories</IconText>
                       </TouchableOpacity>
                     )}
+                    {claimed && (
+                      <TouchableOpacity
+                        onPress={() => item.restaurant_id && setEditingName({ id: item.restaurant_id, name: item.restaurant_name })}
+                        disabled={isBusy}
+                        accessibilityRole="button"
+                      >
+                        <IconText style={styles.categoriesLink} emoji="✏️">Edit Name</IconText>
+                      </TouchableOpacity>
+                    )}
                     {canToggleStatus(item) && (
                       <TouchableOpacity
                         style={[styles.actionBtn, isClosed ? styles.actionBtnOk : styles.actionBtnWarn]}
@@ -420,6 +431,16 @@ export default function AdminRestaurantsScreen() {
         restaurantId={editingCategories?.id ?? null}
         restaurantName={editingCategories?.name ?? ''}
         onClose={() => setEditingCategories(null)}
+      />
+
+      <EditRestaurantNameModal
+        restaurantId={editingName?.id ?? null}
+        restaurantName={editingName?.name ?? ''}
+        onClose={() => setEditingName(null)}
+        onSaved={(newName) => {
+          const id = editingName?.id;
+          setRows((prev) => prev.map((r) => (r.restaurant_id === id ? { ...r, restaurant_name: newName } : r)));
+        }}
       />
 
       {/* Confirm modal — used instead of Alert.alert, which is unreliable on React Native Web */}

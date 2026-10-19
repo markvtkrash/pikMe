@@ -1,10 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator,
   Modal, Switch,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Alert, confirmDialog } from '../../src/utils/alert';
+import { supabase } from '../../src/api/supabase';
 import {
   getRestaurantMenuForEdit, getMenuSharingInfo, saveMenuItem, previewDeleteMenuItems, deleteMenuItems, verifyMenuItems,
   EditableMenuItem, MenuSharingInfo, DeleteMenuItemsResult,
@@ -120,7 +121,12 @@ function nutritionSummary(i: EditableMenuItem) {
 // applies to every location sharing it; the banner says so.
 export default function AdminMenuEditScreen() {
   const router = useRouter();
-  const { name, placeId, address } = useLocalSearchParams<{ name: string; placeId?: string; address?: string }>();
+  const { name, placeId, address: addressParam } = useLocalSearchParams<{ name: string; placeId?: string; address?: string }>();
+  // Some links here (e.g. the restaurant name in Scheduled Builds' Recent Builds list) have
+  // no address to pass at all -- place_menu_crawl, which feeds that list, has no address column.
+  // Looked up by place ID as a fallback, the same way the Update Menu Tool page already does.
+  const [lookedUpAddress, setLookedUpAddress] = useState<string | undefined>(undefined);
+  const address = addressParam || lookedUpAddress;
 
   const [items, setItems] = useState<EditableMenuItem[]>([]);
   const [sharing, setSharing] = useState<MenuSharingInfo | null>(null);
@@ -150,6 +156,19 @@ export default function AdminMenuEditScreen() {
       loadAll();
     }, [name, placeId])
   );
+
+  useEffect(() => {
+    setLookedUpAddress(undefined);
+    if (addressParam || !placeId) return;
+    let cancelled = false;
+    supabase.rpc('admin_get_place_info', { p_place_id: placeId })
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        const info = Array.isArray(data) ? data[0] : data;
+        if (info?.address) setLookedUpAddress(info.address);
+      });
+    return () => { cancelled = true; };
+  }, [placeId, addressParam]);
 
   async function loadAll() {
     if (!name) {
@@ -329,7 +348,7 @@ export default function AdminMenuEditScreen() {
                 </TouchableOpacity>
                 {!!placeId && (
                   <TouchableOpacity
-                    onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: { placeId } } as any)}
+                    onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: address ? { placeId, address } : { placeId } } as any)}
                     style={styles.updateToolBtn}
                   >
                     <Text style={styles.updateToolBtnText}>Update Menu Tool</Text>

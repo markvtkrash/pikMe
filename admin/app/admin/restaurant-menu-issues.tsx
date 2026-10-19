@@ -168,7 +168,14 @@ export default function RestaurantMenuIssuesScreen() {
                   >
                     {busyId === item.job_id ? <ActivityIndicator size="small" color="#455a64" /> : <Text style={styles.retryBtnText}>↻ Try again</Text>}
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.retryBtn} onPress={() => router.push({ pathname: '/admin/menu-management/by-place', params: { placeId: item.place_id } } as any)} accessibilityRole="button">
+                  <TouchableOpacity
+                    style={styles.retryBtn}
+                    onPress={() => router.push({
+                      pathname: '/admin/menu-management/by-place',
+                      params: item.address ? { placeId: item.place_id, address: item.address } : { placeId: item.place_id },
+                    } as any)}
+                    accessibilityRole="button"
+                  >
                     <IconText style={styles.retryBtnText} emoji="📷">Add the menu</IconText>
                   </TouchableOpacity>
                 </View>
