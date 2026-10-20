@@ -362,6 +362,12 @@ export default function AdminMenuEditScreen() {
                 >
                   <Text style={styles.updateToolBtnText}>🔎 Find Menu on Google</Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/admin/scheduled-builds' as any)} style={styles.updateToolBtn}>
+                  <Text style={styles.updateToolBtnText}>Scheduled Builds</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/admin/reports/menu-health' as any)} style={styles.updateToolBtn}>
+                  <Text style={styles.updateToolBtnText}>Menu Data Health</Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.title}>{name}</Text>
               <Text style={styles.subtitle}>Manual Edit — add, update or delete menu items</Text>

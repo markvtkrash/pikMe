@@ -145,12 +145,16 @@ export default function AdminReportsScreen() {
         {REPORTS.map((report) => (
           <TouchableOpacity
             key={report.key}
-            style={[styles.card, { backgroundColor: report.bg }]}
+            style={[styles.card, { backgroundColor: report.bg, borderColor: report.color }]}
             onPress={() => router.push(report.href as any)}
           >
-            <AppIcon emoji={report.icon} size={30} color={report.color} />
-            <Text style={[styles.cardTitle, { color: report.color }]}>{report.title}</Text>
-            <Text style={styles.cardSubtitle}>{report.subtitle}</Text>
+            <View style={styles.cardTop}>
+              <View style={[styles.cardCircle, { backgroundColor: report.color }]}>
+                <AppIcon emoji={report.icon} size={16} color="#fff" />
+              </View>
+              <Text style={[styles.cardTitle, { color: report.color }]} numberOfLines={2}>{report.title}</Text>
+            </View>
+            <Text style={styles.cardSubtitle} numberOfLines={2}>{report.subtitle}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -163,12 +167,13 @@ const styles = StyleSheet.create({
   content: { padding: 16, width: '100%', maxWidth: 900, alignSelf: 'center' },
   title: { fontSize: 22, fontWeight: '800', color: '#222', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#888', marginBottom: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: {
-    width: '48%', minWidth: 160, borderRadius: 14, padding: 16,
-    gap: 6, elevation: 1,
+    width: '32%', minWidth: 200, minHeight: 64, borderRadius: 12, borderWidth: 2,
+    paddingVertical: 12, paddingHorizontal: 12, justifyContent: 'center', gap: 4, elevation: 1,
   },
-  cardIcon: { fontSize: 26 },
-  cardTitle: { fontSize: 15, fontWeight: '800' },
-  cardSubtitle: { fontSize: 12, color: '#666', lineHeight: 17 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  cardCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  cardTitle: { flex: 1, fontSize: 14, fontWeight: '800' },
+  cardSubtitle: { fontSize: 11.5, color: '#666', lineHeight: 15, marginLeft: 44 },
 });

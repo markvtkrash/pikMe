@@ -92,6 +92,12 @@ export default function AdminMenuViewScreen() {
                 >
                   <Text style={styles.searchBtnText}>🔎 Find Menu on Google</Text>
                 </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/admin/scheduled-builds' as any)} style={styles.searchBtn}>
+                  <Text style={styles.searchBtnText}>Scheduled Builds</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/admin/reports/menu-health' as any)} style={styles.searchBtn}>
+                  <Text style={styles.searchBtnText}>Menu Data Health</Text>
+                </TouchableOpacity>
               </View>
               <Text style={styles.title}>{name}</Text>
               <Text style={styles.subtitle}>
