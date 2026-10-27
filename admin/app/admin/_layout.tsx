@@ -50,6 +50,7 @@ export default function AdminLayout() {
       <Stack.Screen name="regions" options={{ title: '🗺️ Region Management' }} />
       <Stack.Screen name="analytics" options={{ title: '📈 App Usage' }} />
       <Stack.Screen name="scheduled-builds" options={{ title: '⏱️ Scheduled Builds' }} />
+      <Stack.Screen name="menu-agent" options={{ title: '🤖 Menu Agent' }} />
       <Stack.Screen name="config" options={{ title: '⚙️ App Config' }} />
       <Stack.Screen name="tickets" options={{ title: '🎫 Support Tickets' }} />
       <Stack.Screen name="tickets/[id]" options={{ title: 'Ticket Details' }} />

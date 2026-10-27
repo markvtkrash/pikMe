@@ -78,6 +78,8 @@ export interface MenuItem {
   // ones (see menu-nutrition.tsx in the owner app). Defaults to
   // 'ai_estimate' for any row from before this field existed.
   nutritionSource?: 'ai_estimate' | 'owner_provided';
+  // The owner's price in cents when the dish can be ordered online; null or absent otherwise.
+  priceCents?: number | null;
   nutrition: {
     calories: number;
     totalFat_g: number;

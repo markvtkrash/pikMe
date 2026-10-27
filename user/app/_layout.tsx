@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, LogBox, Image, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -25,6 +25,11 @@ import { useThemedStyles } from '../src/theme/useTheme';
 import { useProfileReminderStore } from '../src/store/profileReminderStore';
 import { trackEvent } from '../src/api/analytics';
 import { useRememberedFiltersStore } from '../src/store/rememberedFiltersStore';
+import { useOrderCartStore } from '../src/store/orderCartStore';
+import { useOrderBannerStore } from '../src/store/orderBannerStore';
+import { useActiveOrders } from '../src/hooks/useActiveOrders';
+import { ActiveOrderBanner, ORDER_BANNER_HEIGHT } from '../src/components/order/ActiveOrderBanner';
+import { summarizeActiveOrders } from '../src/utils/orders';
 
 // the browser's own reveal-password eye would be a second eye next to the app's Show / Hide button
 hideNativePasswordReveal();
@@ -143,6 +148,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           useProfileReminderStore.getState().reset();
           // and the filters remembered on this phone belong to the person who just left
           useRememberedFiltersStore.getState().clear();
+          // and so does any cart, for the same reason
+          useOrderCartStore.getState().clear();
         }
       }
     });
@@ -237,9 +244,48 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
+      <AppFrame signedIn={hasSession}>{children}</AppFrame>
       <ProfileReminder />
     </>
+  );
+}
+
+// The app itself, with a thin bar above it while the person has an order in progress. Tapping the bar opens the page with all their orders.
+// The bar takes the phone's top inset for itself, so the screens below are told that inset is 0 while it shows (otherwise they would pad
+// for the status bar a second time). The tree is the same whether the bar shows or not, so the screens are never rebuilt when it comes
+// and goes.
+function AppFrame({ signedIn, children }: { signedIn: boolean; children: React.ReactNode }) {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const segments = useSegments() as string[];
+  const { data: orders } = useActiveOrders(signedIn);
+  const setBannerHeight = useOrderBannerStore((s) => s.setHeight);
+
+  const summary = signedIn ? summarizeActiveOrders(orders) : null;
+  // the orders pages already show every order and its status
+  const show = !!summary && segments[0] !== 'order';
+  const height = show ? ORDER_BANNER_HEIGHT + insets.top : 0;
+
+  useEffect(() => {
+    setBannerHeight(height);
+    return () => setBannerHeight(0);
+  }, [height, setBannerHeight]);
+
+  const childInsets = useMemo(() => (show ? { ...insets, top: 0 } : insets), [show, insets]);
+
+  return (
+    <View style={{ flex: 1 }}>
+      {show && summary && (
+        <ActiveOrderBanner
+          label="View your order status"
+          topInset={insets.top}
+          onPress={() => router.push('/order' as any)}
+        />
+      )}
+      <View style={{ flex: 1 }}>
+        <SafeAreaInsetsContext.Provider value={childInsets}>{children}</SafeAreaInsetsContext.Provider>
+      </View>
+    </View>
   );
 }
 
@@ -279,9 +325,11 @@ function FloatingLogo() {
   // text in both themes, the same way it already stays readable over photos and maps in light mode --
   // dark mode must not touch it.
   const insets = useSafeAreaInsets();
+  // below the order bar while it shows (the bar already covers the phone's top inset), otherwise below the status bar
+  const bannerHeight = useOrderBannerStore((s) => s.height);
   return (
     <View
-      style={[baseFloatingLogoStyles.container, { top: insets.top + 8 }]}
+      style={[baseFloatingLogoStyles.container, { top: (bannerHeight > 0 ? bannerHeight : insets.top) + 8 }]}
       pointerEvents="none"
       accessible
       accessibilityLabel={BRAND_NAME}
@@ -328,6 +376,9 @@ export default function RootLayout() {
                 name="restaurant/[id]"
                 options={{ presentation: 'transparentModal', animation: 'fade' }}
               />
+              {/* My orders and an order's status open as the same kind of popup (the menu and checkout pages stay full screen) */}
+              <Stack.Screen name="order/index" options={{ presentation: 'transparentModal', animation: 'fade' }} />
+              <Stack.Screen name="order/[orderId]" options={{ presentation: 'transparentModal', animation: 'fade' }} />
             </Stack>
           </AuthGate>
           </UpdateGate>

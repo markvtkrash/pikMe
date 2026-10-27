@@ -152,6 +152,22 @@ serve(async (req) => {
       if (!chainError && isChain === false) ownPlaceId = placeId;
     }
 
+    // ── Ask the menu agent to read this restaurant's website ────────────────────
+    // Best effort, independents only. The database decides: agent switched on, a start URL known, nothing verified
+    // yet, not tried recently, daily caps. Runs before the cache check so a restaurant that only ever gets AI items is still queued.
+    if (ownPlaceId) {
+      try {
+        const { data: agentResult, error: agentError } = await supabase.rpc('request_menu_agent_for_place', {
+          p_place_id: ownPlaceId,
+          p_name: restaurantName.trim(),
+        });
+        if (agentError) console.warn('[fetch-menu-items-ai] could not ask the menu agent:', agentError.message);
+        else console.log('[fetch-menu-items-ai] menu agent:', agentResult);
+      } catch (agentErr) {
+        console.warn('[fetch-menu-items-ai] could not ask the menu agent:', agentErr instanceof Error ? agentErr.message : 'error');
+      }
+    }
+
     // ── Check 30-day cache ──────────────────────────────────────────────────────
     const cacheFrom = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const cachedQuery = ownPlaceId

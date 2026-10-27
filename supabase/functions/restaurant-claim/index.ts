@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { buildDetailsRequest, toLegacyPlace } from "../fetch-nearby-restaurants/placesNew.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -75,21 +76,36 @@ serve(async (req) => {
     // and cache it instead, sometimes repeatedly. Combined with 050's TTL
     // exemption for claimed restaurants, this restaurant never needs a
     // Google Place Details call from the consumer side again.
+    //
+    // Places API (New) first: it returns the website in the same Enterprise-tier call as the rating and opening hours, and the
+    // website goes to cached_restaurants.website (the menu agent's start URL). Any problem with it falls back to the legacy
+    // call below, which is the behaviour this function had before.
     let verifiedPlace: any = null;
     try {
-      const placeDetailsUrl =
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${googlePlaceId}` +
-        `&key=${GOOGLE_PLACES_KEY}&fields=place_id,name,formatted_address,geometry,rating,types,photos,opening_hours`;
-      const placeRes = await fetch(placeDetailsUrl);
-      const placeData = await placeRes.json();
-
-      if (placeData.status !== "OK") {
-        return new Response(
-          JSON.stringify({ error: "Restaurant not found on Google Places" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+      try {
+        const req = buildDetailsRequest(googlePlaceId, GOOGLE_PLACES_KEY);
+        const newRes = await fetch(req.url, req.init);
+        if (newRes.ok) verifiedPlace = toLegacyPlace(await newRes.json().catch(() => null));
+        else console.warn("[restaurant-claim] Place Details (New) HTTP", newRes.status, "- using the legacy API");
+      } catch (newErr) {
+        console.warn("[restaurant-claim] Place Details (New) failed - using the legacy API:", newErr);
       }
-      verifiedPlace = placeData.result;
+
+      if (!verifiedPlace) {
+        const placeDetailsUrl =
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${googlePlaceId}` +
+          `&key=${GOOGLE_PLACES_KEY}&fields=place_id,name,formatted_address,geometry,rating,types,photos,opening_hours`;
+        const placeRes = await fetch(placeDetailsUrl);
+        const placeData = await placeRes.json();
+
+        if (placeData.status !== "OK") {
+          return new Response(
+            JSON.stringify({ error: "Restaurant not found on Google Places" }),
+            { status: 400, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        verifiedPlace = placeData.result;
+      }
     } catch (error) {
       console.warn("[restaurant-claim] Could not verify with Google Places:", error);
       // Continue anyway - allow claim even if verification fails
@@ -171,8 +187,8 @@ serve(async (req) => {
             name:           verifiedPlace.name ?? restaurantName,
             latitude:       verifiedPlace.geometry.location.lat,
             longitude:      verifiedPlace.geometry.location.lng,
-            address:        verifiedPlace.formatted_address ?? address,
-            city:           "",
+            address:        verifiedPlace.formatted_address ?? verifiedPlace.vicinity ?? address,
+            city:           verifiedPlace.city ?? "",
             rating:         verifiedPlace.rating ?? 0,
             priceLevel:     null,
             cuisineTypes:   (verifiedPlace.types ?? []).filter((t: string) => !GENERIC_TYPES.has(t)),
@@ -185,6 +201,7 @@ serve(async (req) => {
                 }
               : null,
             openNow:        verifiedPlace.opening_hours?.open_now ?? false,
+            website:        verifiedPlace.website ?? null,
           }],
         });
         console.log("[restaurant-claim] Cached restaurant for consumer discovery:", restaurantName);

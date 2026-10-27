@@ -228,6 +228,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// The owner news pop-up is for the owner, not for staff on the order-screen tablet (/kiosk/<token>).
+function OwnerAnnouncement() {
+  const segments = useSegments();
+  return segments[0] === 'kiosk' ? null : <AnnouncementModal />;
+}
+
 export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -235,7 +241,7 @@ export default function RootLayout() {
         <AuthGate>
           <Slot />
         </AuthGate>
-        <AnnouncementModal />
+        <OwnerAnnouncement />
         <AlertModalHost />
       </ErrorBoundary>
     </QueryClientProvider>

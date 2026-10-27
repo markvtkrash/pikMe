@@ -1,9 +1,9 @@
 // Google Places API (New) for fetch-nearby-restaurants. Kept apart from index.ts so it can be unit tested.
 //
 // Every request names the FIELDS it wants (a field mask), and Google bills by the most expensive field asked for. We ask only for what the app uses:
-//   id, displayName, location, formattedAddress, types, businessStatus, rating, currentOpeningHours
-// Rating and opening hours put a request in the Enterprise tier; nothing here goes above it (no reviews, no "serves ..." flags, no phone, no website,
-// no photos, no price level: the app uses none of them).
+//   id, displayName, location, formattedAddress, types, businessStatus, rating, currentOpeningHours, websiteUri
+// Rating and opening hours put a request in the Enterprise tier, and websiteUri is in that same tier, so it adds no cost; nothing here goes above it
+// (no reviews, no "serves ..." flags, no phone, no photos, no price level). The website is only cached, for the menu agent's start URL.
 //
 // The answer is converted into the SHAPE OF THE LEGACY API's results (place_id, geometry.location, vicinity, opening_hours.periods ...), so the code that
 // builds restaurants, the cache table and the apps need no change, and a phone with an older app keeps working.
@@ -18,11 +18,11 @@ export function parsePlacesApiVersion(value: unknown): PlacesApiVersion {
 
 export const NEARBY_FIELD_MASK = [
   'places.id', 'places.displayName', 'places.location', 'places.formattedAddress', 'places.types', 'places.businessStatus',
-  'places.rating', 'places.currentOpeningHours',
+  'places.rating', 'places.currentOpeningHours', 'places.websiteUri',
 ].join(',');
 
 // The single-place version of the same fields (Place Details has no "places." prefix).
-export const DETAILS_FIELD_MASK = 'id,displayName,location,formattedAddress,types,businessStatus,rating,currentOpeningHours';
+export const DETAILS_FIELD_MASK = 'id,displayName,location,formattedAddress,types,businessStatus,rating,currentOpeningHours,websiteUri';
 
 // What counts as a food place. includedTypes matches ANY of a place's types, and most restaurants list 'restaurant' among theirs. Cafes, coffee shops and
 // bakeries are named because they often do not, which is why the legacy 'restaurant' filter missed places like Dunkin'.
@@ -153,6 +153,7 @@ export function toLegacyPlace(p: any): Record<string, unknown> | null {
     types: Array.isArray(p.types) ? p.types.filter((t: unknown) => typeof t === 'string') : [],
     opening_hours: toLegacyHours(p.currentOpeningHours),
     business_status: p.businessStatus,
+    website: typeof p.websiteUri === 'string' && p.websiteUri.trim() ? p.websiteUri.trim() : undefined,
   };
 }
 

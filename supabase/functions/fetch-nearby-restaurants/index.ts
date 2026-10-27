@@ -525,6 +525,8 @@ Deno.serve(async (req) => {
       try {
         if (restaurants.length > 0) {
           // SQL reads flat fields (placeId, latitude, longitude, address, city) — not nested location
+          // the website is cached only (not sent to the app); it is the menu agent's start URL
+          const websiteById = new Map(places.map((p) => [p.place_id, p.website ?? null]));
           const toCache = restaurants.map((r) => ({
             placeId:        r.placeId,
             name:           r.name,
@@ -538,6 +540,7 @@ Deno.serve(async (req) => {
             photoReference: r.photoReference ?? null,
             openingHours:   r.openingHours ?? null,
             openNow:        r.openNow,
+            website:        websiteById.get(r.placeId) ?? null,
           }));
           await supabase.rpc('upsert_restaurants', { p_restaurants: toCache });
         }
@@ -731,6 +734,7 @@ Deno.serve(async (req) => {
                 photoReference: backfilled.photoReference ?? null,
                 openingHours:   backfilled.openingHours ?? null,
                 openNow:        backfilled.openNow,
+                website:        place.website ?? null,
               }],
             });
 

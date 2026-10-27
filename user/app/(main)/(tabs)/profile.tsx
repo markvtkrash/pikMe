@@ -290,6 +290,26 @@ export default function ProfileScreen() {
 
       <View style={styles.topActions}>{actionButtons(true)}</View>
 
+      {/* Orders for pickup: right at the top, where a person with an order in progress looks first */}
+      <View style={styles.section}>
+        <TouchableOpacity style={[styles.supportBtn, styles.ordersBtn]} onPress={() => router.push('/order' as any)} accessibilityRole="button">
+          {/* Drawn from plain views because an emoji cart can't be recolored */}
+          <View style={styles.ordersBtnCart}>
+            <View style={styles.cartIcon}>
+              <View style={styles.cartHandle} />
+              <View style={styles.cartBasket} />
+              <View style={[styles.cartWheel, { left: 6 }]} />
+              <View style={[styles.cartWheel, { left: 15 }]} />
+            </View>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.supportBtnTitle, styles.ordersBtnTitle]}>My orders</Text>
+            <Text style={[styles.supportBtnSubtitle, styles.ordersBtnSubtitle]}>See your pickup orders and where they are</Text>
+          </View>
+          <Text style={[styles.supportBtnArrow, styles.ordersBtnTitle]}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Resolved ticket notifications */}
       {resolvedTickets.map((ticket) => (
         <View key={ticket.id} style={styles.resolvedBanner}>
@@ -587,4 +607,20 @@ const baseStyles = StyleSheet.create({
   supportBtnTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   supportBtnSubtitle: { fontSize: 12, color: '#888', marginTop: 2 },
   supportBtnArrow: { fontSize: 18, color: BRAND_COLORS.primary, fontWeight: '600' },
+
+  // My orders: a filled, colored button so it stands apart from the plain rows below it
+  ordersBtn: { backgroundColor: '#0D47A1' },
+  ordersBtnCart: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cartIcon: { width: 24, height: 20 },
+  cartHandle: { position: 'absolute', left: 0, top: 1, width: 6, height: 3, borderRadius: 1.5, backgroundColor: '#FF6B6B' },
+  cartBasket: {
+    position: 'absolute', left: 4, top: 3, width: 19, height: 10,
+    backgroundColor: '#FF6B6B', borderTopLeftRadius: 2, borderTopRightRadius: 2, borderBottomLeftRadius: 5, borderBottomRightRadius: 5,
+  },
+  cartWheel: { position: 'absolute', top: 15, width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#FF6B6B' },
+  ordersBtnTitle: { color: '#fff' },
+  ordersBtnSubtitle: { color: 'rgba(255,255,255,0.85)' },
 });

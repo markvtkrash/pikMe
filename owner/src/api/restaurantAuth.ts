@@ -376,6 +376,7 @@ export async function getRestaurantMenuItems(restaurantName: string, placeId?: s
       protein_g: row.protein_g,
       is_verified: row.is_verified,
       is_out_of_stock: row.is_out_of_stock,
+      price_cents: row.price_cents,   // the owner's price in cents (migration 165); null = not for sale
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }

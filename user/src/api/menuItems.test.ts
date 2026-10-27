@@ -74,6 +74,12 @@ describe('mapMenuRow', () => {
     expect(mapped.nutrition.sugars_g).toBe(0);
   });
 
+  it('carries the owner\'s price in cents, and leaves it out when the row has none', () => {
+    expect(mapMenuRow({ ...row, price_cents: 1250 }).priceCents).toBe(1250);
+    expect(mapMenuRow({ ...row, price_cents: null }).priceCents).toBeNull();
+    expect(mapMenuRow(row).priceCents).toBeUndefined();
+  });
+
   it('passes through an unverified AI-estimate row', () => {
     const mapped = mapMenuRow({ ...row, is_verified: false, nutrition_source: 'ai_estimate' });
     expect(mapped.isVerified).toBe(false);

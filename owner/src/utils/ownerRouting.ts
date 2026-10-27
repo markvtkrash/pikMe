@@ -2,6 +2,7 @@
 // the rules can be tested. Returns the path to redirect to, or null to stay put.
 //
 // Rules (in order):
+//  0. The staff order screen (/kiosk/<token>) is reached by a secret link, with no login: it is never redirected, signed in or not.
 //  1. Entry-point routes (the bare root and /owner) handle their own redirects.
 //  2. No session and not on an auth page -> owner login.
 //     Exception: the forgot-password page is left alone once signed in — checking the
@@ -32,6 +33,8 @@ export interface OwnerRouteState {
 
 export function resolveOwnerRoute(state: OwnerRouteState): string | null {
   const { hasSession, roleCheckComplete, isRestaurantOwner, hasStoreOwner, mustChangePassword, segments } = state;
+
+  if (segments[0] === 'kiosk') return null;
 
   const isEntryPoint = segments[0] === 'owner' || segments[0] === undefined;
   if (isEntryPoint) return null;

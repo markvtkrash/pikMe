@@ -39,6 +39,9 @@ import { supabase } from '../../src/api/supabase';
 import { useUIStore } from '../../src/store/uiStore';
 import type { Recommendation, Coupon } from '../../src/types';
 import { useThemedStyles, useThemeColor } from '../../src/theme/useTheme';
+import { useOrderingInfo } from '../../src/hooks/useOrderingInfo';
+import { useOrderCartStore } from '../../src/store/orderCartStore';
+import { cartCount, cartSubtotalCents, formatCents } from '../../src/utils/orders';
 
 const LOADING_EMOJIS = ['🍽️', '🥗', '🍲', '🥘', '🍳'];
 
@@ -78,7 +81,6 @@ function placeholderImage(name: string) {
 const LOADING_STATES = [
   { emoji: '📊', text: 'Analyzing nutrition', bg: '#E3F2FD' },
   { emoji: '🎯', text: 'Matching goals', bg: '#E3F2FD' },
-  { emoji: '🔍', text: 'Filtering allergens', bg: '#FFF3E0' },
   { emoji: '❤️', text: 'Finding favorites', bg: '#FCE4EC' },
   { emoji: '⚡', text: 'Personalizing menu', bg: '#F3E5F5' },
   { emoji: '🥗', text: 'Scanning nutrients', bg: '#E0F2F1' },
@@ -137,6 +139,11 @@ export default function RestaurantDetailScreen() {
   const genericCouponActivation = useCouponActivation({ onClosed: removeCouponFromList });
 
   const share = useShare();
+
+  // Ordering for pickup: shown only while the server says this restaurant takes orders (asked fresh each time the restaurant opens).
+  const { data: orderingInfo } = useOrderingInfo(id);
+  const orderCart = useOrderCartStore((s) => s.cart);
+  const itemsInCart = orderCart.placeId === id ? cartCount(orderCart) : 0;
 
   // anonymous usage counts: a restaurant was opened, and its menu showed items (each once per restaurant per launch)
   useEffect(() => {
@@ -363,6 +370,17 @@ export default function RestaurantDetailScreen() {
                     }}
                   >
                     <Text style={styles.directionsPillTxt}>🧭 Directions</Text>
+                  </TouchableOpacity>
+                ) : null}
+                {orderingInfo?.available ? (
+                  <TouchableOpacity
+                    style={styles.orderPill}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Order for pickup"
+                    onPress={() => router.push({ pathname: '/order/menu', params: { placeId: restaurant.placeId, name: restaurant.name } } as any)}
+                  >
+                    <Text style={styles.orderPillTxt}>🛒 Order pickup</Text>
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -604,6 +622,22 @@ export default function RestaurantDetailScreen() {
       }
     />
 
+    {/* The order in progress at THIS restaurant, one tap from checkout. */}
+    {orderingInfo?.available && itemsInCart > 0 && (
+      <TouchableOpacity
+        style={styles.cartBar}
+        onPress={() => router.push('/order/checkout' as any)}
+        accessibilityRole="button"
+        accessibilityLabel={`View your order: ${itemsInCart} item${itemsInCart === 1 ? '' : 's'}`}
+      >
+        <Text style={styles.cartBarTxt}>{itemsInCart} item{itemsInCart === 1 ? '' : 's'}  ·  {formatCents(cartSubtotalCents(orderCart))}</Text>
+        <View style={styles.cartIconBadge}>
+          <Text style={styles.cartIcon}>🛒</Text>
+          <View style={styles.cartCount}><Text style={styles.cartCountTxt}>{itemsInCart}</Text></View>
+        </View>
+      </TouchableOpacity>
+    )}
+
     {/* For everyone: a dish name does not show every ingredient. Pinned to the bottom of the sheet, outside the scrolling list, so it is
         always visible however far the menu is scrolled. */}
     <View style={[styles.stickyNotice, { paddingBottom: Math.max(insets.bottom, 7) }]}>
@@ -811,6 +845,14 @@ const baseStyles = StyleSheet.create({
   addressLine: { fontSize: 11.5, color: '#6B6B6B' },
   directionsPill: { backgroundColor: '#E3F2FD', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#1565C0' },
   directionsPillTxt: { fontSize: 14, fontWeight: '800', color: BRAND_COLORS.primary },
+  orderPill: { backgroundColor: '#E8F5E9', paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#2E7D32' },
+  orderPillTxt: { fontSize: 14, fontWeight: '800', color: '#1B5E20' },
+  cartBar: { backgroundColor: '#2E7D32', paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cartBarTxt: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  cartIconBadge: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  cartIcon: { fontSize: 22 },
+  cartCount: { position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#E65100', borderWidth: 1.5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  cartCountTxt: { color: '#fff', fontSize: 10, fontWeight: '900' },
   // Share sits at the right end of the name line, with a gap from the name, as the one solid blue button with a white ring and a shadow so it is in focus
   nameShareRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8 },
   sharePill: {

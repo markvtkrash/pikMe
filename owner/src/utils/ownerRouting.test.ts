@@ -33,6 +33,22 @@ describe('entry points', () => {
   });
 });
 
+describe('the staff order screen (/kiosk/<token>)', () => {
+  const KIOSK = ['kiosk', '[token]'];
+
+  it('is left alone whatever the state: it needs no login', () => {
+    expect(resolveOwnerRoute(state({ segments: KIOSK, hasSession: false, isRestaurantOwner: false, hasStoreOwner: false }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: KIOSK }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: KIOSK, roleCheckComplete: false }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: KIOSK, mustChangePassword: true }))).toBeNull();
+    expect(resolveOwnerRoute(state({ segments: KIOSK, isRestaurantOwner: false }))).toBeNull();
+  });
+
+  it('does not open the rest of the owner area to someone on it', () => {
+    expect(resolveOwnerRoute(state({ segments: DASHBOARD, hasSession: false, isRestaurantOwner: false, hasStoreOwner: false }))).toBe(OWNER_LOGIN_PATH);
+  });
+});
+
 describe('not signed in', () => {
   // A signed-out user is never an owner and has no owner record in the store.
   const signedOut = (overrides: Partial<OwnerRouteState> = {}) =>

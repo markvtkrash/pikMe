@@ -21,6 +21,8 @@ export function mapMenuRow(item: any): MenuItem {
     imageUrl: item.image_url,
     isVerified: item.is_verified,
     nutritionSource: item.nutrition_source,
+    // the owner's price in cents, for online ordering (migration 165); null / absent = not for sale
+    priceCents: item.price_cents,
   };
 }
 

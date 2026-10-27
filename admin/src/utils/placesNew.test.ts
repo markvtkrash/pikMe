@@ -20,11 +20,11 @@ describe('the field mask', () => {
   it('asks only for what the app uses', () => {
     expect(fields.sort()).toEqual([
       'places.businessStatus', 'places.currentOpeningHours', 'places.displayName', 'places.formattedAddress', 'places.id', 'places.location',
-      'places.rating', 'places.types',
+      'places.rating', 'places.types', 'places.websiteUri',
     ]);
   });
   it('never asks for the expensive or unused fields', () => {
-    for (const bad of ['photos', 'reviews', 'editorialSummary', 'websiteUri', 'nationalPhoneNumber', 'priceLevel', 'priceRange', 'servesVegetarianFood', 'userRatingCount']) {
+    for (const bad of ['photos', 'reviews', 'editorialSummary', 'nationalPhoneNumber', 'priceLevel', 'priceRange', 'servesVegetarianFood', 'userRatingCount']) {
       expect(NEARBY_FIELD_MASK).not.toContain(bad);
       expect(DETAILS_FIELD_MASK).not.toContain(bad);
     }
@@ -117,6 +117,11 @@ describe('toLegacyPlace', () => {
       vicinity: '101 Market St, San Francisco, CA 94103, USA', city: 'San Francisco', rating: 4.2, types: ['mexican_restaurant', 'restaurant', 'food'],
       opening_hours: { open_now: false },
     });
+  });
+  it('keeps the website, trimmed, and leaves it out when Google has none or it is blank', () => {
+    expect(toLegacyPlace({ ...place, websiteUri: ' https://tacoloco.com/ ' })!.website).toBe('https://tacoloco.com/');
+    expect(toLegacyPlace(place)!.website).toBeUndefined();
+    expect(toLegacyPlace({ ...place, websiteUri: '  ' })!.website).toBeUndefined();
   });
   it('leaves rating and hours out when Google has none', () => {
     const p = toLegacyPlace({ ...place, rating: undefined, currentOpeningHours: undefined })!;

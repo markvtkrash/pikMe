@@ -3,13 +3,14 @@ import { NAV_ITEMS } from './adminNav';
 
 describe('ADMIN_TOOLS', () => {
   it('lists Region Management, App Usage, Scheduled Builds, Announcements, City Imports, Restaurant Categories and App Config', () => {
-    expect(ADMIN_TOOLS.map((t) => t.title)).toEqual(['Region Management', 'App Usage', 'Scheduled Builds', 'Announcements', 'City Imports', 'Restaurant Categories', 'App Config']);
+    expect(ADMIN_TOOLS.map((t) => t.title)).toEqual(['Region Management', 'App Usage', 'Scheduled Builds', 'Announcements', 'City Imports', 'Menu Agent', 'Restaurant Categories', 'App Config']);
     const byTitle = Object.fromEntries(ADMIN_TOOLS.map((t) => [t.title, t.href]));
     expect(byTitle['Region Management']).toBe('/admin/regions');
     expect(byTitle['App Usage']).toBe('/admin/analytics');
     expect(byTitle['Scheduled Builds']).toBe('/admin/scheduled-builds');
     expect(byTitle['Announcements']).toBe('/admin/announcements');
     expect(byTitle['City Imports']).toBe('/admin/crawl-cities');
+    expect(byTitle['Menu Agent']).toBe('/admin/menu-agent');
     expect(byTitle['Restaurant Categories']).toBe('/admin/restaurant-categories');
     expect(byTitle['App Config']).toBe('/admin/config');
   });

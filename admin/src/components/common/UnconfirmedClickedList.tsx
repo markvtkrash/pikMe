@@ -50,6 +50,12 @@ export default function UnconfirmedClickedList() {
   const pageCount = pageCountFor(total, UNCONFIRMED_PAGE_SIZE);
   const range = pageRange(page, total, UNCONFIRMED_PAGE_SIZE);
 
+  // Opening a restaurant's page leaves this screen mounted underneath, so the window is closed as the admin goes there.
+  function goTo(href: { pathname: string; params: Record<string, string> }) {
+    router.push(href as any);
+    setOpen(false);
+  }
+
   const rowList = (
     <>
       {rows.map((r) => {
@@ -60,7 +66,7 @@ export default function UnconfirmedClickedList() {
             <View style={styles.rowText}>
               {/* the name opens this restaurant's menu edit page (its own place, by its place ID) */}
               <TouchableOpacity
-                onPress={() => router.push({ pathname: '/admin/menu-edit', params: editParams(r) } as any)}
+                onPress={() => goTo({ pathname: '/admin/menu-edit', params: editParams(r) })}
                 accessibilityRole="link"
                 accessibilityLabel={`Edit the menu of ${r.restaurant_name}`}
               >
@@ -75,10 +81,10 @@ export default function UnconfirmedClickedList() {
             </View>
             <TouchableOpacity
               style={styles.manageBtn}
-              onPress={() => router.push({
+              onPress={() => goTo({
                 pathname: '/admin/menu-management/by-place',
                 params: r.address ? { placeId: r.place_id, address: r.address } : { placeId: r.place_id },
-              } as any)}
+              })}
               accessibilityRole="button"
             >
               <Text style={styles.manageText}>Manage</Text>

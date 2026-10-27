@@ -28,6 +28,9 @@ export const FAVORITABLE_PAGES: FavoritablePage[] = [
   { key: 'tool-preview', icon: '👀', label: 'Preview as a Customer', href: '/restaurant/preview' },
   { key: 'tool-relocate', icon: '📍', label: 'My Restaurant Moved', href: '/restaurant/relocate' },
   { key: 'tool-visibility', icon: '⏸', label: 'Pause My Restaurant', href: '/restaurant/visibility' },
+  { key: 'tool-payments', icon: '💳', label: 'Get Paid', href: '/restaurant/payments' },
+  { key: 'tool-ordering', icon: '🛒', label: 'Online Ordering', href: '/restaurant/ordering' },
+  { key: 'tool-kiosk', icon: '🧾', label: 'Order Station Link', href: '/restaurant/kiosk-access' },
 ];
 
 export const FAVORITABLE_PAGES_BY_KEY: Record<string, FavoritablePage> =

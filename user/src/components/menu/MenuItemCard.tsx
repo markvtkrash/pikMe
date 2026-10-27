@@ -14,6 +14,7 @@ import { getItemWarnings, getSafeIndicator } from './menuItemWarnings';
 import { CouponActivationModal } from '../coupon/CouponActivationModal';
 import { CouponConfirmModal } from '../coupon/CouponConfirmModal';
 import { NutritionInfoModal } from './NutritionInfoModal';
+import { OrderAddControl } from '../order/OrderAddControl';
 import { showNutritionFor } from '../../utils/menuStatus';
 import { useShare } from '../../hooks/useShare';
 import { dishShareMessage } from '../../utils/shareText';
@@ -233,6 +234,9 @@ export function MenuItemCard({ recommendation, itemCoupons = [], onCouponClosed,
           </TouchableOpacity>
         </Animated.View>
       </View>
+
+      {/* Ordering ahead: the price and Add to order, only where the restaurant takes orders and this dish can be ordered */}
+      <OrderAddControl item={item} restaurant={recommendation.restaurant} />
 
       {/* Coupons: a thin strip each, so a coupon does not take a whole banner */}
       {itemCoupons.length > 0 && (

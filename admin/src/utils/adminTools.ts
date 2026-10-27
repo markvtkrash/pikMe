@@ -56,6 +56,15 @@ export const ADMIN_TOOLS: AdminTool[] = [
     href: '/admin/crawl-cities',
   },
   {
+    key: 'menu-agent',
+    icon: '🤖',
+    title: 'Menu Agent',
+    subtitle: 'Review the dishes the agent read from restaurant websites: approve or reject them, then add the approved ones to the menu',
+    color: '#283593',
+    bg: '#E8EAF6',
+    href: '/admin/menu-agent',
+  },
+  {
     key: 'restaurant-categories',
     icon: '🏷️',
     title: 'Restaurant Categories',

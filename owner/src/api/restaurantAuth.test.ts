@@ -279,7 +279,7 @@ describe('getRestaurantMenuItems', () => {
       makeQueryBuilder({
         data: [
           { item_id: 'i2', name: 'Burrito', calories: 500, protein_g: 20, is_verified: false, is_out_of_stock: true },
-          { item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false },
+          { item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false, price_cents: 450 },
         ],
         error: null,
       })
@@ -287,7 +287,7 @@ describe('getRestaurantMenuItems', () => {
 
     await expect(getRestaurantMenuItems('Taco Bell')).resolves.toEqual([
       { id: 'i2', item_id: 'i2', name: 'Burrito', calories: 500, protein_g: 20, is_verified: false, is_out_of_stock: true },
-      { id: 'i1', item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false },
+      { id: 'i1', item_id: 'i1', name: 'Taco', calories: 170, protein_g: 8, is_verified: true, is_out_of_stock: false, price_cents: 450 },
     ]);
   });
 

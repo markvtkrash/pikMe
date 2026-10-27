@@ -196,3 +196,43 @@ select outcome, count(*) from city_places where city_id = '...' group by 1;
 * Run cron as an unprivileged user (not root and not the database user). As an extra layer you can also block that
   user's traffic to private ranges with the firewall (`iptables -m owner --uid-owner`).
 * The worker identifies itself as `MenuCollectorBot` and follows `robots.txt` (inherited from `menu_reader.py`).
+
+## Menu agent (`crawl_agent.py`)
+
+An AI agent that reads a restaurant's website step by step and **proposes** dishes for an admin to approve. This script is only
+the courier: it asks the `menu-agent` edge function for a job, does the instruction it is given, reports what it saw, and gets
+the next instruction. The server (and its AI) decides where to go next; the AI key never leaves the edge function.
+
+```
+crawl_agent.py  --work------------>  menu-agent   (claims a job; start page = the restaurant's website)
+                <--open_page url--
+                --step: page text, links, PDF links-->   the AI reads the page, answers with the next instruction
+                <--open_page / read_pdf / read_image / done--
+                ... until done or the step limit (menuAgentMaxSteps) ...
+                                     menu-agent saves the dishes as PENDING proposals
+admin Tools -> Menu Agent            approve / reject, then "Add to menu" (the AI estimates nutrition at that point)
+```
+
+Safety: the script runs only the four instruction kinds above and refuses anything else; every address goes through
+`safety.py` (public addresses only) and `robots.txt` first; the server only sends it to pages on the restaurant's own site, and
+treats page text as untrusted. `read_image` is reported as "not supported" by this worker for now. The only secret on the VPS is
+the crawler secret. Nothing reaches a menu without an admin's approval.
+
+### Setup
+
+Same `/etc/pikme-crawler.env` and virtual environment as `crawl_places.py`. The address defaults to the `CRAWLER_URL` address with
+`/menu-agent` in place of `/menu-crawl`; set `AGENT_URL=` in the env file to override. Deploy the function (`supabase/functions/menu-agent`)
+and turn the agent on in App Config (`menuAgentEnabled`, off by default). A job is created with `request_menu_agent_job(place_id, name, url)`.
+
+```bash
+# try one run by hand
+./venv/bin/python crawl_agent.py --env-file /etc/pikme-crawler.env --verbose
+
+# every 15 minutes (exits at once when no job is waiting; never runs twice at the same time)
+*/15 * * * * cd /opt/pikme/crawler && ./venv/bin/python crawl_agent.py --env-file /etc/pikme-crawler.env >> /var/log/pikme-agent.log 2>&1
+```
+
+Limits: `--max-jobs` (3), `--job-timeout` (900 s), `--hard-max-steps` (50, a local ceiling behind the server's `menuAgentMaxSteps`).
+A job interrupted mid-run is handed out again after 30 minutes and starts from its first page.
+Tests: `python -m unittest tests.test_agent_worker`.
+

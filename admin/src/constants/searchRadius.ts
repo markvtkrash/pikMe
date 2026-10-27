@@ -1,5 +1,5 @@
 import { getConfigNumber } from './appConfig';
- 
+
 // Distance used by the Create Restaurant Owner screen when searching by zip
 // code or current location. Same real-world setting as the owner app's claim/
 // relocate flows, so it shares the 'ownerSearchRadiusMeters' DB key/env extra
